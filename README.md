@@ -64,6 +64,10 @@ print(result.output)
 - Versioning policy: [`docs/versioning.md`](docs/versioning.md)
 - Roadmap: [`docs/roadmap.md`](docs/roadmap.md)
 
+## White Paper
+
+See the canonical white paper for background, design rationale, and flow overview: [`docs/white-papers/agentic-squad-framework.md`](docs/white-papers/agentic-squad-framework.md).
+
 ## Contributing
 
 See `CONTRIBUTING.md` for setup, workflow, and PR expectations.
