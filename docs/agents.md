@@ -8,11 +8,16 @@ This section summarizes the **Agent Contract** for consistent agent inputs/outpu
 
 ## Initial agent set
 
-The first agent specifications live in `agents/`:
+The initial agent specifications live in `agents/`. The index is [`agents/README.md`](../agents/README.md).
 
 - Coordinator: [`agents/coordinator/README.md`](../agents/coordinator/README.md)
 - Decision Maker: [`agents/decision-maker/README.md`](../agents/decision-maker/README.md)
 - CISO: [`agents/ciso/README.md`](../agents/ciso/README.md)
+- Tech Lead: [`agents/tech-lead/README.md`](../agents/tech-lead/README.md)
+- Architect: [`agents/architect/README.md`](../agents/architect/README.md)
+- DBA: [`agents/dba/README.md`](../agents/dba/README.md)
+- DevOps: [`agents/devops/README.md`](../agents/devops/README.md)
+- Data Scientist: [`agents/data-scientist/README.md`](../agents/data-scientist/README.md)
 
 ### Overview
 
