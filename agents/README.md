@@ -62,3 +62,15 @@ Operations:
 Data:
 
 - [`agents/data-scientist/README.md`](data-scientist/README.md) Defines analysis plans, data requirements, metrics, and experiments.
+
+Quality:
+
+- [`agents/qa/README.md`](qa/README.md) Defines test strategy, quality gates, and regression risk assessment.
+
+Documentation:
+
+- [`agents/technical-writer/README.md`](technical-writer/README.md) Reviews documentation for accuracy, clarity, and consistency.
+
+Legal and compliance:
+
+- [`agents/legal/README.md`](legal/README.md) Reviews licensing and notice requirements and produces a compliance report.
