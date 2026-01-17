@@ -1,0 +1,43 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-18_1015-arch-async-messaging",
+  "task_id": "task-5678",
+  "agent": {
+    "name": "dba",
+    "role": "DBA",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "Reviewed data layer impact; identified indexing and migration considerations. No blocking issues.",
+  "decisions": [
+    {
+      "id": "dba-dec-1",
+      "title": "Add message status index",
+      "rationale": "Support DLQ and replay queries efficiently"
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "dba-ns-1",
+      "action": "Design migration for message status table with minimal downtime",
+      "owner": "dba",
+      "reason": "Support observability and replay"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "dba-art-1",
+      "kind": "data",
+      "description": "DBA review notes",
+      "payload": {
+        "path": "artifacts/dba-review.md",
+        "action": "create",
+        "content": "Indexing recommendations, migration approach, rollback plan.",
+        "content_encoding": "utf-8",
+        "mime_type": "text/markdown"
+      }
+    }
+  ],
+  "errors": [],
+  "logs": []
+}

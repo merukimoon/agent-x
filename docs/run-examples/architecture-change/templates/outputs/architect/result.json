@@ -1,0 +1,54 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-18_1015-arch-async-messaging",
+  "task_id": "task-5678",
+  "agent": {
+    "name": "architect",
+    "role": "Architect",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "Evaluated async messaging options; recommend managed queue with at-least-once delivery and DLQ.",
+  "decisions": [
+    {
+      "id": "arch-dec-1",
+      "title": "Adopt managed queue service",
+      "rationale": "Reduces coupling, provides durability, aligns with reliability goals",
+      "options_considered": [
+        "Managed queue",
+        "Self-hosted broker",
+        "Stay synchronous"
+      ]
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "arch-ns-1",
+      "action": "Define message schemas and versioning policy",
+      "owner": "tech-lead",
+      "reason": "Ensure compatibility during migration"
+    },
+    {
+      "id": "arch-ns-2",
+      "action": "Draft ADR for messaging topology and DLQ handling",
+      "owner": "architect",
+      "reason": "Traceable decision for future changes"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "arch-art-1",
+      "kind": "data",
+      "description": "Architecture option matrix",
+      "payload": {
+        "path": "artifacts/architecture-options.md",
+        "action": "create",
+        "content": "Comparison of managed queue vs self-hosted broker vs synchronous baseline.",
+        "content_encoding": "utf-8",
+        "mime_type": "text/markdown"
+      }
+    }
+  ],
+  "errors": [],
+  "logs": []
+}

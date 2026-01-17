@@ -1,0 +1,44 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-18_1015-arch-async-messaging",
+  "task_id": "task-5678",
+  "agent": {
+    "name": "ciso",
+    "role": "CISO",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "Security review completed; no blocking findings. Warnings logged for message confidentiality and audit scope.",
+  "decisions": [
+    {
+      "id": "ciso-dec-1",
+      "title": "Require encryption in transit and at rest for queue",
+      "classification": "warning",
+      "rationale": "Standard control; vendor supports managed keys"
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "ciso-ns-1",
+      "action": "Document audit fields in message schema and ensure logging does not capture payload PII",
+      "owner": "architect",
+      "reason": "Preserve audit integrity and privacy"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "ciso-art-1",
+      "kind": "data",
+      "description": "Security and compliance notes",
+      "payload": {
+        "path": "artifacts/security-review.md",
+        "action": "create",
+        "content": "Encryption, access control, audit logging scope, and vendor risk considerations.",
+        "content_encoding": "utf-8",
+        "mime_type": "text/markdown"
+      }
+    }
+  ],
+  "errors": [],
+  "logs": []
+}

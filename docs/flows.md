@@ -273,7 +273,7 @@ Decision Maker outputs:
 
 ## Flow B: Architecture or design change proposal
 
-This flow is the canonical Orchestration v2 definition for architecture and design change proposals. It extends the earlier flow by adding explicit QA gates and optional specialized reviews.
+This flow is the canonical Orchestration v2 definition for architecture and design change proposals. It extends the earlier flow by adding explicit QA gates and optional specialized reviews. For a full example run, see `docs/run-examples/architecture-change/README.md`.
 
 Purpose: make design changes explicit, reviewable, and decision traceable, with clear ownership for tradeoffs.
 

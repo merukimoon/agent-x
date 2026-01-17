@@ -5,6 +5,11 @@
 - Reference: `docs/run-examples/pr-completion/README.md`
 - Purpose: shows the golden path for manual execution of Flow A using the run layout and Agent Contract outputs.
 
+## Run example: Flow B (Architecture change)
+
+- Reference: `docs/run-examples/architecture-change/README.md`
+- Purpose: shows the golden path for manual execution of Flow B with full agent set participation and decision traceability.
+
 These code-oriented examples remain minimal and may be pseudo-code until the framework API is implemented (**TODO**).
 
 ## Example 1: Single agent “task runner”

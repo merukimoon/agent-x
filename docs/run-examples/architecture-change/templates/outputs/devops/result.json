@@ -1,0 +1,43 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-18_1015-arch-async-messaging",
+  "task_id": "task-5678",
+  "agent": {
+    "name": "devops",
+    "role": "DevOps",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "Outlined operational plan for queue adoption; no blocking issues.",
+  "decisions": [
+    {
+      "id": "devops-dec-1",
+      "title": "Set SLOs for queue latency and DLQ backlog",
+      "rationale": "Ensure reliability objectives are explicit"
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "devops-ns-1",
+      "action": "Implement dashboards and alerts for enqueue latency, consumer lag, and DLQ growth",
+      "owner": "devops",
+      "reason": "Detect incidents early"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "devops-art-1",
+      "kind": "data",
+      "description": "Operational plan",
+      "payload": {
+        "path": "artifacts/operational-plan.md",
+        "action": "create",
+        "content": "Monitoring, scaling assumptions, and alert thresholds for messaging system.",
+        "content_encoding": "utf-8",
+        "mime_type": "text/markdown"
+      }
+    }
+  ],
+  "errors": [],
+  "logs": []
+}

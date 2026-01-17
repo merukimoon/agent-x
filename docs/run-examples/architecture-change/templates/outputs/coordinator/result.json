@@ -1,0 +1,36 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-18_1015-arch-async-messaging",
+  "task_id": "task-5678",
+  "agent": {
+    "name": "coordinator",
+    "role": "Coordinator",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "Flow B completed with approved architecture decision and assigned follow-ups.",
+  "decisions": [
+    {
+      "id": "coord-dec-1",
+      "title": "Document optional specialist inputs",
+      "rationale": "DBA and DevOps inputs included due to data and reliability impact"
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "coord-ns-1",
+      "action": "Track ADR publication and link in run artifacts",
+      "owner": "architect",
+      "reason": "Maintain traceability"
+    },
+    {
+      "id": "coord-ns-2",
+      "action": "Update run.json status to complete after artifacts uploaded",
+      "owner": "coordinator",
+      "reason": "Close the run formally"
+    }
+  ],
+  "artifacts": [],
+  "errors": [],
+  "logs": []
+}

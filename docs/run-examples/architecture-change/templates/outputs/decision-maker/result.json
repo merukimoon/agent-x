@@ -1,0 +1,40 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-18_1015-arch-async-messaging",
+  "task_id": "task-5678",
+  "agent": {
+    "name": "decision-maker",
+    "role": "Decision Maker",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "Approved managed queue approach with conditions; all warnings accepted with owners.",
+  "decisions": [
+    {
+      "id": "dm-dec-1",
+      "title": "Approve managed queue with dual-write rollout",
+      "rationale": "Meets resilience goals and aligns with risk appetite",
+      "accepted_risks": [
+        "Potential backlog during cutover",
+        "Vendor dependency and SLA reliance"
+      ]
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "dm-ns-1",
+      "action": "Complete ADR and share for sign-off",
+      "owner": "architect",
+      "reason": "Trace decision and rationale"
+    },
+    {
+      "id": "dm-ns-2",
+      "action": "Implement observability and DLQ monitoring before full cutover",
+      "owner": "devops",
+      "reason": "Mitigate backlog risk"
+    }
+  ],
+  "artifacts": [],
+  "errors": [],
+  "logs": []
+}
