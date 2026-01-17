@@ -49,14 +49,15 @@ print(result.output)
 
 ## Documentation
 
-- Getting oriented: `docs/README.md`
-- Architecture overview: `docs/architecture.md`
-- Concepts and terms: `docs/concepts.md`
-- Agent roles and interfaces: `docs/agents.md`
-- Prompting guidance: `docs/prompting.md`
-- Examples: `docs/examples.md`
-- Versioning policy: `docs/versioning.md`
-- Roadmap: `docs/roadmap.md`
+- Getting oriented: [`docs/README.md`](docs/README.md)
+- Architecture overview: [`docs/architecture.md`](docs/architecture.md)
+- Concepts and terms: [`docs/concepts.md`](docs/concepts.md)
+- Agent Contract (canonical): [`docs/agent-contract.md`](docs/agent-contract.md)
+- Agent roles and interfaces: [`docs/agents.md`](docs/agents.md)
+- Prompting guidance: [`docs/prompting.md`](docs/prompting.md)
+- Examples: [`docs/examples.md`](docs/examples.md)
+- Versioning policy: [`docs/versioning.md`](docs/versioning.md)
+- Roadmap: [`docs/roadmap.md`](docs/roadmap.md)
 
 ## Contributing
 
@@ -65,4 +66,3 @@ See `CONTRIBUTING.md` for setup, workflow, and PR expectations.
 ## Security
 
 See `SECURITY.md` for vulnerability reporting.
-
