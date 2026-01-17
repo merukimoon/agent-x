@@ -18,6 +18,7 @@ The initial agent specifications live in `agents/`. The index is [`agents/README
 - DBA: [`agents/dba/README.md`](../agents/dba/README.md)
 - DevOps: [`agents/devops/README.md`](../agents/devops/README.md)
 - Data Scientist: [`agents/data-scientist/README.md`](../agents/data-scientist/README.md)
+- PR Reviewer: [`agents/pr-reviewer/README.md`](../agents/pr-reviewer/README.md)
 - QA: [`agents/qa/README.md`](../agents/qa/README.md)
 - Technical Writer: [`agents/technical-writer/README.md`](../agents/technical-writer/README.md)
 - Legal: [`agents/legal/README.md`](../agents/legal/README.md)

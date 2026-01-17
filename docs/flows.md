@@ -13,6 +13,7 @@ This document defines canonical, repeatable orchestration flows for the initial 
 - QA: [`agents/qa/README.md`](../agents/qa/README.md)
 - Technical Writer: [`agents/technical-writer/README.md`](../agents/technical-writer/README.md)
 - Legal: [`agents/legal/README.md`](../agents/legal/README.md)
+- PR Reviewer: [`agents/pr-reviewer/README.md`](../agents/pr-reviewer/README.md)
 
 All agent-to-agent interaction MUST conform to the Agent Contract: [`docs/agent-contract.md`](agent-contract.md).
 
@@ -22,7 +23,8 @@ These rules apply to all flows in this document.
 
 - One Decision Maker per run. The Decision Maker is the single approval authority.
 - The Coordinator owns orchestration and aggregation and must not make final decisions on tradeoffs.
-- QA, CISO, and Legal outputs must classify findings as blocking or non blocking.
+- QA outputs must classify findings as blocking or non blocking.
+- CISO and Legal outputs must classify findings as blocking or warning, where warning is treated as non blocking.
 - All blocking findings must be resolved or explicitly accepted by the Decision Maker.
 - The Coordinator must always produce a final run summary, even if the run is blocked or partial.
 - Agents must record decisions and next steps in the Agent Contract envelope.
@@ -96,6 +98,7 @@ For additional agents, create matching folders under `outputs/` as needed, for e
 - `outputs/dba/`
 - `outputs/devops/`
 - `outputs/data-scientist/`
+- `outputs/pr-reviewer/`
 
 Agents MUST keep `result.json` aligned with `docs/agent-contract.md` for required fields and status semantics.
 
@@ -136,21 +139,27 @@ Mandatory:
 - CISO
 - Legal
 - Decision Maker
+- PR Reviewer (mandatory for PRs that change code or configuration)
 
 Optional (pulled in by scenario):
 
 - Tech Lead (if technical changes, not purely docs)
 - DevOps (if operational impact)
+ 
+Notes:
+
+- If the PR is docs only, PR Reviewer is optional unless explicitly requested.
 
 ### Ordered agent execution
 
 1) Coordinator
-2) Technical Writer
-3) QA
-4) CISO
-5) Legal
-6) Decision Maker
-7) Coordinator (final summary)
+2) PR Reviewer (if required by PR scope)
+3) Technical Writer
+4) QA
+5) CISO
+6) Legal
+7) Decision Maker
+8) Coordinator (final summary)
 
 ### Inputs per agent
 
@@ -171,6 +180,12 @@ QA inputs:
 - Acceptance criteria and risk areas from Coordinator and Technical Writer outputs.
 - Artifacts to validate and any required checks.
 
+PR Reviewer inputs:
+
+- PR link and diff summary, or equivalent change set description.
+- Reference docs or decisions relevant to the change.
+- Policy constraints for handling sensitive code and copying content.
+
 CISO inputs:
 
 - The artifacts to review (as references or payloads).
@@ -181,6 +196,8 @@ Legal inputs:
 
 - Repository license and notices (for example, `LICENSE`) and any changed licensing related content.
 - Any dependency or third party asset licensing context, if applicable (**TODO** when dependencies exist).
+
+If the PR includes dependency changes, the PR Reviewer must call out dependency scope and risks so that CISO and Legal reviews cover them explicitly.
 
 Decision Maker inputs:
 
@@ -204,6 +221,12 @@ QA outputs:
 
 - Test strategy and quality gates (data artifact recommended).
 - Classification of quality issues as blocking or non blocking.
+
+PR Reviewer outputs:
+
+- A PRReviewReport data artifact with findings categorized and marked as blocking or non blocking.
+- Risk assessment and test impact notes.
+- Explicit escalations to QA, CISO, or Legal when needed.
 
 CISO outputs:
 
@@ -233,6 +256,7 @@ Decision Maker outputs:
 - CISO must classify security and compliance findings as blocking or warning.
 - Legal must classify license and notice findings as blocking or warning.
 - Blocking findings must be resolved or explicitly accepted by the Decision Maker.
+- Coordinator must aggregate PR Reviewer findings into the final run summary when PR Reviewer ran.
 
 ### Escalation points
 

@@ -54,6 +54,7 @@ Engineering:
 - [`agents/tech-lead/README.md`](tech-lead/README.md) Produces technical plans, risks, dependencies, and estimates.
 - [`agents/architect/README.md`](architect/README.md) Produces architecture proposals and ADR like decision records.
 - [`agents/dba/README.md`](dba/README.md) Reviews data layer changes, migrations, performance, and rollback safety.
+- [`agents/pr-reviewer/README.md`](pr-reviewer/README.md) Reviews PR diffs and produces a structured PR review report.
 
 Operations:
 

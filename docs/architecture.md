@@ -78,7 +78,7 @@ This mapping defines the default participation model. Specific flows in `docs/fl
 
 | Scenario | Mandatory agents | Optional agents | Decision owner |
 | --- | --- | --- | --- |
-| Documentation or PR completion | Coordinator, Technical Writer, QA, CISO, Legal, Decision Maker | Tech Lead (if technical changes), DevOps (if operational impact), DBA (if data impact) | Decision Maker |
+| Documentation or PR completion | Coordinator, Technical Writer, QA, CISO, Legal, Decision Maker, PR Reviewer (code or config PRs) | Tech Lead (if technical changes), DevOps (if operational impact), DBA (if data impact) | Decision Maker |
 | Architecture or design change | Coordinator, Architect, Tech Lead, QA, CISO, Decision Maker | DBA (data impact), DevOps (infra impact), Legal (license or dependency changes), Data Scientist (model or analytics impact), Technical Writer (doc updates) | Decision Maker |
 | Performance, reliability, or cost issue | Coordinator, DevOps, DBA, QA, Decision Maker | Architect, Data Scientist, CISO (if security relevant), Tech Lead (if implementation planning needed) | Decision Maker |
 
