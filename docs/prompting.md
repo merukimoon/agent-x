@@ -27,5 +27,14 @@ Until there is a dedicated prompt registry, treat prompts as code:
 - Keep changes small and explained
 - Record user-visible prompt changes in `CHANGELOG.md` when they affect behavior (**TODO**)
 
-**TODO**: Decide where prompts live (e.g., `prompts/` directory) and document conventions.
+## Prompt storage and versioning
 
+Prompts live in `prompts/` and SHOULD be versioned so runs are reproducible.
+
+Recommended conventions:
+
+- Organize prompts by agent name (matching `agents/<agent-name>/`).
+- Use explicit versions (e.g., `vX.Y`) and keep prior versions available unless removal is required for security/privacy.
+- Reference prompts by identifier + version from agent specifications (e.g., `planning@v0.2`).
+
+See `prompts/README.md` for the repository-level prompt layout conventions.

@@ -16,6 +16,34 @@ The repository is currently in documentation scaffolding and does not yet includ
 - **Prompt management**: Storage, versioning, and composition of prompts
 - **Provider adapters**: Model/API adapters (if applicable) (**TODO**)
 
+## Repository layout
+
+This repository is structured so specifications and artifacts have obvious homes before any runtime code exists.
+
+- `agents/` Agent specifications (responsibilities, policies, checklists). No implementation code.
+- `prompts/` Versioned prompts used by agents.
+- `schemas/` Schemas for structured inputs/outputs and contract validation (format TBD).
+- `runs/` Execution run outputs and produced artifacts (usually not committed).
+- `docs/` Conceptual documentation and canonical specs (including `docs/agent-contract.md`).
+
+Example layout:
+
+```text
+.
+├── agents/
+│   └── README.md
+├── prompts/
+│   └── README.md
+├── schemas/
+│   └── README.md
+├── runs/
+│   └── README.md
+├── docs/
+│   ├── README.md
+│   └── agent-contract.md
+└── .github/
+```
+
 ## Data flow (typical)
 
 1) A caller creates a Task (goal + inputs + constraints)
@@ -27,4 +55,3 @@ The repository is currently in documentation scaffolding and does not yet includ
 
 - A full hosted service (unless explicitly added later) (**TODO**)
 - A large plugin ecosystem before the core stabilizes (**TODO**)
-
