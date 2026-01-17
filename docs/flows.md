@@ -5,8 +5,28 @@ This document defines canonical, repeatable orchestration flows for the initial 
 - Coordinator: [`agents/coordinator/README.md`](../agents/coordinator/README.md)
 - Decision Maker: [`agents/decision-maker/README.md`](../agents/decision-maker/README.md)
 - CISO: [`agents/ciso/README.md`](../agents/ciso/README.md)
+- Tech Lead: [`agents/tech-lead/README.md`](../agents/tech-lead/README.md)
+- Architect: [`agents/architect/README.md`](../agents/architect/README.md)
+- DBA: [`agents/dba/README.md`](../agents/dba/README.md)
+- DevOps: [`agents/devops/README.md`](../agents/devops/README.md)
+- Data Scientist: [`agents/data-scientist/README.md`](../agents/data-scientist/README.md)
+- QA: [`agents/qa/README.md`](../agents/qa/README.md)
+- Technical Writer: [`agents/technical-writer/README.md`](../agents/technical-writer/README.md)
+- Legal: [`agents/legal/README.md`](../agents/legal/README.md)
 
 All agent-to-agent interaction MUST conform to the Agent Contract: [`docs/agent-contract.md`](agent-contract.md).
+
+## Orchestration rules and invariants
+
+These rules apply to all flows in this document.
+
+- One Decision Maker per run. The Decision Maker is the single approval authority.
+- The Coordinator owns orchestration and aggregation and must not make final decisions on tradeoffs.
+- QA, CISO, and Legal outputs must classify findings as blocking or non blocking.
+- All blocking findings must be resolved or explicitly accepted by the Decision Maker.
+- The Coordinator must always produce a final run summary, even if the run is blocked or partial.
+- Agents must record decisions and next steps in the Agent Contract envelope.
+- Outputs must be inspectable and stored under `runs/<run-id>/` using the manual run layout.
 
 ## Run-level concepts
 
@@ -66,6 +86,17 @@ Each participating agent writes its contract response and notes to:
 - Decision Maker: `outputs/decision-maker/result.json` and `outputs/decision-maker/notes.md`
 - CISO: `outputs/ciso/result.json` and `outputs/ciso/notes.md`
 
+For additional agents, create matching folders under `outputs/` as needed, for example:
+
+- `outputs/qa/`
+- `outputs/technical-writer/`
+- `outputs/legal/`
+- `outputs/tech-lead/`
+- `outputs/architect/`
+- `outputs/dba/`
+- `outputs/devops/`
+- `outputs/data-scientist/`
+
 Agents MUST keep `result.json` aligned with `docs/agent-contract.md` for required fields and status semantics.
 
 ### Store artifacts
@@ -86,7 +117,9 @@ The final summary should capture: outcome, key decisions, artifacts produced, an
 
 ## Flow A: Documentation or PR completion
 
-Purpose: gate documentation updates behind a security and compliance review and explicit approval when tradeoffs exist.
+This flow is the canonical Orchestration v2 definition for documentation or PR completion. It supersedes the earlier minimal flow by making quality, security, and legal checks explicit gates.
+
+Purpose: gate documentation and PR outcomes behind documentation review, QA gates, security review, legal compliance review, and explicit approval when tradeoffs exist.
 
 ### Trigger
 
@@ -95,46 +128,48 @@ Purpose: gate documentation updates behind a security and compliance review and 
 
 ### Participating agents
 
-- Coordinator (drives the flow)
-- CISO (review gate)
-- Decision Maker (approval and tradeoffs)
+Mandatory:
 
-### Steps (bullet-based flow)
+- Coordinator
+- Technical Writer
+- QA
+- CISO
+- Legal
+- Decision Maker
 
-1) Trigger occurs.
-2) Coordinator collects context and artifacts.
-3) Coordinator determines required checks and sends review request to CISO.
-4) CISO reviews artifacts and emits a SecurityComplianceReport artifact.
-5) Coordinator forwards findings and any tradeoffs to the Decision Maker.
-6) Decision Maker approves, rejects, or requests changes.
-7) Coordinator produces the run summary and routes any follow-up work.
+Optional (pulled in by scenario):
 
-### Sequence (ASCII)
+- Tech Lead (if technical changes, not purely docs)
+- DevOps (if operational impact)
 
-```text
-Trigger
-  |
-  v
-Coordinator ---> CISO
-    |             |
-    |<--- report--|
-    |
-    +-----------> Decision Maker
-    |               |
-    |<--- decision--|
-    |
-    v
-Coordinator (final summary)
-```
+### Ordered agent execution
+
+1) Coordinator
+2) Technical Writer
+3) QA
+4) CISO
+5) Legal
+6) Decision Maker
+7) Coordinator (final summary)
 
 ### Inputs per agent
 
 Coordinator inputs:
 
 - TaskRequest describing what changed and why (goal and acceptance criteria).
-- Context containing the changed artifacts (paths, diffs, or contents).
-- Policy for the run (allowed tools, privacy rules, logging requirements).
+- Context containing changed artifacts (paths, diffs, or contents).
+- Policy for the run (privacy rules, allowed tools, logging requirements).
 - Context listing available agents and their specs.
+
+Technical Writer inputs:
+
+- Artifacts in scope and intended audience (if provided).
+- Source of truth references to validate against (for example, `docs/agent-contract.md`, `docs/flows.md`).
+
+QA inputs:
+
+- Acceptance criteria and risk areas from Coordinator and Technical Writer outputs.
+- Artifacts to validate and any required checks.
 
 CISO inputs:
 
@@ -142,48 +177,81 @@ CISO inputs:
 - The run Policy (especially privacy and logging constraints).
 - Baseline repository docs relevant to security and compliance (for example, `LICENSE`, `SECURITY.md`, `CODE_OF_CONDUCT.md`).
 
+Legal inputs:
+
+- Repository license and notices (for example, `LICENSE`) and any changed licensing related content.
+- Any dependency or third party asset licensing context, if applicable (**TODO** when dependencies exist).
+
 Decision Maker inputs:
 
-- The CISO report artifact and a summary of findings.
-- Explicit options when tradeoffs exist, including who is impacted and what is at risk.
-- Acceptance criteria to decide against.
+- Aggregated findings and options from Coordinator.
+- QA, CISO, and Legal findings classified as blocking or non blocking.
+- Any tradeoffs and scope questions that require approval.
 
 ### Outputs per agent
 
 Coordinator outputs:
 
-- A response that includes routing decisions and assigned next steps.
-- A final run summary artifact (conceptual) as a `data` artifact when useful.
+- Routing decisions and assigned next steps.
+- Final run summary in `runs/<run-id>/summary/final.md`.
+
+Technical Writer outputs:
+
+- Documentation review findings and a concrete update plan (data artifact recommended).
+- Next steps for documentation edits and consistency fixes.
+
+QA outputs:
+
+- Test strategy and quality gates (data artifact recommended).
+- Classification of quality issues as blocking or non blocking.
 
 CISO outputs:
 
-- A `data` artifact shaped like `SecurityComplianceReport` (see `agents/ciso/README.md`).
-- Decisions that classify blocking versus warning findings.
+- A `data` artifact shaped like `SecurityComplianceReport`.
+- Classification decisions for blocking versus warning findings.
+- Remediation next steps.
+
+Legal outputs:
+
+- A `data` artifact shaped like `LicenseComplianceReport`.
+- Classification decisions for blocking versus warning findings.
 - Remediation next steps.
 
 Decision Maker outputs:
 
-- A decision record: approve, reject, or request changes, with rationale.
+- Approve, reject, or request changes, with rationale.
 - Delegated next steps back to the Coordinator with constraints.
 
 ### Decision points
 
-- Decision Maker: whether to accept risk, request changes, or reject the outcome.
-- Coordinator: whether findings can be remediated within scope or require re-scoping.
+- Decision Maker: approve, reject, request changes, or accept documented risk.
+- Coordinator: determine which optional agents are needed and whether scope must change.
+
+### Quality, security, and legal gates
+
+- QA must classify quality issues as blocking or non blocking.
+- CISO must classify security and compliance findings as blocking or warning.
+- Legal must classify license and notice findings as blocking or warning.
+- Blocking findings must be resolved or explicitly accepted by the Decision Maker.
 
 ### Escalation points
 
-- Any blocking CISO finding escalates to the Decision Maker.
-- Any legal, compliance, or disclosure commitment escalates to a human maintainer (**TODO** define thresholds).
+- Any blocking QA, CISO, or Legal finding escalates to the Decision Maker.
+- Any legal or compliance commitment escalates to a human maintainer when required (**TODO** define thresholds).
 
 ### Artifacts produced
 
-- CISO: `SecurityComplianceReport` (data artifact).
-- Coordinator: run summary (data artifact, optional), and a consolidated list of next steps.
+- Technical Writer: documentation review report (data artifact, recommended).
+- QA: test strategy report (data artifact, recommended).
+- CISO: security and compliance report (data artifact).
+- Legal: license compliance report (data artifact).
+- Coordinator: final run summary in `runs/<run-id>/summary/final.md`.
 
 ## Flow B: Architecture or design change proposal
 
-Purpose: make design changes explicit, reviewable, and decision-traceable, with clear ownership for tradeoffs.
+This flow is the canonical Orchestration v2 definition for architecture and design change proposals. It extends the earlier flow by adding explicit QA gates and optional specialized reviews.
+
+Purpose: make design changes explicit, reviewable, and decision traceable, with clear ownership for tradeoffs.
 
 ### Trigger
 
@@ -192,19 +260,32 @@ Purpose: make design changes explicit, reviewable, and decision-traceable, with 
 
 ### Participating agents
 
-- Coordinator (drives structure and routing)
-- Decision Maker (owns decisions)
-- CISO (gates on security and compliance impacts)
+Mandatory:
 
-### Steps (bullet-based flow)
+- Coordinator
+- Architect
+- Tech Lead
+- QA
+- CISO
+- Decision Maker
 
-1) Trigger occurs with a proposed change.
-2) Coordinator normalizes the proposal into options and acceptance criteria.
-3) Coordinator requests CISO review if the proposal touches security, privacy, policy, prompts, or schemas.
-4) CISO emits findings and classification (block or warning).
-5) Coordinator compiles a decision request: options, constraints, findings, and recommended path.
-6) Decision Maker selects an option, sets constraints, and delegates follow-up work.
-7) Coordinator records the decision outcome and produces a run summary that is ready to implement later.
+Optional (pulled in by scenario):
+
+- DBA (data impact)
+- DevOps (infra impact)
+- Legal (license or dependency changes)
+- Data Scientist (model or analytics impact)
+
+### Ordered agent execution
+
+1) Coordinator
+2) Architect
+3) Tech Lead
+4) Optional specialists (DBA, DevOps, Data Scientist, Legal) as needed
+5) QA
+6) CISO
+7) Decision Maker
+8) Coordinator (final summary)
 
 ### Inputs per agent
 
@@ -214,7 +295,29 @@ Coordinator inputs:
 - Constraints (policy, compatibility requirements, versioning expectations).
 - Any prior decisions that apply.
 
-CISO inputs (if in scope):
+Architect inputs:
+
+- Proposal scope, goals, and constraints.
+- Prior decisions and compatibility expectations.
+
+Tech Lead inputs:
+
+- Proposed architecture direction and acceptance criteria.
+- Constraints and sequencing expectations.
+
+Optional specialist inputs:
+
+- DBA: data model impact, query patterns, migration constraints.
+- DevOps: operational impact, scaling and cost constraints, observability requirements.
+- Data Scientist: data requirements, metrics, evaluation and experiment needs.
+- Legal: licensing and notice impact if third party assets or distribution terms are affected.
+
+QA inputs:
+
+- Proposed changes and acceptance criteria.
+- Risk areas and verification expectations.
+
+CISO inputs:
 
 - The proposal and impacted artifacts.
 - The run Policy and any privacy constraints.
@@ -231,8 +334,28 @@ Coordinator outputs:
 
 - A decision request artifact (conceptual) as `data` if helpful.
 - Clear `next_steps[]` assignments for drafting and review.
+- Final run summary in `runs/<run-id>/summary/final.md`.
 
-CISO outputs (if in scope):
+Architect outputs:
+
+- Architecture proposal and design decisions with rationale (data artifacts recommended).
+
+Tech Lead outputs:
+
+- Technical plan outline, risks, dependencies, and verification guidance (data artifact recommended).
+
+Optional specialist outputs:
+
+- DBA: database review report (data artifact recommended).
+- DevOps: operations plan including scaling and cost notes (data artifact recommended).
+- Data Scientist: analysis plan including data requirements and metrics (data artifact recommended).
+- Legal: license compliance report when in scope (data artifact).
+
+QA outputs:
+
+- Quality gates and regression concerns, classified as blocking or non blocking (data artifact recommended).
+
+CISO outputs:
 
 - Findings with classification and recommended mitigations.
 
@@ -246,6 +369,13 @@ Decision Maker outputs:
 - Decision Maker: selects an option or defers with explicit next steps and owners.
 - Coordinator: determines whether the proposal is sufficiently specified to proceed or is blocked.
 
+### Quality, security, and legal gates
+
+- QA must classify quality issues as blocking or non blocking.
+- CISO must classify security and compliance findings as blocking or warning.
+- Legal must classify license and notice findings as blocking or warning when Legal is in scope.
+- Blocking findings must be resolved or explicitly accepted by the Decision Maker.
+
 ### Escalation points
 
 - Blocking CISO findings escalate to the Decision Maker and may require human risk acceptance.
@@ -256,3 +386,129 @@ Decision Maker outputs:
 - Coordinator: decision request (optional data artifact) and run summary (optional data artifact).
 - Decision Maker: decision record (data artifact, optional) and delegated next steps.
 - CISO: findings report (data artifact) when in scope.
+
+## Flow C: Performance, reliability, or cost issue
+
+This flow is the canonical Orchestration v2 definition for issues where performance, reliability, or cost are primary drivers.
+
+### Trigger
+
+- A performance regression, reliability risk, incident pattern, or cost spike is reported.
+- A proposal specifically targets scaling, reliability posture, or cloud resource costs.
+
+### Participating agents
+
+Mandatory:
+
+- Coordinator
+- DevOps
+- DBA
+- QA
+- Decision Maker
+
+Optional (pulled in by scenario):
+
+- Architect (system level changes)
+- Data Scientist (analysis, metrics, experiment design)
+- CISO (if security or privacy relevant)
+- Tech Lead (if implementation planning and sequencing is needed)
+
+### Ordered agent execution
+
+1) Coordinator
+2) DevOps
+3) DBA
+4) Optional specialists (Architect, Data Scientist, CISO, Tech Lead) as needed
+5) QA
+6) Decision Maker
+7) Coordinator (final summary)
+
+### Inputs per agent
+
+Coordinator inputs:
+
+- Incident or issue description and any constraints.
+- Affected artifacts or evidence references, if available.
+- Run Policy constraints for logging and data handling.
+
+DevOps inputs:
+
+- Service objectives and constraints if known (**TODO**).
+- Observability expectations and any existing telemetry constraints.
+- Cost and scaling concerns in scope.
+
+DBA inputs:
+
+- Data access patterns, query patterns, and any migration context.
+- Availability and rollback constraints if relevant.
+
+Optional specialist inputs:
+
+- Architect: proposed system changes and interface constraints.
+- Data Scientist: metrics, analysis plan, and experiment design requirements.
+- CISO: security and privacy implications for logging, data handling, or access patterns.
+- Tech Lead: sequencing, risks, and implementation plan.
+
+QA inputs:
+
+- Acceptance criteria for the fix and regression surfaces.
+- Any known failure modes and test expectations.
+
+Decision Maker inputs:
+
+- Options and tradeoffs, including cost and reliability impact.
+- QA findings classified as blocking or non blocking.
+- DBA and DevOps risks and constraints.
+
+### Outputs per agent
+
+DevOps outputs:
+
+- Operations plan including monitoring requirements, scaling triggers, and cost optimization options (data artifact recommended).
+
+DBA outputs:
+
+- Data layer review including performance risks, migration notes, and rollback guidance when relevant (data artifact recommended).
+
+QA outputs:
+
+- Quality gates and regression plan, classified as blocking or non blocking (data artifact recommended).
+
+Optional specialist outputs:
+
+- Architect: design notes and compatibility impact.
+- Data Scientist: analysis plan and metrics.
+- CISO: security and privacy findings if in scope.
+- Tech Lead: implementation plan and dependencies if in scope.
+
+Decision Maker outputs:
+
+- Approve, reject, or request changes, with rationale.
+- Delegated next steps back to the Coordinator with constraints.
+
+Coordinator outputs:
+
+- Final run summary in `runs/<run-id>/summary/final.md`.
+
+### Decision points
+
+- Decision Maker: selects an option and approves tradeoffs or defers with owners.
+- Coordinator: determines which optional agents are required based on impact.
+
+### Quality, security, and legal gates
+
+- QA must classify quality issues as blocking or non blocking.
+- CISO is a gate only when security or privacy is implicated by the change.
+- Blocking findings must be resolved or explicitly accepted by the Decision Maker.
+
+### Escalation points
+
+- Blocking QA findings escalate to the Decision Maker.
+- Security relevant concerns escalate to CISO when in scope.
+- Budget or cost commitments may require human maintainer approval (**TODO** define thresholds).
+
+### Artifacts produced and run storage
+
+- Agent outputs live under `runs/<run-id>/outputs/<agent>/result.json`.
+- Produced files and diffs live under `runs/<run-id>/artifacts/`.
+- The final aggregation lives under `runs/<run-id>/summary/final.md`.

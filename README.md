@@ -55,7 +55,7 @@ print(result.output)
 
 - Getting oriented: [`docs/README.md`](docs/README.md)
 - Architecture overview: [`docs/architecture.md`](docs/architecture.md)
-- Orchestration flows: [`docs/flows.md`](docs/flows.md)
+- Orchestration v2 flows: [`docs/flows.md`](docs/flows.md)
 - Concepts and terms: [`docs/concepts.md`](docs/concepts.md)
 - Agent Contract (canonical): [`docs/agent-contract.md`](docs/agent-contract.md)
 - Agent roles and interfaces: [`docs/agents.md`](docs/agents.md)

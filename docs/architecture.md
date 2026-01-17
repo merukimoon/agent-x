@@ -57,11 +57,30 @@ Orchestration MUST be explicit and inspectable:
 
 All agent interactions MUST follow [`docs/agent-contract.md`](agent-contract.md). Canonical workflows are defined in [`docs/flows.md`](flows.md).
 
+### Orchestration v2 overview
+
+Orchestration v2 integrates the full agent set and makes participation explicit:
+
+- The Coordinator owns routing, sequencing, and aggregation.
+- The Decision Maker is the single authority for approvals within a run.
+- QA, CISO, and Legal reviews are explicit gates where applicable.
+- Specialized agents are pulled in by scenario, not always on.
+
 ### Roles in flows (summary)
 
 - Coordinator: decomposes tasks, delegates work, aggregates final outcome, emits run summary.
 - Decision Maker: selects among options, resolves conflicts, accepts or rejects risk, delegates next steps.
 - CISO: reviews artifacts, classifies findings (block or warning), emits a structured report.
+
+### Scenario to agent mapping
+
+This mapping defines the default participation model. Specific flows in `docs/flows.md` are canonical.
+
+| Scenario | Mandatory agents | Optional agents | Decision owner |
+| --- | --- | --- | --- |
+| Documentation or PR completion | Coordinator, Technical Writer, QA, CISO, Legal, Decision Maker | Tech Lead (if technical changes), DevOps (if operational impact), DBA (if data impact) | Decision Maker |
+| Architecture or design change | Coordinator, Architect, Tech Lead, QA, CISO, Decision Maker | DBA (data impact), DevOps (infra impact), Legal (license or dependency changes), Data Scientist (model or analytics impact), Technical Writer (doc updates) | Decision Maker |
+| Performance, reliability, or cost issue | Coordinator, DevOps, DBA, QA, Decision Maker | Architect, Data Scientist, CISO (if security relevant), Tech Lead (if implementation planning needed) | Decision Maker |
 
 ### Example flow diagram
 
@@ -89,6 +108,33 @@ Coordinator ---> CISO
     |
     v
 Coordinator (final summary)
+```
+
+### Full system view (ASCII)
+
+This is the high level interaction shape across a run. Not all agents run in every scenario.
+
+```text
+Trigger
+  |
+  v
+Coordinator
+  |
+  +--> Technical Writer (docs quality, if in scope)
+  +--> Tech Lead (plan, if in scope)
+  +--> Architect (design, if in scope)
+  +--> DBA (data layer, if in scope)
+  +--> DevOps (ops, scaling, cost, if in scope)
+  +--> Data Scientist (analysis, if in scope)
+  +--> QA (quality gate, if in scope)
+  +--> CISO (security gate, if in scope)
+  +--> Legal (license gate, if in scope)
+  |
+  v
+Decision Maker (single approval authority)
+  |
+  v
+Coordinator (final run summary)
 ```
 
 ## Data flow (typical)
