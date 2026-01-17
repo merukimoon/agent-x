@@ -2,6 +2,9 @@
 
 ## From Ad-Hoc AI Usage to Governed Agent Systems
 
+**Version:** 1.0.1  
+**Last updated:** 2026-01-17
+
 > This white paper is published at:  
 > https://merukimoon.com/en/thinking/white-papers/agentic-squad-framework
 >
