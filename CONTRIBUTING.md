@@ -66,6 +66,7 @@ Best ways to contribute:
 - Clarify terminology and fill in **TODO** markers in docs
 - Add minimal runnable examples once an API exists (**TODO**)
 - Open issues for design proposals and trade-offs
+- Follow Soft-Verify for terminology: if you introduce a new term in docs or agent specs, add it to `docs/reference/terminology-glossary.md` or reuse an existing term; glossary updates are encouraged but do not block reviews.
 
 Before submitting a large change:
 

@@ -10,6 +10,7 @@ The format is based on Keep a Changelog, and this project intends to follow Sema
 
 - Initial repository scaffolding (documentation, community health files, templates)
 - (**TODO**) First runnable framework skeleton
+- Terminology glossary (v0) with Soft-Verify guidance (canonical but subject to refinement; glossary changes tracked here, non-blocking)
 
 ### Changed
 
@@ -18,4 +19,3 @@ The format is based on Keep a Changelog, and this project intends to follow Sema
 ### Fixed
 
 - N/A
-

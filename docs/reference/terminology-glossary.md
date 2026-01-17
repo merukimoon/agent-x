@@ -1,6 +1,6 @@
-# Terminology Glossary (Canonical)
+# Terminology Glossary (Canonical, v0)
 
-This glossary is the single source of truth for naming across the Agentic Squad Framework. Terms are implementation-agnostic and apply to agents, prompts, runs, and documentation.
+This glossary is the single source of truth for naming across the Agentic Squad Framework. Terms are implementation-agnostic and apply to agents, prompts, runs, and documentation. Version: v0 (canonical but subject to refinement; keep changes tracked in `CHANGELOG.md`).
 
 ## Agent
 
