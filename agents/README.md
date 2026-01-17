@@ -35,3 +35,11 @@ All agents MUST conform to the Agent Contract:
 
 An agent spec SHOULD state which conformance level it targets (L0/L1/L2).
 
+## Initial agents
+
+These are the first specification level agents in this repository:
+
+- [`agents/coordinator/README.md`](coordinator/README.md) Orchestrates runs by routing tasks and aggregating outputs.
+- [`agents/decision-maker/README.md`](decision-maker/README.md) Resolves tradeoffs and conflicts and records final decisions.
+- [`agents/ciso/README.md`](ciso/README.md) Reviews artifacts for security, privacy, and compliance and produces a report.
+

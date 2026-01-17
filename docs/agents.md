@@ -6,6 +6,14 @@ This document describes agent responsibilities and the intended interface bounda
 
 This section summarizes the **Agent Contract** for consistent agent inputs/outputs and enforceable boundaries. The canonical, detailed specification is [`docs/agent-contract.md`](agent-contract.md).
 
+## Initial agent set
+
+The first agent specifications live in `agents/`:
+
+- Coordinator: [`agents/coordinator/README.md`](../agents/coordinator/README.md)
+- Decision Maker: [`agents/decision-maker/README.md`](../agents/decision-maker/README.md)
+- CISO: [`agents/ciso/README.md`](../agents/ciso/README.md)
+
 ### Overview
 
 The Agent Contract defines:
