@@ -66,7 +66,7 @@ print(result.output)
 
 ## White Paper
 
-See the canonical white paper for background, design rationale, and flow overview: [`docs/white-papers/agentic-squad-framework.md`](docs/white-papers/agentic-squad-framework.md).
+See the canonical white paper for the framework’s conceptual model, roles, terminology, and verification approach: [`docs/white-papers/agentic-squad-framework.md`](docs/white-papers/agentic-squad-framework.md).
 
 ## Contributing
 
