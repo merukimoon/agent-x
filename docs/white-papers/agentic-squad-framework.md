@@ -15,6 +15,14 @@ This paper introduces Agentic Squad Framework, a lightweight, governance-first a
 
 The goal is not more automation, but predictable, scalable collaboration between humans and agents.
 
+This paper is for engineers and maintainers who need agent behavior to be reviewable and repeatable. Read it to understand the core roles, shared terminology, and verification boundaries that make multi-agent work operationally safe.
+
+## What Makes This Framework Different
+
+- Role-based agents, not prompt-centric helpers: responsibilities and boundaries come first, prompts follow.
+- Terminology as a first-class system component: shared meaning is treated as infrastructure, not optional documentation.
+- Verification as an explicit boundary: quality, security, and compliance gates are defined as part of the system, not left to ad-hoc review.
+
 ## 1. The Problem: AI Without Structure
 
 Most teams start using AI agents organically:
@@ -120,6 +128,8 @@ The framework supports progressive rigor:
 This mirrors how mature engineering systems evolve.
 
 ## System Overview
+
+This diagram summarizes how the principles above combine into a single system.
 
 ```mermaid
 flowchart TD
@@ -228,7 +238,7 @@ The goal is better systems.
 
 ## Practical Run Examples
 
-This repository contains practical run examples demonstrating how the framework operates in real scenarios.
+This repository contains practical run examples that demonstrate the concepts and boundaries described in this paper in real scenarios.
 
 See:
 
@@ -236,3 +246,7 @@ See:
 - docs/run-examples/pr-completion
 
 These examples focus on process, role boundaries, and verification, not just outputs. They are intended to make the system behavior observable, explainable, and reproducible.
+
+## Status and Evolution
+
+This white paper is v1 and describes stable principles, but some components are expected to evolve. In particular, terminology details and verification rigor may change over time as the repository matures and run examples expand.
