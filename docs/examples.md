@@ -1,6 +1,11 @@
 # Examples
 
-These examples are intentionally minimal and may be pseudo-code until the framework API is implemented (**TODO**).
+## Run example: Flow A (PR completion)
+
+- Reference: `docs/run-examples/pr-completion/README.md`
+- Purpose: shows the golden path for manual execution of Flow A using the run layout and Agent Contract outputs.
+
+These code-oriented examples remain minimal and may be pseudo-code until the framework API is implemented (**TODO**).
 
 ## Example 1: Single agent “task runner”
 
@@ -35,4 +40,3 @@ reviewer = Agent(name="reviewer", prompt="Critique and verify.") # TODO
 squad = Squad(agents=[executor, reviewer]) # TODO
 result = squad.run(task="Refactor module layout without breaking public API") # TODO
 ```
-

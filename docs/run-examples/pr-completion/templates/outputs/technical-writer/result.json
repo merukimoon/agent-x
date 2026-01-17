@@ -1,0 +1,44 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-17_1200-pr-docs-and-config",
+  "task_id": "task-1234",
+  "agent": {
+    "name": "technical-writer",
+    "role": "Technical Writer",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "Docs updated for feature flag behavior; terminology aligned with architecture.",
+  "decisions": [
+    {
+      "id": "tw-dec-1",
+      "title": "Align feature flag description",
+      "rationale": "Ensure users know default and rollout plan",
+      "scope": "docs/flows.md"
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "tw-ns-1",
+      "action": "Apply copyedits and link to architecture section",
+      "reason": "Keep docs consistent",
+      "owner": "coordinator"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "tw-art-1",
+      "kind": "data",
+      "description": "Documentation review notes",
+      "payload": {
+        "path": "artifacts/doc-review-notes.txt",
+        "action": "create",
+        "content": "Minimal copy changes and link fixes.",
+        "content_encoding": "utf-8",
+        "mime_type": "text/plain"
+      }
+    }
+  ],
+  "errors": [],
+  "logs": []
+}

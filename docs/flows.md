@@ -120,7 +120,7 @@ The final summary should capture: outcome, key decisions, artifacts produced, an
 
 ## Flow A: Documentation or PR completion
 
-This flow is the canonical Orchestration v2 definition for documentation or PR completion. It supersedes the earlier minimal flow by making quality, security, and legal checks explicit gates.
+This flow is the canonical Orchestration v2 definition for documentation or PR completion. It supersedes the earlier minimal flow by making quality, security, and legal checks explicit gates. For a full example run, see `docs/run-examples/pr-completion/README.md`.
 
 Purpose: gate documentation and PR outcomes behind documentation review, QA gates, security review, legal compliance review, and explicit approval when tradeoffs exist.
 

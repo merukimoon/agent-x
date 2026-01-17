@@ -1,0 +1,49 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-17_1200-pr-docs-and-config",
+  "task_id": "task-1234",
+  "agent": {
+    "name": "qa",
+    "role": "QA",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "Quality gates defined; no blocking issues found.",
+  "decisions": [
+    {
+      "id": "qa-dec-1",
+      "title": "QA gates for feature flag doc and config",
+      "rationale": "Ensure docs and config changes are exercised"
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "qa-ns-1",
+      "action": "Verify feature flag default and docs match",
+      "reason": "Prevent rollout confusion",
+      "owner": "coordinator"
+    },
+    {
+      "id": "qa-ns-2",
+      "action": "Run smoke tests covering flag on/off paths (if available)",
+      "reason": "Check regression risk",
+      "owner": "coordinator"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "qa-art-1",
+      "kind": "data",
+      "description": "Test strategy summary",
+      "payload": {
+        "path": "artifacts/qa-test-strategy.txt",
+        "action": "create",
+        "content": "Coverage: flag default, docs link validity, smoke tests if available.\nRisks: low; no code paths changed beyond config default.",
+        "content_encoding": "utf-8",
+        "mime_type": "text/plain"
+      }
+    }
+  ],
+  "errors": [],
+  "logs": []
+}

@@ -1,0 +1,31 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-17_1200-pr-docs-and-config",
+  "task_id": "task-1234",
+  "agent": {
+    "name": "decision-maker",
+    "role": "Decision Maker",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "Approved with one non blocking note; proceed after minor config comment.",
+  "decisions": [
+    {
+      "id": "dm-dec-1",
+      "title": "Approve PR #42",
+      "rationale": "All gates passed; only non blocking suggestion remains",
+      "scope": "PR #42"
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "dm-ns-1",
+      "action": "Add config comment per PR Reviewer suggestion",
+      "reason": "Documentation of rollout plan",
+      "owner": "coordinator"
+    }
+  ],
+  "artifacts": [],
+  "errors": [],
+  "logs": []
+}
