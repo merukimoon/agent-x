@@ -1,7 +1,7 @@
 .PHONY: help run-new run-tree
 
 help:
-	@echo "agentsquad-framework: manual run scaffolding"
+	@echo "agentic-squad-framework: manual run scaffolding"
 	@echo ""
 	@echo "Targets:"
 	@echo "  make help"

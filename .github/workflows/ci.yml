@@ -16,6 +16,5 @@ jobs:
 
       - name: Repository sanity
         run: |
-          echo "CI placeholder for agentsquad-framework"
+          echo "CI placeholder for agentic-squad-framework"
           echo "TODO: add language-specific build/test/lint steps."
-

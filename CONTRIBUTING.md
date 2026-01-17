@@ -1,4 +1,4 @@
-# Contributing to agentsquad-framework
+# Contributing to agentic-squad-framework
 
 Thanks for helping improve this project. This guide describes how to propose changes and what we expect in pull requests.
 
@@ -16,7 +16,7 @@ Steps:
 
 1) Fork the repository
 2) Clone your fork:
-   - `git clone https://github.com/<you>/agentsquad-framework.git`
+   - `git clone https://github.com/<you>/agentic-squad-framework.git`
 3) Create a branch:
    - `git checkout -b <type>/<short-description>`
 
@@ -75,4 +75,3 @@ Before submitting a large change:
 ## Code of Conduct
 
 This project uses the Contributor Covenant. See `CODE_OF_CONDUCT.md`.
-

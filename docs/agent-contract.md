@@ -1,6 +1,6 @@
 # Agent Contract (Canonical)
 
-This document defines the **Agent Contract** for `agentsquad-framework`. It is intentionally implementation-agnostic and uses normative keywords:
+This document defines the **Agent Contract** for `agentic-squad-framework`. It is intentionally implementation-agnostic and uses normative keywords:
 
 - **MUST**: required for conformance
 - **SHOULD**: strongly recommended

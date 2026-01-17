@@ -57,9 +57,9 @@ Orchestration MUST be explicit and inspectable:
 
 All agent interactions MUST follow [`docs/agent-contract.md`](agent-contract.md). Canonical workflows are defined in [`docs/flows.md`](flows.md).
 
-### Orchestration v2 overview
+### Orchestration overview
 
-Orchestration v2 integrates the full agent set and makes participation explicit:
+Orchestration integrates the full agent set and makes participation explicit:
 
 - The Coordinator owns routing, sequencing, and aggregation.
 - The Decision Maker is the single authority for approvals within a run.
