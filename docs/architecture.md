@@ -44,6 +44,53 @@ Example layout:
 └── .github/
 ```
 
+## Orchestration & Flows
+
+### Orchestration philosophy
+
+Orchestration MUST be explicit and inspectable:
+
+- The Coordinator drives flows by routing tasks, collecting inputs, and aggregating outcomes.
+- The Coordinator does not make final decisions when tradeoffs exist.
+- The Decision Maker resolves conflicts, approves outcomes, and records rationale.
+- The CISO performs security, privacy, and compliance review as a gating step when changes touch policies, prompts, schemas, or other sensitive areas.
+
+All agent interactions MUST follow [`docs/agent-contract.md`](agent-contract.md). Canonical workflows are defined in [`docs/flows.md`](flows.md).
+
+### Roles in flows (summary)
+
+- Coordinator: decomposes tasks, delegates work, aggregates final outcome, emits run summary.
+- Decision Maker: selects among options, resolves conflicts, accepts or rejects risk, delegates next steps.
+- CISO: reviews artifacts, classifies findings (block or warning), emits a structured report.
+
+### Example flow diagram
+
+Bullet-based:
+
+- Trigger occurs (for example, documentation updated).
+- Coordinator collects artifacts and defines required checks.
+- CISO reviews artifacts and emits a SecurityComplianceReport.
+- Decision Maker approves, rejects, or requests changes.
+- Coordinator aggregates outcomes and publishes run summary and next steps.
+
+Sequence (ASCII):
+
+```text
+Trigger
+  |
+  v
+Coordinator ---> CISO
+    |             |
+    |<--- report--|
+    |
+    +-----------> Decision Maker
+    |               |
+    |<--- decision--|
+    |
+    v
+Coordinator (final summary)
+```
+
 ## Data flow (typical)
 
 1) A caller creates a Task (goal + inputs + constraints)
