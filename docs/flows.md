@@ -33,6 +33,57 @@ Runs may partially fail without losing traceability:
 - If an agent returns `error`, the Coordinator either retries with an adjusted input set (if safe) or escalates with a structured summary.
 - A run MUST end with a final Coordinator response that summarizes what is complete, what is pending, and what was deferred.
 
+## Manual execution using runs/
+
+This repository supports a manual, language-agnostic run workflow. The goal is consistency and traceability, not automation.
+
+### Create a run
+
+From the repository root:
+
+- `make run-new NAME="<short-slug>"`
+
+This creates a new folder under `runs/` with a UTC timestamp prefix, for example:
+
+- `runs/2026-01-17_0930-docs-pr-audit/`
+
+List a run’s contents:
+
+- `make run-tree RUN="<run-folder-name>"`
+
+### Fill inputs
+
+In the run folder:
+
+- `inputs/request.md` contains the TaskRequest: goal, inputs, acceptance criteria, and key policy constraints.
+- `inputs/context.md` contains supporting context: links, excerpts, and relevant repository state.
+
+### Record agent outputs
+
+Each participating agent writes its contract response and notes to:
+
+- Coordinator: `outputs/coordinator/result.json` and `outputs/coordinator/notes.md`
+- Decision Maker: `outputs/decision-maker/result.json` and `outputs/decision-maker/notes.md`
+- CISO: `outputs/ciso/result.json` and `outputs/ciso/notes.md`
+
+Agents MUST keep `result.json` aligned with `docs/agent-contract.md` for required fields and status semantics.
+
+### Store artifacts
+
+If the run produces files, diffs, or structured reports, store them under:
+
+- `artifacts/`
+
+Reference any produced artifacts from the corresponding agent `result.json` and from the final summary.
+
+### Produce the final summary
+
+The Coordinator produces the end-of-run aggregation in:
+
+- `summary/final.md`
+
+The final summary should capture: outcome, key decisions, artifacts produced, and follow-up actions.
+
 ## Flow A: Documentation or PR completion
 
 Purpose: gate documentation updates behind a security and compliance review and explicit approval when tradeoffs exist.

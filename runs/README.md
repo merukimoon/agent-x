@@ -45,3 +45,16 @@ Run outputs are usually **not committed** to git:
 
 This repository ignores `runs/` by default, while keeping `runs/README.md` tracked.
 
+## How to create a run
+
+From the repository root:
+
+- `make run-new NAME="<short-slug>"`
+
+Example:
+
+- `make run-new NAME="docs-pr-audit"`
+
+Then inspect it with:
+
+- `make run-tree RUN="<run-folder-name>"`
