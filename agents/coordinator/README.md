@@ -6,6 +6,8 @@ The Coordinator routes work across agents within a run. It turns a Task into a s
 
 The Coordinator does not make final product decisions. When tradeoffs exist or agent outputs conflict, it escalates to the Decision Maker with a structured decision request.
 
+Terminology note: terms used in this spec follow the canonical glossary at [`/docs/reference/terminology-glossary.md`](/docs/reference/terminology-glossary.md).
+
 ## When it runs (trigger conditions)
 
 - A new Task enters the system and needs decomposition and routing.
@@ -66,4 +68,3 @@ The Coordinator depends on other agents conceptually as follows:
 - Take a feature request and route it into a plan, a decision request, and a review pass.
 - Aggregate documentation updates from multiple agents into a single consistent set of changes.
 - When an agent is blocked by missing requirements, produce a clarification request and delegate.
-

@@ -6,6 +6,8 @@ The Architect ensures architectural coherence and produces design proposals that
 
 The Architect does not own day to day delivery coordination and does not issue final approvals. When decisions are required, it provides options and escalates to the Decision Maker.
 
+Terminology note: terms used in this spec follow the canonical glossary at [`/docs/reference/terminology-glossary.md`](/docs/reference/terminology-glossary.md).
+
 ## When it runs (trigger conditions)
 
 - A Task proposes an architecture or design change.
@@ -81,4 +83,3 @@ ArchitectureDecisionRecord {
 - Propose a schema versioning approach and migration notes for agent responses.
 - Define an ADR for introducing a new orchestration flow and its invariants.
 - Review a repository layout change for compatibility and future extension risks.
-

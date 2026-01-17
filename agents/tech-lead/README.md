@@ -6,6 +6,8 @@ The Tech Lead translates goals into an implementable technical plan. It estimate
 
 The Tech Lead does not make final product decisions. When tradeoffs exist, it provides options and escalates to the Decision Maker for approval.
 
+Terminology note: terms used in this spec follow the canonical glossary at [`/docs/reference/terminology-glossary.md`](/docs/reference/terminology-glossary.md).
+
 ## When it runs (trigger conditions)
 
 - A Task needs an implementation plan, sequencing, or effort estimation.
@@ -74,4 +76,3 @@ TechnicalPlan {
 - Produce a plan and risk list for introducing a new schema definition and migration path.
 - Estimate effort and dependencies for adding a new agent flow and updating documentation.
 - Propose an implementation approach for integrating run outputs into a review process.
-
