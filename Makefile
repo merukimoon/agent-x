@@ -1,4 +1,4 @@
-.PHONY: help run-new run-tree agent flow
+.PHONY: help run-new run-tree agent flow run-status
 
 help:
 	@echo "agentic-squad-framework: manual run scaffolding"
@@ -13,6 +13,9 @@ help:
 	@echo ""
 	@echo "  make run-tree RUN=\"<run-folder-name>\""
 	@echo "    Print a tree (or listing) for the specified run folder."
+	@echo ""
+	@echo "  make run-status RUN=\"<run-folder-name>\""
+	@echo "    Print plan status summary for the specified run."
 
 run-new:
 	@set -eu; \
@@ -80,28 +83,7 @@ run-status:
 		echo "ERROR: RUN is required. Example: make run-status RUN=\"2026-01-18_1124-pr-docs-and-config-3\""; \
 		exit 2; \
 	fi; \
-	RUN_DIR="runs/$$RUN"; \
-	if [ ! -d "$$RUN_DIR" ]; then \
-		echo "ERROR: run directory not found: $$RUN_DIR"; \
-		exit 2; \
-	fi; \
-	echo "Run: $$RUN"; \
-	echo ""; \
-	echo "Inputs (first 30 lines):"; \
-	for f in "$$RUN_DIR/inputs/request.md" "$$RUN_DIR/inputs/context.md"; do \
-		echo ""; echo "== $$f =="; \
-		sed -n '1,30p' "$$f"; \
-	done; \
-	echo ""; \
-	echo "Agent statuses (status field from result.json):"; \
-	for a in coordinator decision-maker ciso pr-reviewer; do \
-		f="$$RUN_DIR/outputs/$$a/result.json"; \
-		printf "  %-14s " "$$a"; \
-		python -c "import json; print(json.load(open('$$f','r',encoding='utf-8')).get('status','?'))" 2>/dev/null || echo "?"; \
-	done; \
-	echo ""; \
-	echo "Non-empty files (bytes):"; \
-	find "$$RUN_DIR" -type f -maxdepth 4 -print0 | xargs -0 wc -c | sort -n
+	node scripts/agentic.mjs status --run "$$RUN"
 
 .PHONY: agent
 

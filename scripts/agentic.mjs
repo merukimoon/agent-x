@@ -57,6 +57,10 @@ import process from "process";
  *     notes: string;
  *   };
  *   status: StepStatus;
+ *   attempt: number;
+ *   max_attempts: number;
+ *   last_error: string | null;
+ *   allow_skip: boolean;
  * }} PlanStep
  */
 /**
@@ -82,6 +86,10 @@ const USAGE = [
   "Usage:",
   "  node scripts/agentic.mjs agent <agentName> --run <RUN_ID> [--dry-run]",
   "  node scripts/agentic.mjs flow --run <RUN_ID> [--dry-run]",
+  "  node scripts/agentic.mjs validate --run <RUN_ID>",
+  "  node scripts/agentic.mjs retry --run <RUN_ID> --step <STEP_ID>",
+  "  node scripts/agentic.mjs skip --run <RUN_ID> --step <STEP_ID>",
+  "  node scripts/agentic.mjs status --run <RUN_ID>",
 ].join("\n");
 
 class CLIError extends Error {
@@ -158,6 +166,34 @@ function formatExcerpt(label, lines) {
   const safeLines = lines.length > 0 ? lines : ["(file empty)"];
   const quoted = safeLines.map((line) => `> ${line}`);
   return [`## ${label} (first 20 lines)`, ...quoted, ""].join("\n");
+}
+
+/**
+ * Get canonical outputs paths for an agent.
+ * @param {AgentName} agent
+ * @returns {{ result: string; notes: string }}
+ */
+function getCanonicalOutputs(agent) {
+  return {
+    result: `outputs/${agent}/result.json`,
+    notes: `outputs/${agent}/notes.md`,
+  };
+}
+
+/**
+ * Ensure the outputs paths follow the canonical layout for an agent.
+ * @param {PlanStep} step
+ */
+function validateCanonicalOutputs(step) {
+  const expected = getCanonicalOutputs(step.agent);
+  if (
+    step.outputs.result !== expected.result ||
+    step.outputs.notes !== expected.notes
+  ) {
+    fail(
+      `Step ${step.id} outputs must match canonical layout. Expected result=${expected.result}, notes=${expected.notes}.`
+    );
+  }
 }
 
 /**
@@ -249,11 +285,12 @@ function buildDefaultPlan(runId, createdAtUtc) {
           "outputs/coordinator/notes.md",
         ],
       },
-      outputs: {
-        result: "outputs/decision-maker/result.json",
-        notes: "outputs/decision-maker/notes.md",
-      },
+      outputs: getCanonicalOutputs("decision-maker"),
       status: "pending",
+      attempt: 0,
+      max_attempts: 1,
+      last_error: null,
+      allow_skip: true,
     },
     {
       id: "step-2",
@@ -267,11 +304,12 @@ function buildDefaultPlan(runId, createdAtUtc) {
           "outputs/decision-maker/notes.md",
         ],
       },
-      outputs: {
-        result: "outputs/pr-reviewer/result.json",
-        notes: "outputs/pr-reviewer/notes.md",
-      },
+      outputs: getCanonicalOutputs("pr-reviewer"),
       status: "pending",
+      attempt: 0,
+      max_attempts: 1,
+      last_error: null,
+      allow_skip: true,
     },
     {
       id: "step-3",
@@ -285,11 +323,12 @@ function buildDefaultPlan(runId, createdAtUtc) {
           "outputs/pr-reviewer/notes.md",
         ],
       },
-      outputs: {
-        result: "outputs/ciso/result.json",
-        notes: "outputs/ciso/notes.md",
-      },
+      outputs: getCanonicalOutputs("ciso"),
       status: "pending",
+      attempt: 0,
+      max_attempts: 1,
+      last_error: null,
+      allow_skip: true,
     },
   ];
 
@@ -385,9 +424,120 @@ function validatePlan(candidate, expectedRunId) {
         `plan.json step ${step.id} has invalid status: ${String(step.status)}.`
       );
     }
+    if (
+      typeof step.attempt !== "number" ||
+      !Number.isInteger(step.attempt) ||
+      step.attempt < 0
+    ) {
+      fail(`plan.json step ${step.id} attempt must be a non-negative integer.`);
+    }
+    if (
+      typeof step.max_attempts !== "number" ||
+      !Number.isInteger(step.max_attempts) ||
+      step.max_attempts < 1
+    ) {
+      fail(`plan.json step ${step.id} max_attempts must be an integer >= 1.`);
+    }
+    if (step.last_error !== null && typeof step.last_error !== "string") {
+      fail(`plan.json step ${step.id} last_error must be null or string.`);
+    }
+    if (typeof step.allow_skip !== "boolean") {
+      fail(`plan.json step ${step.id} allow_skip must be boolean.`);
+    }
+    validateCanonicalOutputs(/** @type {PlanStep} */ (step));
   });
 
   return /** @type {Plan} */ (plan);
+}
+
+/**
+ * Validate plan references against the filesystem and layout.
+ * @param {Plan} plan
+ * @param {string} runDir
+ * @returns {string[]} List of validation errors.
+ */
+function validatePlanFiles(plan, runDir) {
+  /** @type {string[]} */
+  const errors = [];
+  const requestPath = path.join(runDir, "inputs", "request.md");
+  const contextPath = path.join(runDir, "inputs", "context.md");
+
+  if (!fs.existsSync(requestPath)) {
+    errors.push(`Missing input: ${requestPath}`);
+  }
+  if (!fs.existsSync(contextPath)) {
+    errors.push(`Missing input: ${contextPath}`);
+  }
+
+  const stepByAgent = new Map();
+  plan.steps.forEach((step) => {
+    if (!stepByAgent.has(step.agent)) {
+      stepByAgent.set(step.agent, step);
+    }
+  });
+
+  /**
+   * Determine whether a dependency output is expected to exist now.
+   * @param {AgentName} agent
+   * @returns {boolean}
+   */
+  const shouldRequireDependencyOutput = (agent) => {
+    if (agent === "coordinator") {
+      return true;
+    }
+    const depStep = stepByAgent.get(agent);
+    if (!depStep) {
+      errors.push(`Dependency agent ${agent} not found in plan steps.`);
+      return false;
+    }
+    return depStep.status === "done";
+  };
+
+  plan.steps.forEach((step) => {
+    const expected = getCanonicalOutputs(step.agent);
+    if (
+      step.outputs.result !== expected.result ||
+      step.outputs.notes !== expected.notes
+    ) {
+      errors.push(
+        `Step ${step.id} outputs must match canonical layout (expected ${expected.result} and ${expected.notes}).`
+      );
+    }
+    if (step.inputs.request !== "inputs/request.md") {
+      errors.push(`Step ${step.id} inputs.request must be inputs/request.md.`);
+    }
+    if (step.inputs.context !== "inputs/context.md") {
+      errors.push(`Step ${step.id} inputs.context must be inputs/context.md.`);
+    }
+
+    step.inputs.prior_outputs.forEach((relPath) => {
+      const fullPath = path.join(runDir, relPath);
+      const match = relPath.match(/^outputs\/([^/]+)\/(result\.json|notes\.md)$/);
+      const depAgent = match && isAgentName(match[1]) ? /** @type {AgentName} */ (match[1]) : null;
+      const mustExist = depAgent ? shouldRequireDependencyOutput(depAgent) : true;
+      if (mustExist) {
+        if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
+          errors.push(
+            `Step ${step.id} prior output missing: ${fullPath} (from ${relPath}).`
+          );
+        }
+      }
+    });
+
+    step.depends_on.forEach((dep) => {
+      const depResult = path.join(runDir, getCanonicalOutputs(dep).result);
+      const mustExist = shouldRequireDependencyOutput(dep);
+      if (mustExist) {
+        if (!fs.existsSync(depResult) || !fs.statSync(depResult).isFile()) {
+          errors.push(
+            `Step ${step.id} dependency missing result: ${depResult} (dependency ${dep}).`
+          );
+        }
+      }
+    });
+  });
+
+  return errors;
 }
 
 /**
@@ -429,6 +579,22 @@ function updatePlanStepStatus(plan, stepId, status, planPath) {
     fail(`Step ${stepId} not found in plan.`);
   }
   target.status = status;
+  persistPlan(planPath, plan);
+}
+
+/**
+ * Update a plan step with a mutator and persist.
+ * @param {Plan} plan
+ * @param {string} stepId
+ * @param {(step: PlanStep) => void} mutator
+ * @param {string} planPath
+ */
+function updatePlanStep(plan, stepId, mutator, planPath) {
+  const target = plan.steps.find((step) => step.id === stepId);
+  if (!target) {
+    fail(`Step ${stepId} not found in plan.`);
+  }
+  mutator(target);
   persistPlan(planPath, plan);
 }
 
@@ -539,6 +705,58 @@ function parseRunArgs(args) {
 }
 
 /**
+ * Parse run id and step id from args.
+ * @param {string[]} args
+ * @returns {{ runId: RunId; stepId: string; remainder: string[] }}
+ */
+function parseRunAndStepArgs(args) {
+  /** @type {RunId | null} */
+  let runId = null;
+  let stepId = null;
+  const remainder = [];
+
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === "--run") {
+      const value = args[i + 1];
+      if (!value || value.startsWith("--")) {
+        fail("Value required for --run <RUN_ID>.", { showUsage: true });
+      }
+      runId = value;
+      i += 1;
+      continue;
+    }
+    if (arg.startsWith("--run=")) {
+      runId = arg.slice("--run=".length);
+      continue;
+    }
+    if (arg === "--step") {
+      const value = args[i + 1];
+      if (!value || value.startsWith("--")) {
+        fail("Value required for --step <STEP_ID>.", { showUsage: true });
+      }
+      stepId = value;
+      i += 1;
+      continue;
+    }
+    if (arg.startsWith("--step=")) {
+      stepId = arg.slice("--step=".length);
+      continue;
+    }
+    remainder.push(arg);
+  }
+
+  if (!runId) {
+    fail("RUN_ID is required via --run <RUN_ID>.", { showUsage: true });
+  }
+  if (!stepId) {
+    fail("STEP_ID is required via --step <STEP_ID>.", { showUsage: true });
+  }
+
+  return { runId, stepId, remainder };
+}
+
+/**
  * Execute the "agent" command.
  * @param {string[]} args
  */
@@ -607,6 +825,13 @@ function runFlow(runId, mode) {
 
   let plan = loadPlan(planPath, runId);
 
+  const validationErrors = validatePlanFiles(plan, runDir);
+  if (validationErrors.length > 0) {
+    console.error("Validation failed:");
+    validationErrors.forEach((err) => console.error(`- ${err}`));
+    process.exit(3);
+  }
+
   plan.steps.forEach((step) => {
     if (step.status === "failed") {
       fail(
@@ -622,17 +847,37 @@ function runFlow(runId, mode) {
       return;
     }
 
+    if (step.attempt >= step.max_attempts) {
+      fail(
+        `Step ${step.id} has reached max attempts (${step.attempt}/${step.max_attempts}). Use retry or skip to continue.`
+      );
+    }
+
     ensureDependencies(step, runDir);
 
-    updatePlanStepStatus(plan, step.id, "running", planPath);
+    updatePlanStep(plan, step.id, (s) => {
+      if (s.attempt < 1) {
+        s.attempt = 1;
+      }
+      s.status = "running";
+      s.last_error = null;
+    }, planPath);
     plan = loadPlan(planPath, runId);
 
     try {
       runAgent(step.agent, runId, mode);
-      updatePlanStepStatus(plan, step.id, "done", planPath);
+      updatePlanStep(plan, step.id, (s) => {
+        s.status = "done";
+        s.last_error = null;
+      }, planPath);
       plan = loadPlan(planPath, runId);
     } catch (error) {
-      updatePlanStepStatus(plan, step.id, "failed", planPath);
+      const reason = error instanceof Error ? error.message : String(error);
+      const truncated = reason.replace(/\s+/g, " ").slice(0, 200);
+      updatePlanStep(plan, step.id, (s) => {
+        s.status = "failed";
+        s.last_error = truncated;
+      }, planPath);
       throw error;
     }
   });
@@ -654,6 +899,137 @@ function handleFlowCommand(args) {
   }
   const mode = parsed.dryRun ? "dry-run" : "live";
   runFlow(parsed.runId, mode);
+}
+
+/**
+ * Execute the "validate" command.
+ * @param {string[]} args
+ */
+function handleValidateCommand(args) {
+  const parsed = parseRunArgs(args);
+  if (parsed.remainder.length > 0) {
+    fail(`Unknown arguments: ${parsed.remainder.join(" ")}`, { showUsage: true });
+  }
+  const runDir = path.join(process.cwd(), "runs", parsed.runId);
+  ensureRunAndInputs(runDir);
+  const planPath = path.join(runDir, "plan.json");
+  if (!fs.existsSync(planPath) || !fs.statSync(planPath).isFile()) {
+    fail(`plan.json not found at ${planPath}`);
+  }
+  const plan = loadPlan(planPath, parsed.runId);
+  const errors = validatePlanFiles(plan, runDir);
+  if (errors.length > 0) {
+    console.error("Validation failed:");
+    errors.forEach((err) => console.error(`- ${err}`));
+    process.exit(3);
+  }
+  console.log("OK");
+}
+
+/**
+ * Execute the "retry" command.
+ * @param {string[]} args
+ */
+function handleRetryCommand(args) {
+  const parsed = parseRunAndStepArgs(args);
+  if (parsed.remainder.length > 0) {
+    fail(`Unknown arguments: ${parsed.remainder.join(" ")}`, { showUsage: true });
+  }
+  const runDir = path.join(process.cwd(), "runs", parsed.runId);
+  const planPath = path.join(runDir, "plan.json");
+  if (!fs.existsSync(planPath)) {
+    fail(`plan.json not found at ${planPath}`);
+  }
+  const plan = loadPlan(planPath, parsed.runId);
+  const target = plan.steps.find((s) => s.id === parsed.stepId);
+  if (!target) {
+    fail(`Step not found: ${parsed.stepId}`);
+  }
+  if (target.status !== "failed") {
+    fail(`Retry allowed only when status is failed (current ${target.status}).`);
+  }
+  if (target.attempt >= target.max_attempts) {
+    fail(
+      `Max attempts reached for step ${target.id} (${target.attempt}/${target.max_attempts}).`
+    );
+  }
+  updatePlanStep(plan, target.id, (s) => {
+    s.status = "pending";
+    s.attempt += 1;
+    s.last_error = null;
+  }, planPath);
+  console.log(`Step ${target.id} marked pending for retry (attempt ${target.attempt}/${target.max_attempts}).`);
+}
+
+/**
+ * Execute the "skip" command.
+ * @param {string[]} args
+ */
+function handleSkipCommand(args) {
+  const parsed = parseRunAndStepArgs(args);
+  if (parsed.remainder.length > 0) {
+    fail(`Unknown arguments: ${parsed.remainder.join(" ")}`, { showUsage: true });
+  }
+  const runDir = path.join(process.cwd(), "runs", parsed.runId);
+  const planPath = path.join(runDir, "plan.json");
+  if (!fs.existsSync(planPath)) {
+    fail(`plan.json not found at ${planPath}`);
+  }
+  const plan = loadPlan(planPath, parsed.runId);
+  const target = plan.steps.find((s) => s.id === parsed.stepId);
+  if (!target) {
+    fail(`Step not found: ${parsed.stepId}`);
+  }
+  if (!target.allow_skip) {
+    fail(`Step ${target.id} does not allow skipping.`);
+  }
+  if (target.status !== "pending" && target.status !== "failed") {
+    fail(
+      `Skip allowed only when status is pending or failed (current ${target.status}).`
+    );
+  }
+  updatePlanStep(plan, target.id, (s) => {
+    s.status = "skipped";
+    s.last_error = null;
+  }, planPath);
+  console.log(`Step ${target.id} marked skipped.`);
+}
+
+/**
+ * Execute the "status" command.
+ * @param {string[]} args
+ */
+function handleStatusCommand(args) {
+  const parsed = parseRunArgs(args);
+  if (parsed.remainder.length > 0) {
+    fail(`Unknown arguments: ${parsed.remainder.join(" ")}`, { showUsage: true });
+  }
+  const runDir = path.join(process.cwd(), "runs", parsed.runId);
+  const planPath = path.join(runDir, "plan.json");
+  if (!fs.existsSync(planPath)) {
+    fail(`plan.json not found at ${planPath}`);
+  }
+  const plan = loadPlan(planPath, parsed.runId);
+  const counts = {
+    pending: 0,
+    running: 0,
+    done: 0,
+    failed: 0,
+    skipped: 0,
+  };
+  plan.steps.forEach((step) => {
+    counts[step.status] += 1;
+  });
+  console.log(`Run: ${parsed.runId}`);
+  console.log(
+    `Plan: total=${plan.steps.length} pending=${counts.pending} running=${counts.running} done=${counts.done} failed=${counts.failed} skipped=${counts.skipped}`
+  );
+  console.log("Steps:");
+  plan.steps.forEach((step) => {
+    console.log(
+      `- ${step.id} | ${step.agent} | ${step.status} | attempt ${step.attempt}/${step.max_attempts}`
+    );
+  });
 }
 
 function main() {
@@ -680,6 +1056,26 @@ function main() {
 
   if (command === "flow") {
     handleFlowCommand(args);
+    return;
+  }
+
+  if (command === "validate") {
+    handleValidateCommand(args);
+    return;
+  }
+
+  if (command === "retry") {
+    handleRetryCommand(args);
+    return;
+  }
+
+  if (command === "skip") {
+    handleSkipCommand(args);
+    return;
+  }
+
+  if (command === "status") {
+    handleStatusCommand(args);
     return;
   }
 
