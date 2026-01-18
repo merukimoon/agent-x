@@ -1,13 +1,13 @@
 import fs from "fs";
 import path from "path";
 import process from "process";
-import { PLAN_VERSION, VALID_AGENTS, isAgentName } from "./core.js";
-import { fail } from "./errors.js";
+import { PLAN_VERSION, VALID_AGENTS, isAgentName } from "./core.ts";
+import { fail } from "./errors.ts";
 import {
   isAllowedStatusTransition,
   applyStatusTransition as applyStatusTransitionInternal,
-} from "./status.js";
-import { createFlowLock, removeLock } from "./lock.js";
+} from "./status.ts";
+import { createFlowLock, removeLock } from "./lock.ts";
 import {
   validatePlan,
   gatherPlanSchemaErrors,
@@ -15,15 +15,15 @@ import {
   validatePlanFiles,
   loadPlan,
   persistPlan,
-} from "./plan.js";
+} from "./plan.ts";
 import {
   runAgent,
   ensureDependencies,
   checkDependenciesSatisfied,
   getCanonicalOutputs,
   validateCanonicalOutputs,
-} from "./agents.js";
-import { readFirstLines, ensureRunAndInputs, writeJsonFile, writeFileAtomic } from "./fs.js";
+} from "./agents.ts";
+import { readFirstLines, ensureRunAndInputs, writeJsonFile, writeFileAtomic } from "./fs.ts";
 import type {
   AgentName,
   AgentStatus,
@@ -32,7 +32,7 @@ import type {
   RunId,
   PlanStep,
   Plan,
-} from "./core.js";
+} from "./core.ts";
 
 /**
  * Apply a status transition with optional mutation and persist atomically.

@@ -1,11 +1,9 @@
-// @ts-check
-
-import { fail } from "./errors.js";
+import { fail } from "./errors.ts";
 
 /**
- * @typedef {import("./core.js").Plan} Plan
- * @typedef {import("./core.js").PlanStep} PlanStep
- * @typedef {import("./core.js").StepStatus} StepStatus
+ * @typedef {import("./core.ts").Plan} Plan
+ * @typedef {import("./core.ts").PlanStep} PlanStep
+ * @typedef {import("./core.ts").StepStatus} StepStatus
  */
 
 /** @type {Record<StepStatus, Set<StepStatus>>} */

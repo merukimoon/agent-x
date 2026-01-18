@@ -1,7 +1,7 @@
 // @ts-check
 
-import { USAGE } from "./core.js";
-import { fail } from "./errors.js";
+import { USAGE } from "./core.ts";
+import { fail } from "./errors.ts";
 import {
   handleAgentCommand,
   handleFlowCommand,
@@ -9,7 +9,7 @@ import {
   handleRetryCommand,
   handleSkipCommand,
   handleStatusCommand,
-} from "./cli.js";
+} from "./cli.ts";
 
 /**
  * @param {string[]} argv

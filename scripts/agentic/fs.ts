@@ -1,9 +1,7 @@
-// @ts-check
-
 import fs from "fs";
 import path from "path";
 import process from "process";
-import { fail } from "./errors.js";
+import { fail } from "./errors.ts";
 
 /**
  * Read the first N lines from a file.
@@ -69,7 +67,7 @@ export function formatExcerpt(label, lines) {
 
 /**
  * Build agent notes content.
- * @param {import("./core.js").BuildNotesParams} params
+ * @param {import("./core.ts").BuildNotesParams} params
  * @returns {string}
  */
 export function buildNotes({

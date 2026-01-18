@@ -6,16 +6,16 @@ import {
   PLAN_VERSION,
   isAgentName,
   isStepStatus,
-} from "./core.js";
-import { fail } from "./errors.js";
-import { writeJsonFile } from "./fs.js";
-import { getCanonicalOutputs } from "./agents.js";
+} from "./core.ts";
+import { fail } from "./errors.ts";
+import { writeJsonFile } from "./fs.ts";
+import { getCanonicalOutputs } from "./agents.ts";
 
 /**
  * Validate a parsed plan object and return it if valid.
  * @param {unknown} candidate
- * @param {import("./core.js").RunId} expectedRunId
- * @returns {import("./core.js").Plan}
+ * @param {import("./core.ts").RunId} expectedRunId
+ * @returns {import("./core.ts").Plan}
  */
 export function validatePlan(candidate, expectedRunId) {
   const { plan, schemaErrors } = gatherPlanSchemaErrors(candidate, expectedRunId);
@@ -28,17 +28,17 @@ export function validatePlan(candidate, expectedRunId) {
 /**
  * Gather schema and invariant errors without throwing.
  * @param {unknown} candidate
- * @param {import("./core.js").RunId} expectedRunId
- * @returns {{ plan: import("./core.js").Plan; schemaErrors: string[] }}
+ * @param {import("./core.ts").RunId} expectedRunId
+ * @returns {{ plan: import("./core.ts").Plan; schemaErrors: string[] }}
  */
 export function gatherPlanSchemaErrors(candidate, expectedRunId) {
-  const plan = /** @type {Partial<import("./core.js").Plan>} */ (candidate);
+  const plan = /** @type {Partial<import("./core.ts").Plan>} */ (candidate);
   /** @type {string[]} */
   const errors = [];
 
   if (!candidate || typeof candidate !== "object") {
     errors.push("plan.json is invalid: expected an object.");
-    return { plan: /** @type {import("./core.js").Plan} */ (plan), schemaErrors: errors };
+    return { plan: /** @type {import("./core.ts").Plan} */ (plan), schemaErrors: errors };
   }
 
   if (!plan.run_id || plan.run_id !== expectedRunId) {
@@ -87,7 +87,7 @@ export function gatherPlanSchemaErrors(candidate, expectedRunId) {
 
   /** @type {Set<string>} */
   const stepIds = new Set();
-  /** @type {Set<import("./core.js").AgentName>} */
+  /** @type {Set<import("./core.ts").AgentName>} */
   const agentsInPlan = new Set();
   if (Array.isArray(plan.steps)) {
     plan.steps.forEach((step) => {
@@ -226,15 +226,15 @@ export function gatherPlanSchemaErrors(candidate, expectedRunId) {
     }
   });
 
-  return { plan: /** @type {import("./core.js").Plan} */ (plan), schemaErrors: errors };
+  return { plan: /** @type {import("./core.ts").Plan} */ (plan), schemaErrors: errors };
 }
 
 /**
  * Perform validation and classify errors.
- * @param {import("./core.js").RunId} runId
+ * @param {import("./core.ts").RunId} runId
  * @param {string} runDir
  * @param {string} planPath
- * @returns {{ plan: import("./core.js").Plan | null; schemaErrors: string[]; missingPaths: string[]; planLoadError: string | null }}
+ * @returns {{ plan: import("./core.ts").Plan | null; schemaErrors: string[]; missingPaths: string[]; planLoadError: string | null }}
  */
 export function runValidationChecks(runId, runDir, planPath) {
   if (!fs.existsSync(planPath) || !fs.statSync(planPath).isFile()) {
@@ -271,7 +271,7 @@ export function runValidationChecks(runId, runDir, planPath) {
 
 /**
  * Validate plan references against the filesystem and layout.
- * @param {import("./core.js").Plan} plan
+ * @param {import("./core.ts").Plan} plan
  * @param {string} runDir
  * @returns {string[]} List of validation errors.
  */
@@ -288,7 +288,7 @@ export function validatePlanFiles(plan, runDir) {
     errors.push(`Missing input: ${contextPath}`);
   }
 
-  /** @type {Map<import("./core.js").AgentName, import("./core.js").StepStatus>} */
+  /** @type {Map<import("./core.ts").AgentName, import("./core.ts").StepStatus>} */
   const statusByAgent = new Map();
   plan.steps.forEach((step) => {
     statusByAgent.set(step.agent, step.status);
@@ -298,7 +298,7 @@ export function validatePlanFiles(plan, runDir) {
    * Determine whether dependency outputs must exist now.
    * - Coordinator dependencies are always required.
    * - Other agents are required when their status is not pending.
-   * @param {import("./core.js").AgentName} agent
+   * @param {import("./core.ts").AgentName} agent
    * @returns {boolean}
    */
   const mustRequireDependency = (agent) => {
@@ -318,7 +318,7 @@ export function validatePlanFiles(plan, runDir) {
       const fullPath = path.join(runDir, relPath);
       const match = relPath.match(/^outputs\/([^/]+)\/(result\.json|notes\.md)$/);
       const depAgent =
-        match && isAgentName(match[1]) ? /** @type {import("./core.js").AgentName} */ (match[1]) : null;
+        match && isAgentName(match[1]) ? /** @type {import("./core.ts").AgentName} */ (match[1]) : null;
       const requireNow = depAgent ? mustRequireDependency(depAgent) : true;
       if (requireNow) {
         if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
@@ -348,8 +348,8 @@ export function validatePlanFiles(plan, runDir) {
 /**
  * Load plan.json from disk.
  * @param {string} planPath
- * @param {import("./core.js").RunId} runId
- * @returns {import("./core.js").Plan}
+ * @param {import("./core.ts").RunId} runId
+ * @returns {import("./core.ts").Plan}
  */
 export function loadPlan(planPath, runId) {
   try {
@@ -362,10 +362,10 @@ export function loadPlan(planPath, runId) {
   }
 }
 
-/**
+ /**
  * Write the plan to disk.
  * @param {string} planPath
- * @param {import("./core.js").Plan} plan
+ * @param {import("./core.ts").Plan} plan
  */
 export function persistPlan(planPath, plan) {
   writeJsonFile(planPath, plan);

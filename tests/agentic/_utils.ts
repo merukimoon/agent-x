@@ -5,9 +5,10 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { createRequire } from 'module';
+import { pathToFileURL } from 'url';
 
 const require = createRequire(import.meta.url);
-const TSX_IMPORT = require.resolve('tsx');
+const TSX_IMPORT = pathToFileURL(require.resolve('tsx')).href;
 
 /**
  * Spawn the CLI with given args.

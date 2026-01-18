@@ -1,15 +1,13 @@
-// @ts-check
-
 import fs from "fs";
 import path from "path";
 import process from "process";
-import { fail } from "./errors.js";
+import { fail } from "./errors.ts";
 
 /**
  * Create a lock file for flow execution.
  * @param {string} runDir
- * @param {import("./core.js").RunId} runId
- * @param {import("./core.js").ExecutionMode} mode
+ * @param {import("./core.ts").RunId} runId
+ * @param {import("./core.ts").ExecutionMode} mode
  * @returns {string} lockPath
  */
 export function createFlowLock(runDir, runId, mode) {

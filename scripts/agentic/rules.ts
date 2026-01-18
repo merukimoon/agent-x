@@ -1,13 +1,11 @@
-// @ts-check
-
 import fs from "fs";
 import path from "path";
 import {
   FLOW_ARCH_CHANGE,
   RULES_DIR,
   isAgentName,
-} from "./core.js";
-import { fail } from "./errors.js";
+} from "./core.ts";
+import { fail } from "./errors.ts";
 
 /**
  * Find matching keywords in text.
@@ -32,7 +30,7 @@ function findKeywords(text, keywords) {
 
 /**
  * Load rule packs from the rules directory.
- * @returns {import("./core.js").RulePack[]}
+ * @returns {import("./core.ts").RulePack[]}
  */
 export function loadRulePacks() {
   if (!fs.existsSync(RULES_DIR) || !fs.statSync(RULES_DIR).isDirectory()) {
@@ -42,7 +40,7 @@ export function loadRulePacks() {
   if (files.length === 0) {
     fail(`No rule packs found in ${RULES_DIR}`);
   }
-  /** @type {import("./core.js").RulePack[]} */
+  /** @type {import("./core.ts").RulePack[]} */
   const packs = [];
   files.forEach((file) => {
     const fullPath = path.join(RULES_DIR, file);
@@ -68,13 +66,13 @@ export function validateRulePack(pack, source) {
   if (
     !pack ||
     typeof pack !== "object" ||
-    typeof /** @type {import("./core.js").RulePack} */ (pack).flow_type !== "string" ||
-    !Array.isArray(/** @type {import("./core.js").RulePack} */ (pack).keywords) ||
-    !Array.isArray(/** @type {import("./core.js").RulePack} */ (pack).steps)
+    typeof /** @type {import("./core.ts").RulePack} */ (pack).flow_type !== "string" ||
+    !Array.isArray(/** @type {import("./core.ts").RulePack} */ (pack).keywords) ||
+    !Array.isArray(/** @type {import("./core.ts").RulePack} */ (pack).steps)
   ) {
     fail(`Rule pack invalid at ${source}`);
   }
-  const asPack = /** @type {import("./core.js").RulePack} */ (pack);
+  const asPack = /** @type {import("./core.ts").RulePack} */ (pack);
   asPack.steps.forEach((step, index) => {
     if (!step || typeof step !== "object") {
       fail(`Rule pack step ${index} invalid in ${source}`);
@@ -92,19 +90,19 @@ export function validateRulePack(pack, source) {
  * Classify flow based on request and context contents using rule packs.
  * @param {string} requestText
  * @param {string} contextText
- * @returns {{ pack: import("./core.js").RulePack; signals: string[]; confidence: import("./core.js").ConfidenceLevel }}
+ * @returns {{ pack: import("./core.ts").RulePack; signals: string[]; confidence: import("./core.ts").ConfidenceLevel }}
  */
 export function classifyFlow(requestText, contextText) {
   const combined = `${requestText}\n${contextText}`;
   const packs = loadRulePacks();
 
-  /** @type {{ pack: import("./core.js").RulePack; matches: string[] }[]} */
+  /** @type {{ pack: import("./core.ts").RulePack; matches: string[] }[]} */
   const scored = packs.map((pack) => {
     const matches = findKeywords(combined, pack.keywords);
     return { pack, matches };
   });
 
-  /** @type {{ pack: import("./core.js").RulePack; matches: string[] } | null} */
+  /** @type {{ pack: import("./core.ts").RulePack; matches: string[] } | null} */
   let best = null;
   let bestCount = 0;
   scored.forEach((entry) => {
@@ -126,7 +124,7 @@ export function classifyFlow(requestText, contextText) {
     );
   }
 
-  const chosen = /** @type {{ pack: import("./core.js").RulePack; matches: string[] }} */ (best);
+  const chosen = /** @type {{ pack: import("./core.ts").RulePack; matches: string[] }} */ (best);
   const confidence =
     bestCount >= 3 ? "high" : bestCount === 2 ? "medium" : "low";
   const signals = chosen.matches.map((k) => `keyword:${k}`);

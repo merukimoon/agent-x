@@ -9,6 +9,7 @@
     "types": [
       "node"
     ],
+    "allowImportingTsExtensions": true,
     "incremental": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true

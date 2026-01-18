@@ -6,7 +6,7 @@ import process from "process";
 import {
   PLAN_VERSION,
   isAgentName,
-} from "./core.js";
+} from "./core.ts";
 import {
   readFirstLines,
   readFileText,
@@ -14,16 +14,16 @@ import {
   buildNotes,
   writeJsonFile,
   writeFileAtomic,
-} from "./fs.js";
-import { classifyFlow } from "./rules.js";
+} from "./fs.ts";
+import { classifyFlow } from "./rules.ts";
 
 /**
- * @typedef {import("./core.js").AgentName} AgentName
- * @typedef {import("./core.js").AgentStatus} AgentStatus
- * @typedef {import("./core.js").ExecutionMode} ExecutionMode
- * @typedef {import("./core.js").RunId} RunId
- * @typedef {import("./core.js").AgentResult} AgentResult
- * @typedef {import("./core.js").PlanStep} PlanStep
+ * @typedef {import("./core.ts").AgentName} AgentName
+ * @typedef {import("./core.ts").AgentStatus} AgentStatus
+ * @typedef {import("./core.ts").ExecutionMode} ExecutionMode
+ * @typedef {import("./core.ts").RunId} RunId
+ * @typedef {import("./core.ts").AgentResult} AgentResult
+ * @typedef {import("./core.ts").PlanStep} PlanStep
  */
 
 /**
