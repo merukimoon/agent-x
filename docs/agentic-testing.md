@@ -32,4 +32,6 @@ Generation resolves paths from the repo root via `import.meta.url`, so it is ind
 npm test
 ```
 
-Uses `node:test` to compare normalized CLI output against goldens. A fresh temp copy of the fixture is used per test for isolation.*** End Patch@end of conversation to=functions.apply_patch  পেল```
+Uses `node:test` to compare normalized CLI output against goldens. A fresh temp copy of the fixture is used per test for isolation.
+
+If goldens are missing, tests are skipped with a hint to run `npm run test:golden`. To auto-generate during `npm test`, set `AGENTIC_AUTOGEN_GOLDENS=1` (this will update files under `tests/agentic/golden/`).
