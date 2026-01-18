@@ -29,21 +29,64 @@ export function runCli({ cwd, args }) {
  * @param {{ cwd: string }} options
  * @returns {string}
  */
-export function normalizeOutput(text, { cwd }) {
+function escapeRegex(value) {
+  return value.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+}
+
+function normalizeNewlines(text) {
   let out = text;
-  const escapedCwd = cwd.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  if (out.startsWith('\ufeff')) {
+    out = out.slice(1);
+  }
+  return out.replace(/\r\n/g, '\n');
+}
+
+function normalizePaths(text, cwd) {
+  let out = text;
+  const escapedCwd = escapeRegex(cwd);
   out = out.replace(new RegExp(escapedCwd, 'g'), '<CWD>');
-  const tmpDir = os.tmpdir().replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const tmpDir = escapeRegex(os.tmpdir());
   out = out.replace(new RegExp(tmpDir, 'g'), '<TMP>');
   out = out.replace(/\\+/g, '/');
-  out = out.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z/g, '<ISO_DATE>');
-  out = out.replace(/Node\.js v\d+\.\d+\.\d+/g, 'Node.js vX.Y.Z');
-  out = out.replace(/node:internal[^\\s:]*(?::\d+){1,2}/g, (m) =>
-    m.replace(/:\d+/g, ':<LINE>'),
+  return out;
+}
+
+function normalizeTimestamps(text) {
+  return text.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z/g, '<ISO_DATE>');
+}
+
+function normalizeNodeVersion(text) {
+  return text.replace(/Node\.js v\d+\.\d+\.\d+/g, 'Node.js vX.Y.Z');
+}
+
+function normalizeNodeStack(text) {
+  let out = text;
+  out = out.replace(/node:internal[^\n]*\n\s*throw err;\n\s*\^\n\n/gs, '<NODE_INTERNAL_HEADER>\n');
+  out = out.replace(/node:internal[^\s)]+/g, (match) => match.replace(/:\d+/g, ':<LINE>'));
+  out = out.replace(/\(node:internal[^)]+\)/g, (match) => match.replace(/:\d+/g, ':<LINE>'));
+  out = out.replace(/^\s+at .*/gm, (line) =>
+    line
+      .replace(/node:internal[^\s)]+/g, (m) => m.replace(/:\d+/g, ':<LINE>'))
+      .replace(/\bat (Function|Module)\./, 'at <FN>.'),
   );
-  out = out.replace(/\(node:internal[^)]+\)/g, (m) =>
-    m.replace(/:\d+/g, ':<LINE>'),
-  );
+  return out;
+}
+
+function normalizeWhitespace(text) {
+  return text
+    .split('\n')
+    .map((line) => line.replace(/[ \t]+$/g, ''))
+    .join('\n');
+}
+
+export function normalizeOutput(text, { cwd }) {
+  let out = typeof text === 'string' ? text : String(text ?? '');
+  out = normalizeNewlines(out);
+  out = normalizePaths(out, cwd);
+  out = normalizeTimestamps(out);
+  out = normalizeNodeVersion(out);
+  out = normalizeNodeStack(out);
+  out = normalizeWhitespace(out);
   return out;
 }
 

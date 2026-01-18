@@ -1,15 +1,12 @@
-node:internal/modules/cjs/loader:1386
-  throw err;
-  ^
-
+<NODE_INTERNAL_HEADER>
 Error: Cannot find module '<CWD>/scripts/agentic.js'
-    at Function._resolveFilename (node:internal/modules/cjs/loader:<LINE>:<LINE>)
+    at <FN>._resolveFilename (node:internal/modules/cjs/loader:<LINE>:<LINE>)
     at defaultResolveImpl (node:internal/modules/cjs/loader:<LINE>:<LINE>)
     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:<LINE>:<LINE>)
-    at Function._load (node:internal/modules/cjs/loader:<LINE>:<LINE>)
+    at <FN>._load (node:internal/modules/cjs/loader:<LINE>:<LINE>)
     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
     at wrapModuleLoad (node:internal/modules/cjs/loader:<LINE>:<LINE>)
-    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:<LINE>:<LINE>)
+    at <FN>.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:<LINE>:<LINE>)
     at node:internal/main/run_main_module:<LINE>:<LINE> {
   code: 'MODULE_NOT_FOUND',
   requireStack: []
