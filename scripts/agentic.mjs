@@ -4,180 +4,34 @@
 import fs from "fs";
 import path from "path";
 import process from "process";
+import {
+  PLAN_VERSION,
+  FLOW_PR_COMPLETION,
+  FLOW_ARCH_CHANGE,
+  RULES_DIR,
+  VALID_AGENTS,
+  USAGE,
+  isAgentName,
+  isStepStatus,
+  isAllowedStatusTransition,
+} from "./agentic/core.mjs";
+import { fail, handleFatalError } from "./agentic/errors.mjs";
 
 /**
- * @typedef {"coordinator" | "decision-maker" | "pr-reviewer" | "ciso"} AgentName
+ * @typedef {import("./agentic/core.mjs").AgentName} AgentName
+ * @typedef {import("./agentic/core.mjs").AgentStatus} AgentStatus
+ * @typedef {import("./agentic/core.mjs").ExecutionMode} ExecutionMode
+ * @typedef {import("./agentic/core.mjs").StepStatus} StepStatus
+ * @typedef {import("./agentic/core.mjs").ConfidenceLevel} ConfidenceLevel
+ * @typedef {import("./agentic/core.mjs").RunId} RunId
+ * @typedef {import("./agentic/core.mjs").AgentResult} AgentResult
+ * @typedef {import("./agentic/core.mjs").BuildNotesParams} BuildNotesParams
+ * @typedef {import("./agentic/core.mjs").PlanStep} PlanStep
+ * @typedef {import("./agentic/core.mjs").RuleStep} RuleStep
+ * @typedef {import("./agentic/core.mjs").RulePack} RulePack
+ * @typedef {import("./agentic/core.mjs").Plan} Plan
+ * @typedef {import("./agentic/core.mjs").ValidationResult} ValidationResult
  */
-/**
- * @typedef {"blocked" | "in_progress" | "done" | "failed"} AgentStatus
- */
-/**
- * @typedef {"dry-run" | "live"} ExecutionMode
- */
-/**
- * @typedef {"pending" | "running" | "done" | "failed" | "skipped"} StepStatus
- */
-/**
- * @typedef {"high" | "medium" | "low"} ConfidenceLevel
- */
-/**
- * @typedef {string} RunId
- */
-/**
- * @typedef {{
- *   agent: AgentName;
- *   run_id: RunId;
- *   status: AgentStatus;
- *   created_at_utc: string;
- *   summary: string;
- *   mode: ExecutionMode;
- * }} AgentResult
- */
-/**
- * @typedef {{
- *   agentName: AgentName;
- *   runId: RunId;
- *   createdAtUtc: string;
- *   mode: ExecutionMode;
- *   requestPath: string;
- *   contextPath: string;
- *   requestExcerpt: string[];
- *   contextExcerpt: string[];
- * }} BuildNotesParams
- */
-/**
- * @typedef {{
- *   id: string;
- *   agent: AgentName;
- *   depends_on: AgentName[];
- *   inputs: {
- *     request: string;
- *     context: string;
- *     prior_outputs: string[];
- *   };
- *   outputs: {
- *     result: string;
- *     notes: string;
- *   };
- *   status: StepStatus;
- *   attempt: number;
- *   max_attempts: number;
- *   last_error: string | null;
- *   allow_skip: boolean;
- * }} PlanStep
- */
-/**
- * @typedef {{
- *   id: string;
- *   agent: AgentName;
- *   depends_on: AgentName[];
- *   enabled_if_keywords?: string[];
- * }} RuleStep
- */
-/**
- * @typedef {{
- *   flow_type: string;
- *   keywords: string[];
- *   steps: RuleStep[];
- * }} RulePack
- */
-/**
- * @typedef {{
- *   run_id: RunId;
- *   created_at_utc: string;
- *   version: string;
- *   flow_type: string;
- *   rationale: string;
- *   signals: string[];
- *   confidence: ConfidenceLevel;
- *   steps: PlanStep[];
- * }} Plan
- */
-/**
- * @typedef {{
- *   missingPaths: string[];
- *   schemaErrors: string[];
- * }} ValidationResult
- */
-
-const PLAN_VERSION = "0.1";
-const FLOW_PR_COMPLETION = "pr-completion";
-const FLOW_ARCH_CHANGE = "architecture-change";
-const RULES_DIR = path.join(process.cwd(), "rules", "flows");
-
-/** @type {Set<AgentName>} */
-const VALID_AGENTS = new Set([
-  "coordinator",
-  "decision-maker",
-  "pr-reviewer",
-  "ciso",
-]);
-
-const USAGE = [
-  "Usage:",
-  "  node scripts/agentic.mjs agent <agentName> --run <RUN_ID> [--dry-run]",
-  "  node scripts/agentic.mjs flow --run <RUN_ID> [--dry-run]",
-  "  node scripts/agentic.mjs validate --run <RUN_ID>",
-  "  node scripts/agentic.mjs retry --run <RUN_ID> --step <STEP_ID>",
-  "  node scripts/agentic.mjs skip --run <RUN_ID> --step <STEP_ID>",
-  "  node scripts/agentic.mjs status --run <RUN_ID>",
-].join("\n");
-
-/** @type {Record<StepStatus, Set<StepStatus>>} */
-const ALLOWED_TRANSITIONS = {
-  pending: new Set(["running", "skipped"]),
-  running: new Set(["done", "failed"]),
-  done: new Set(),
-  failed: new Set(["pending", "skipped"]),
-  skipped: new Set(),
-};
-
-class CLIError extends Error {
-  /**
-   * @param {string} message
-   * @param {{ exitCode?: number; showUsage?: boolean }} [options]
-   */
-  constructor(message, options) {
-    super(message);
-    this.name = "CLIError";
-    this.exitCode = options?.exitCode ?? 2;
-    this.showUsage = options?.showUsage ?? false;
-  }
-}
-
-/**
- * Raise a CLI error.
- * @param {string} message
- * @param {{ showUsage?: boolean; exitCode?: number }} [options]
- * @returns {never}
- */
-function fail(message, options) {
-  throw new CLIError(message, options);
-}
-
-/**
- * Determine whether a value is a supported agent name.
- * @param {string} value
- * @returns {value is AgentName}
- */
-function isAgentName(value) {
-  return VALID_AGENTS.has(/** @type {AgentName} */ (value));
-}
-
-/**
- * Determine whether a value is a valid step status.
- * @param {string} value
- * @returns {value is StepStatus}
- */
-function isStepStatus(value) {
-  return (
-    value === "pending" ||
-    value === "running" ||
-    value === "done" ||
-    value === "failed" ||
-    value === "skipped"
-  );
-}
 
 /**
  * Read the first N lines from a file.
@@ -883,20 +737,6 @@ function loadPlan(planPath, runId) {
  */
 function persistPlan(planPath, plan) {
   writeJsonFile(planPath, plan);
-}
-
-/**
- * Determine if a status transition is allowed.
- * @param {StepStatus} from
- * @param {StepStatus} to
- * @returns {boolean}
- */
-function isAllowedStatusTransition(from, to) {
-  if (from === to) {
-    return true;
-  }
-  const allowed = ALLOWED_TRANSITIONS[from];
-  return allowed ? allowed.has(to) : false;
 }
 
 /**
@@ -1652,17 +1492,5 @@ function main() {
 try {
   main();
 } catch (error) {
-  if (error instanceof CLIError) {
-    console.error(`ERROR: ${error.message}`);
-    if (error.showUsage) {
-      console.error(USAGE);
-    }
-    process.exit(error.exitCode);
-  } else {
-    console.error("ERROR: Unexpected failure.");
-    if (error instanceof Error) {
-      console.error(error.message);
-    }
-    process.exit(1);
-  }
+  handleFatalError(error, USAGE);
 }
