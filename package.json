@@ -2,10 +2,11 @@
   "name": "agentsquad-framework",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --test",
-    "test:golden": "node tests/agentic/generate-golden.mjs"
+    "test:golden": "node tests/agentic/generate-golden.js"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",

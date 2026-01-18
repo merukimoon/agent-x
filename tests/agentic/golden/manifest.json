@@ -2,7 +2,7 @@
   {
     "name": "help",
     "args": [
-      "scripts/agentic.mjs",
+      "scripts/agentic.js",
       "--help"
     ],
     "mutation": null
@@ -10,7 +10,7 @@
   {
     "name": "validate",
     "args": [
-      "scripts/agentic.mjs",
+      "scripts/agentic.js",
       "validate",
       "--run",
       "test-run"
@@ -20,7 +20,7 @@
   {
     "name": "status",
     "args": [
-      "scripts/agentic.mjs",
+      "scripts/agentic.js",
       "status",
       "--run",
       "test-run"
@@ -30,7 +30,7 @@
   {
     "name": "agent-coordinator",
     "args": [
-      "scripts/agentic.mjs",
+      "scripts/agentic.js",
       "agent",
       "coordinator",
       "--run",
@@ -42,7 +42,7 @@
   {
     "name": "flow",
     "args": [
-      "scripts/agentic.mjs",
+      "scripts/agentic.js",
       "flow",
       "--run",
       "test-run",
@@ -53,7 +53,7 @@
   {
     "name": "retry",
     "args": [
-      "scripts/agentic.mjs",
+      "scripts/agentic.js",
       "retry",
       "--run",
       "test-run",
@@ -70,7 +70,7 @@
   {
     "name": "skip",
     "args": [
-      "scripts/agentic.mjs",
+      "scripts/agentic.js",
       "skip",
       "--run",
       "test-run",

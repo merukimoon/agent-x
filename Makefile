@@ -83,7 +83,7 @@ run-status:
 		echo "ERROR: RUN is required. Example: make run-status RUN=\"2026-01-18_1124-pr-docs-and-config-3\""; \
 		exit 2; \
 	fi; \
-	node scripts/agentic.mjs status --run "$$RUN"
+	node scripts/agentic.js status --run "$$RUN"
 
 .PHONY: agent
 
@@ -104,7 +104,7 @@ agent:
 	if [ "$$DRY" != "0" ]; then \
 		DRY_FLAG="--dry-run"; \
 	fi; \
-	node scripts/agentic.mjs agent "$$AGENT" --run "$$RUN" $$DRY_FLAG
+	node scripts/agentic.js agent "$$AGENT" --run "$$RUN" $$DRY_FLAG
 
 .PHONY: flow
 
@@ -120,4 +120,4 @@ flow:
 	if [ "$$DRY" != "0" ]; then \
 		DRY_FLAG="--dry-run"; \
 	fi; \
-	node scripts/agentic.mjs flow --run "$$RUN" $$DRY_FLAG
+	node scripts/agentic.js flow --run "$$RUN" $$DRY_FLAG

@@ -113,12 +113,12 @@ export const VALID_AGENTS = new Set([
 
 export const USAGE = [
   "Usage:",
-  "  node scripts/agentic.mjs agent <agentName> --run <RUN_ID> [--dry-run]",
-  "  node scripts/agentic.mjs flow --run <RUN_ID> [--dry-run]",
-  "  node scripts/agentic.mjs validate --run <RUN_ID>",
-  "  node scripts/agentic.mjs retry --run <RUN_ID> --step <STEP_ID>",
-  "  node scripts/agentic.mjs skip --run <RUN_ID> --step <STEP_ID>",
-  "  node scripts/agentic.mjs status --run <RUN_ID>",
+  "  node scripts/agentic.js agent <agentName> --run <RUN_ID> [--dry-run]",
+  "  node scripts/agentic.js flow --run <RUN_ID> [--dry-run]",
+  "  node scripts/agentic.js validate --run <RUN_ID>",
+  "  node scripts/agentic.js retry --run <RUN_ID> --step <STEP_ID>",
+  "  node scripts/agentic.js skip --run <RUN_ID> --step <STEP_ID>",
+  "  node scripts/agentic.js status --run <RUN_ID>",
 ].join("\n");
 
 /** @type {Record<StepStatus, Set<StepStatus>>} */

@@ -38,12 +38,12 @@ This repo does not yet publish an installable package (**TODO**). For now:
 
 ## Coordinator plan and flow execution
 
-- Run the coordinator to produce `plan.json`: `node scripts/agentic.mjs agent coordinator --run "<RUN_ID>" --dry-run`
-- Execute the plan-driven flow: `node scripts/agentic.mjs flow --run "<RUN_ID>" --dry-run`
+- Run the coordinator to produce `plan.json`: `node scripts/agentic.js agent coordinator --run "<RUN_ID>" --dry-run`
+- Execute the plan-driven flow: `node scripts/agentic.js flow --run "<RUN_ID>" --dry-run`
 - Makefile helper: `make flow RUN="<RUN_ID>" DRY=1` (omit `DRY=1` to run without the dry-run flag; current Step 2 behavior is the same).
-- Validate a run: `node scripts/agentic.mjs validate --run "<RUN_ID>"`
-- Retry or skip a step: `node scripts/agentic.mjs retry --run "<RUN_ID>" --step "<STEP_ID>"` or `... skip ...`
-- View plan status: `make run-status RUN="<RUN_ID>"` (or `node scripts/agentic.mjs status --run "<RUN_ID>"`)
+- Validate a run: `node scripts/agentic.js validate --run "<RUN_ID>"`
+- Retry or skip a step: `node scripts/agentic.js retry --run "<RUN_ID>" --step "<STEP_ID>"` or `... skip ...`
+- View plan status: `make run-status RUN="<RUN_ID>"` (or `node scripts/agentic.js status --run "<RUN_ID>"`)
 
 ## Coordinator planning logic (rules-based)
 

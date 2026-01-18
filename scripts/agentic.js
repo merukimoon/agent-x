@@ -14,23 +14,23 @@ import {
   isAgentName,
   isStepStatus,
   isAllowedStatusTransition,
-} from "./agentic/core.mjs";
-import { fail, handleFatalError } from "./agentic/errors.mjs";
+} from "./agentic/core.js";
+import { fail, handleFatalError } from "./agentic/errors.js";
 
 /**
- * @typedef {import("./agentic/core.mjs").AgentName} AgentName
- * @typedef {import("./agentic/core.mjs").AgentStatus} AgentStatus
- * @typedef {import("./agentic/core.mjs").ExecutionMode} ExecutionMode
- * @typedef {import("./agentic/core.mjs").StepStatus} StepStatus
- * @typedef {import("./agentic/core.mjs").ConfidenceLevel} ConfidenceLevel
- * @typedef {import("./agentic/core.mjs").RunId} RunId
- * @typedef {import("./agentic/core.mjs").AgentResult} AgentResult
- * @typedef {import("./agentic/core.mjs").BuildNotesParams} BuildNotesParams
- * @typedef {import("./agentic/core.mjs").PlanStep} PlanStep
- * @typedef {import("./agentic/core.mjs").RuleStep} RuleStep
- * @typedef {import("./agentic/core.mjs").RulePack} RulePack
- * @typedef {import("./agentic/core.mjs").Plan} Plan
- * @typedef {import("./agentic/core.mjs").ValidationResult} ValidationResult
+ * @typedef {import("./agentic/core.js").AgentName} AgentName
+ * @typedef {import("./agentic/core.js").AgentStatus} AgentStatus
+ * @typedef {import("./agentic/core.js").ExecutionMode} ExecutionMode
+ * @typedef {import("./agentic/core.js").StepStatus} StepStatus
+ * @typedef {import("./agentic/core.js").ConfidenceLevel} ConfidenceLevel
+ * @typedef {import("./agentic/core.js").RunId} RunId
+ * @typedef {import("./agentic/core.js").AgentResult} AgentResult
+ * @typedef {import("./agentic/core.js").BuildNotesParams} BuildNotesParams
+ * @typedef {import("./agentic/core.js").PlanStep} PlanStep
+ * @typedef {import("./agentic/core.js").RuleStep} RuleStep
+ * @typedef {import("./agentic/core.js").RulePack} RulePack
+ * @typedef {import("./agentic/core.js").Plan} Plan
+ * @typedef {import("./agentic/core.js").ValidationResult} ValidationResult
  */
 
 /**

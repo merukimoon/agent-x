@@ -6,7 +6,7 @@ import path from "path";
 import { mkdtempSync } from "fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { copyDir, runCli, normalizeOutput, applyMutation } from "./_utils.mjs";
+import { copyDir, runCli, normalizeOutput, applyMutation } from "./_utils.js";
 import { fileURLToPath } from "url";
 import { spawnSync } from "child_process";
 
@@ -27,7 +27,7 @@ function ensureManifest() {
   }
   const auto = process.env.AGENTIC_AUTOGEN_GOLDENS === "1";
   if (auto) {
-    const result = spawnSync("node", [path.join(REPO_ROOT, "tests", "agentic", "generate-golden.mjs")], {
+    const result = spawnSync("node", [path.join(REPO_ROOT, "tests", "agentic", "generate-golden.js")], {
       encoding: "utf8",
       env: { ...process.env, TZ: "UTC" },
     });

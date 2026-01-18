@@ -6,7 +6,7 @@ import os from "os";
 import path from "path";
 import { mkdtempSync } from "fs";
 import { fileURLToPath } from "url";
-import { copyDir, runCli, normalizeOutput, applyMutation } from "./_utils.mjs";
+import { copyDir, runCli, normalizeOutput, applyMutation } from "./_utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,17 +17,17 @@ const goldenDir = path.join(REPO_ROOT, "tests", "agentic", "golden");
 
 /** @type {{ name: string; args: string[]; mutation?: { type: "setStatus"; stepId: string; status: string; attempt?: number } }[]} */
 const commands = [
-  { name: "help", args: ["scripts/agentic.mjs", "--help"] },
-  { name: "validate", args: ["scripts/agentic.mjs", "validate", "--run", "test-run"] },
-  { name: "status", args: ["scripts/agentic.mjs", "status", "--run", "test-run"] },
-  { name: "agent-coordinator", args: ["scripts/agentic.mjs", "agent", "coordinator", "--run", "test-run", "--dry-run"] },
-  { name: "flow", args: ["scripts/agentic.mjs", "flow", "--run", "test-run", "--dry-run"] },
+  { name: "help", args: ["scripts/agentic.js", "--help"] },
+  { name: "validate", args: ["scripts/agentic.js", "validate", "--run", "test-run"] },
+  { name: "status", args: ["scripts/agentic.js", "status", "--run", "test-run"] },
+  { name: "agent-coordinator", args: ["scripts/agentic.js", "agent", "coordinator", "--run", "test-run", "--dry-run"] },
+  { name: "flow", args: ["scripts/agentic.js", "flow", "--run", "test-run", "--dry-run"] },
   {
     name: "retry",
-    args: ["scripts/agentic.mjs", "retry", "--run", "test-run", "--step", "step-2"],
+    args: ["scripts/agentic.js", "retry", "--run", "test-run", "--step", "step-2"],
     mutation: { type: "setStatus", stepId: "step-2", status: "failed", attempt: 0 },
   },
-  { name: "skip", args: ["scripts/agentic.mjs", "skip", "--run", "test-run", "--step", "step-1"] },
+  { name: "skip", args: ["scripts/agentic.js", "skip", "--run", "test-run", "--step", "step-1"] },
 ];
 
 function ensureDirs() {
