@@ -45,6 +45,14 @@ This repo does not yet publish an installable package (**TODO**). For now:
 - Retry or skip a step: `node scripts/agentic.mjs retry --run "<RUN_ID>" --step "<STEP_ID>"` or `... skip ...`
 - View plan status: `make run-status RUN="<RUN_ID>"` (or `node scripts/agentic.mjs status --run "<RUN_ID>"`)
 
+## Coordinator planning logic (rules-based)
+
+- The coordinator classifies inputs into flows without LLMs.
+- Supported flows:
+  - PR Completion: decision-maker -> pr-reviewer (+ ciso if security keywords appear).
+  - Architecture Change: decision-maker -> pr-reviewer -> ciso.
+- Classification relies on keywords in `inputs/request.md` and `inputs/context.md` and records `flow_type` plus a short rationale in `plan.json`.
+
 ## Reliability notes (Step 3)
 
 - Writes to plan and agent outputs are atomic (temp + rename) to avoid partial files.

@@ -68,6 +68,8 @@ import process from "process";
  *   run_id: RunId;
  *   created_at_utc: string;
  *   version: string;
+ *   flow_type: string;
+ *   rationale: string;
  *   steps: PlanStep[];
  * }} Plan
  */
@@ -79,6 +81,41 @@ import process from "process";
  */
 
 const PLAN_VERSION = "0.1";
+const FLOW_PR_COMPLETION = "pr-completion";
+const FLOW_ARCH_CHANGE = "architecture-change";
+const PR_KEYWORDS = [
+  "pull request",
+  "pr",
+  "review",
+  "merge",
+  "docs update",
+  "documentation",
+  "configuration change",
+  "config change",
+  "config",
+  "change request",
+];
+const ARCH_KEYWORDS = [
+  "architecture",
+  "architectural",
+  "design",
+  "system change",
+  "refactor",
+  "scalability",
+  "performance",
+  "rearchitecture",
+];
+const SECURITY_KEYWORDS = [
+  "security",
+  "vulnerability",
+  "secret",
+  "token",
+  "credential",
+  "compliance",
+  "ciso",
+  "penetration",
+  "data leak",
+];
 
 /** @type {Set<AgentName>} */
 const VALID_AGENTS = new Set([
@@ -165,6 +202,20 @@ function readFirstLines(filePath, lineCount) {
     const contents = fs.readFileSync(filePath, "utf8");
     const lines = contents.split(/\r?\n/);
     return lines.slice(0, lineCount);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    fail(`Unable to read file: ${filePath}. ${reason}`);
+  }
+}
+
+/**
+ * Read full file contents as UTF-8.
+ * @param {string} filePath
+ * @returns {string}
+ */
+function readFileText(filePath) {
+  try {
+    return fs.readFileSync(filePath, "utf8");
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     fail(`Unable to read file: ${filePath}. ${reason}`);
@@ -359,58 +410,70 @@ function removeLock(lockPath) {
 }
 
 /**
- * Build a default plan for dry-run or live runs.
+ * Build a plan from a flow definition.
  * @param {RunId} runId
  * @param {string} createdAtUtc
+ * @param {string} flowType
+ * @param {string} rationale
+ * @param {boolean} includeCiso
  * @returns {Plan}
  */
-function buildDefaultPlan(runId, createdAtUtc) {
+function buildPlanFromFlow(runId, createdAtUtc, flowType, rationale, includeCiso) {
   const request = "inputs/request.md";
   const context = "inputs/context.md";
 
   /** @type {PlanStep[]} */
-  const steps = [
-    {
-      id: "step-1",
-      agent: "decision-maker",
-      depends_on: ["coordinator"],
-      inputs: {
-        request,
-        context,
-        prior_outputs: [
-          "outputs/coordinator/result.json",
-          "outputs/coordinator/notes.md",
-        ],
-      },
-      outputs: getCanonicalOutputs("decision-maker"),
-      status: "pending",
-      attempt: 0,
-      max_attempts: 1,
-      last_error: null,
-      allow_skip: true,
+  const steps = [];
+
+  /** @type {PlanStep} */
+  const decisionMakerStep = {
+    id: "step-1",
+    agent: /** @type {AgentName} */ ("decision-maker"),
+    depends_on: ["coordinator"],
+    inputs: {
+      request,
+      context,
+      prior_outputs: [
+        "outputs/coordinator/result.json",
+        "outputs/coordinator/notes.md",
+      ],
     },
-    {
-      id: "step-2",
-      agent: "pr-reviewer",
-      depends_on: ["decision-maker"],
-      inputs: {
-        request,
-        context,
-        prior_outputs: [
-          "outputs/decision-maker/result.json",
-          "outputs/decision-maker/notes.md",
-        ],
-      },
-      outputs: getCanonicalOutputs("pr-reviewer"),
-      status: "pending",
-      attempt: 0,
-      max_attempts: 1,
-      last_error: null,
-      allow_skip: true,
+    outputs: getCanonicalOutputs("decision-maker"),
+    status: "pending",
+    attempt: 0,
+    max_attempts: 1,
+    last_error: null,
+    allow_skip: true,
+  };
+  steps.push(decisionMakerStep);
+
+  /** @type {PlanStep} */
+  const prReviewerStep = {
+    id: "step-2",
+    agent: /** @type {AgentName} */ ("pr-reviewer"),
+    depends_on: ["decision-maker"],
+    inputs: {
+      request,
+      context,
+      prior_outputs: [
+        "outputs/decision-maker/result.json",
+        "outputs/decision-maker/notes.md",
+      ],
     },
-    {
+    outputs: getCanonicalOutputs("pr-reviewer"),
+    status: "pending",
+    attempt: 0,
+    max_attempts: 1,
+    last_error: null,
+    allow_skip: true,
+  };
+  steps.push(prReviewerStep);
+
+  if (includeCiso) {
+    /** @type {PlanStep} */
+    const cisoStep = {
       id: "step-3",
-      agent: "ciso",
+      agent: /** @type {AgentName} */ ("ciso"),
       depends_on: ["pr-reviewer"],
       inputs: {
         request,
@@ -426,15 +489,76 @@ function buildDefaultPlan(runId, createdAtUtc) {
       max_attempts: 1,
       last_error: null,
       allow_skip: true,
-    },
-  ];
+    };
+    steps.push(cisoStep);
+  }
 
   return {
     run_id: runId,
     created_at_utc: createdAtUtc,
     version: PLAN_VERSION,
+    flow_type: flowType,
+    rationale,
     steps,
   };
+}
+
+/**
+ * Find matching keywords in text.
+ * @param {string} text
+ * @param {string[]} keywords
+ * @returns {string[]}
+ */
+function findKeywords(text, keywords) {
+  const lower = text.toLowerCase();
+  /** @type {string[]} */
+  const found = [];
+  const seen = new Set();
+  keywords.forEach((keyword) => {
+    const key = keyword.toLowerCase();
+    if (!seen.has(key) && lower.includes(key)) {
+      found.push(keyword);
+      seen.add(key);
+    }
+  });
+  return found;
+}
+
+/**
+ * Classify flow based on request and context contents.
+ * @param {string} requestText
+ * @param {string} contextText
+ * @returns {{ flowType: string; rationale: string; includeCiso: boolean }}
+ */
+function classifyFlow(requestText, contextText) {
+  const combined = `${requestText}\n${contextText}`;
+  const archHits = findKeywords(combined, ARCH_KEYWORDS);
+  const prHits = findKeywords(combined, PR_KEYWORDS);
+  const securityHits = findKeywords(combined, SECURITY_KEYWORDS);
+
+  if (archHits.length > 0) {
+    const rationale = `Detected architecture change flow via keywords: ${archHits.join(
+      ", "
+    )}.`;
+    return {
+      flowType: FLOW_ARCH_CHANGE,
+      rationale,
+      includeCiso: true,
+    };
+  }
+
+  if (prHits.length > 0) {
+    const rationale = `Detected PR completion flow via keywords: ${prHits.join(
+      ", "
+    )}.`;
+    return {
+      flowType: FLOW_PR_COMPLETION,
+      rationale,
+      includeCiso: securityHits.length > 0,
+    };
+  }
+
+  fail("Unable to classify request into a known flow type.");
 }
 
 /**
@@ -489,6 +613,13 @@ function gatherPlanSchemaErrors(candidate, expectedRunId) {
 
   if (!Array.isArray(plan.steps) || plan.steps.length === 0) {
     errors.push("plan.json must include at least one step.");
+  }
+
+  if (!plan.flow_type || typeof plan.flow_type !== "string") {
+    errors.push("plan.json flow_type missing or not a string.");
+  }
+  if (!plan.rationale || typeof plan.rationale !== "string") {
+    errors.push("plan.json rationale missing or not a string.");
   }
 
   /** @type {Set<string>} */
@@ -871,7 +1002,16 @@ function runAgent(agentName, runId, mode) {
 
   if (agentName === "coordinator") {
     const planPath = path.join(runDir, "plan.json");
-    const plan = buildDefaultPlan(runId, createdAtUtc);
+    const requestText = readFileText(requestPath);
+    const contextText = readFileText(contextPath);
+    const classification = classifyFlow(requestText, contextText);
+    const plan = buildPlanFromFlow(
+      runId,
+      createdAtUtc,
+      classification.flowType,
+      classification.rationale,
+      classification.includeCiso
+    );
     persistPlan(planPath, plan);
   }
 
@@ -1092,6 +1232,8 @@ function runFlow(runId, mode) {
       run_id: runId,
       created_at_utc: "",
       version: PLAN_VERSION,
+      flow_type: "",
+      rationale: "",
       steps: [],
     },
     runDir
