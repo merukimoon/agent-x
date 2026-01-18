@@ -68,6 +68,21 @@ import process from "process";
  */
 /**
  * @typedef {{
+ *   id: string;
+ *   agent: AgentName;
+ *   depends_on: AgentName[];
+ *   enabled_if_keywords?: string[];
+ * }} RuleStep
+ */
+/**
+ * @typedef {{
+ *   flow_type: string;
+ *   keywords: string[];
+ *   steps: RuleStep[];
+ * }} RulePack
+ */
+/**
+ * @typedef {{
  *   run_id: RunId;
  *   created_at_utc: string;
  *   version: string;
@@ -88,39 +103,7 @@ import process from "process";
 const PLAN_VERSION = "0.1";
 const FLOW_PR_COMPLETION = "pr-completion";
 const FLOW_ARCH_CHANGE = "architecture-change";
-const PR_KEYWORDS = [
-  "pull request",
-  "pr",
-  "review",
-  "merge",
-  "docs update",
-  "documentation",
-  "configuration change",
-  "config change",
-  "config",
-  "change request",
-];
-const ARCH_KEYWORDS = [
-  "architecture",
-  "architectural",
-  "design",
-  "system change",
-  "refactor",
-  "scalability",
-  "performance",
-  "rearchitecture",
-];
-const SECURITY_KEYWORDS = [
-  "security",
-  "vulnerability",
-  "secret",
-  "token",
-  "credential",
-  "compliance",
-  "ciso",
-  "penetration",
-  "data leak",
-];
+const RULES_DIR = path.join(process.cwd(), "rules", "flows");
 
 /** @type {Set<AgentName>} */
 const VALID_AGENTS = new Set([
@@ -415,110 +398,6 @@ function removeLock(lockPath) {
 }
 
 /**
- * Build a plan from a flow definition.
- * @param {RunId} runId
- * @param {string} createdAtUtc
- * @param {string} flowType
- * @param {string} rationale
- * @param {boolean} includeCiso
- * @returns {Plan}
- */
-function buildPlanFromFlow(
-  runId,
-  createdAtUtc,
-  flowType,
-  rationale,
-  includeCiso,
-  /** @type {string[]} */ signals,
-  /** @type {ConfidenceLevel} */ confidence
-) {
-  const request = "inputs/request.md";
-  const context = "inputs/context.md";
-
-  /** @type {PlanStep[]} */
-  const steps = [];
-
-  /** @type {PlanStep} */
-  const decisionMakerStep = {
-    id: "step-1",
-    agent: /** @type {AgentName} */ ("decision-maker"),
-    depends_on: ["coordinator"],
-    inputs: {
-      request,
-      context,
-      prior_outputs: [
-        "outputs/coordinator/result.json",
-        "outputs/coordinator/notes.md",
-      ],
-    },
-    outputs: getCanonicalOutputs("decision-maker"),
-    status: "pending",
-    attempt: 0,
-    max_attempts: 1,
-    last_error: null,
-    allow_skip: true,
-  };
-  steps.push(decisionMakerStep);
-
-  /** @type {PlanStep} */
-  const prReviewerStep = {
-    id: "step-2",
-    agent: /** @type {AgentName} */ ("pr-reviewer"),
-    depends_on: ["decision-maker"],
-    inputs: {
-      request,
-      context,
-      prior_outputs: [
-        "outputs/decision-maker/result.json",
-        "outputs/decision-maker/notes.md",
-      ],
-    },
-    outputs: getCanonicalOutputs("pr-reviewer"),
-    status: "pending",
-    attempt: 0,
-    max_attempts: 1,
-    last_error: null,
-    allow_skip: true,
-  };
-  steps.push(prReviewerStep);
-
-  if (includeCiso) {
-    /** @type {PlanStep} */
-    const cisoStep = {
-      id: "step-3",
-      agent: /** @type {AgentName} */ ("ciso"),
-      depends_on: ["pr-reviewer"],
-      inputs: {
-        request,
-        context,
-        prior_outputs: [
-          "outputs/pr-reviewer/result.json",
-          "outputs/pr-reviewer/notes.md",
-        ],
-      },
-      outputs: getCanonicalOutputs("ciso"),
-      status: "pending",
-      attempt: 0,
-      max_attempts: 1,
-      last_error: null,
-      allow_skip: true,
-    };
-    steps.push(cisoStep);
-  }
-
-  return {
-    run_id: runId,
-    created_at_utc: createdAtUtc,
-    version: PLAN_VERSION,
-    flow_type: flowType,
-    rationale,
-    signals,
-    confidence,
-    steps,
-  };
-}
-
-/**
  * Find matching keywords in text.
  * @param {string} text
  * @param {string[]} keywords
@@ -540,53 +419,110 @@ function findKeywords(text, keywords) {
 }
 
 /**
- * Classify flow based on request and context contents.
+ * Load rule packs from the rules directory.
+ * @returns {RulePack[]}
+ */
+function loadRulePacks() {
+  if (!fs.existsSync(RULES_DIR) || !fs.statSync(RULES_DIR).isDirectory()) {
+    fail(`Rules directory not found: ${RULES_DIR}`);
+  }
+  const files = fs.readdirSync(RULES_DIR).filter((f) => f.endsWith(".json"));
+  if (files.length === 0) {
+    fail(`No rule packs found in ${RULES_DIR}`);
+  }
+  /** @type {RulePack[]} */
+  const packs = [];
+  files.forEach((file) => {
+    const fullPath = path.join(RULES_DIR, file);
+    try {
+      const raw = fs.readFileSync(fullPath, "utf8");
+      const parsed = JSON.parse(raw);
+      validateRulePack(parsed, fullPath);
+      packs.push(parsed);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      fail(`Failed to load rule pack ${fullPath}: ${reason}`);
+    }
+  });
+  return packs;
+}
+
+/**
+ * Validate rule pack structure.
+ * @param {unknown} pack
+ * @param {string} source
+ */
+function validateRulePack(pack, source) {
+  if (
+    !pack ||
+    typeof pack !== "object" ||
+    typeof /** @type {RulePack} */ (pack).flow_type !== "string" ||
+    !Array.isArray(/** @type {RulePack} */ (pack).keywords) ||
+    !Array.isArray(/** @type {RulePack} */ (pack).steps)
+  ) {
+    fail(`Rule pack invalid at ${source}`);
+  }
+  const asPack = /** @type {RulePack} */ (pack);
+  asPack.steps.forEach((step, index) => {
+    if (!step || typeof step !== "object") {
+      fail(`Rule pack step ${index} invalid in ${source}`);
+    }
+    if (!isAgentName(step.agent)) {
+      fail(`Rule pack step ${index} has invalid agent in ${source}: ${String(step.agent)}`);
+    }
+    if (!Array.isArray(step.depends_on)) {
+      fail(`Rule pack step ${index} depends_on invalid in ${source}`);
+    }
+  });
+}
+
+/**
+ * Classify flow based on request and context contents using rule packs.
  * @param {string} requestText
  * @param {string} contextText
- * @returns {{ flowType: string; rationale: string; includeCiso: boolean; signals: string[]; confidence: ConfidenceLevel }}
+ * @returns {{ pack: RulePack; signals: string[]; confidence: ConfidenceLevel }}
  */
 function classifyFlow(requestText, contextText) {
   const combined = `${requestText}\n${contextText}`;
-  const archHits = findKeywords(combined, ARCH_KEYWORDS);
-  const prHits = findKeywords(combined, PR_KEYWORDS);
-  const securityHits = findKeywords(combined, SECURITY_KEYWORDS);
+  const packs = loadRulePacks();
 
-  if (archHits.length > 0) {
-    const rationale = `Detected architecture change flow via keywords: ${archHits.join(
-      ", "
-    )}.`;
-    const confidence = archHits.length >= 3 ? "high" : archHits.length === 2 ? "medium" : "low";
-    const signals = archHits.map((k) => `keyword:${k}`);
-    return {
-      flowType: FLOW_ARCH_CHANGE,
-      rationale,
-      includeCiso: true,
-      signals,
-      confidence,
-    };
-  }
+  /** @type {{ pack: RulePack; matches: string[] }[]} */
+  const scored = packs.map((pack) => {
+    const matches = findKeywords(combined, pack.keywords);
+    return { pack, matches };
+  });
 
-  if (prHits.length > 0) {
-    const rationale = `Detected PR completion flow via keywords: ${prHits.join(
-      ", "
-    )}.`;
-    const confidence = prHits.length >= 3 ? "high" : prHits.length === 2 ? "medium" : "low";
-    const signals = prHits.map((k) => `keyword:${k}`);
-    if (securityHits.length > 0) {
-      securityHits.forEach((k) => {
-        signals.push(`keyword:${k}`);
-      });
+  /** @type {{ pack: RulePack; matches: string[] } | null} */
+  let best = null;
+  let bestCount = 0;
+  scored.forEach((entry) => {
+    const count = entry.matches.length;
+    if (count > bestCount) {
+      best = entry;
+      bestCount = count;
+    } else if (count === bestCount && count > 0) {
+      if (entry.pack.flow_type === FLOW_ARCH_CHANGE) {
+        best = entry;
+      }
     }
-    return {
-      flowType: FLOW_PR_COMPLETION,
-      rationale,
-      includeCiso: securityHits.length > 0,
-      signals,
-      confidence,
-    };
+  });
+
+  if (!best || bestCount === 0) {
+    const available = packs.map((p) => p.flow_type).join(", ");
+    fail(
+      `Unable to classify request into a known flow type. Add clearer keywords to inputs. Available flows: ${available}`
+    );
   }
 
-  fail("Unable to classify request into a known flow type. Add clearer keywords to inputs.");
+  const chosen = /** @type {{ pack: RulePack; matches: string[] }} */ (best);
+  const confidence =
+    bestCount >= 3 ? "high" : bestCount === 2 ? "medium" : "low";
+  const signals = chosen.matches.map((k) => `keyword:${k}`);
+  return {
+    pack: chosen.pack,
+    signals,
+    confidence,
+  };
 }
 
 /**
@@ -1045,18 +981,62 @@ function runAgent(agentName, runId, mode) {
     const planPath = path.join(runDir, "plan.json");
     const requestText = readFileText(requestPath);
     const contextText = readFileText(contextPath);
-    const classification = classifyFlow(requestText, contextText);
-    const plan = buildPlanFromFlow(
-      runId,
-      createdAtUtc,
-      classification.flowType,
-      classification.rationale,
-      classification.includeCiso,
-      classification.signals,
-      classification.confidence
-    );
-    persistPlan(planPath, plan);
-  }
+  const classification = classifyFlow(requestText, contextText);
+  /** @type {PlanStep[]} */
+  const steps = [];
+  const matchedSet = new Set(classification.signals.map((s) => s.replace(/^keyword:/, "")));
+  classification.pack.steps.forEach((stepDef) => {
+    if (
+      Array.isArray(stepDef.enabled_if_keywords) &&
+      stepDef.enabled_if_keywords.length > 0
+    ) {
+      const enabled = stepDef.enabled_if_keywords.some((k) =>
+        matchedSet.has(k)
+      );
+      if (!enabled) {
+        return;
+      }
+    }
+    const priorOutputs = stepDef.depends_on.flatMap((dep) => {
+      const outputs = getCanonicalOutputs(dep);
+      return [outputs.result, outputs.notes];
+    });
+    steps.push({
+      id: stepDef.id,
+      agent: stepDef.agent,
+      depends_on: stepDef.depends_on,
+      inputs: {
+        request: "inputs/request.md",
+        context: "inputs/context.md",
+        prior_outputs: priorOutputs,
+      },
+      outputs: getCanonicalOutputs(stepDef.agent),
+      status: "pending",
+      attempt: 0,
+      max_attempts: 1,
+      last_error: null,
+      allow_skip: true,
+    });
+  });
+
+  const rationaleSample = classification.signals.slice(0, 3).join(", ");
+  const rationale =
+    rationaleSample.length > 0
+      ? `Selected ${classification.pack.flow_type} via keywords: ${rationaleSample}`
+      : `Selected ${classification.pack.flow_type}.`;
+
+  const plan = {
+    run_id: runId,
+    created_at_utc: createdAtUtc,
+    version: PLAN_VERSION,
+    flow_type: classification.pack.flow_type,
+    rationale,
+    signals: classification.signals,
+    confidence: classification.confidence,
+    steps,
+  };
+  persistPlan(planPath, plan);
+}
 
   const modeLabel = mode === "dry-run" ? "Dry run" : "Run";
   console.log(
@@ -1559,7 +1539,7 @@ function handleStatusCommand(args) {
   );
   const signalsPreview =
     plan.signals.length > 8
-      ? `${plan.signals.slice(0, 8).join(",")} , ...`
+      ? `${plan.signals.slice(0, 8).join(",")}, ...`
       : plan.signals.join(",") || "-";
   console.log(
     `Flow: ${plan.flow_type} | confidence=${plan.confidence} | signals=${signalsPreview}`

@@ -51,8 +51,11 @@ This repo does not yet publish an installable package (**TODO**). For now:
 - Supported flows:
   - PR Completion: decision-maker -> pr-reviewer (+ ciso if security keywords appear).
   - Architecture Change: decision-maker -> pr-reviewer -> ciso.
+- Rule packs live under `rules/flows/*.json`; add a new flow by creating a pack with keywords and step definitions.
 - Classification relies on keywords in `inputs/request.md` and `inputs/context.md` and records `flow_type` plus a short rationale in `plan.json`.
 - Explainability: plan records matched keyword signals and a confidence level (high/medium/low). Status output shows flow, confidence, and signals (capped preview).
+- Flow selection: evaluates rule packs, picks the flow with the most keyword matches (ties favor architecture-change when applicable).
+- Rule pack shape (example): `{"flow_type":"pr-completion","keywords":["pull request",...],"steps":[{"id":"step-1","agent":"decision-maker","depends_on":["coordinator"]},...]}`.
 
 ## Reliability notes (Step 3)
 

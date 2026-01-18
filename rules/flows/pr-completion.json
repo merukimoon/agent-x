@@ -1,0 +1,52 @@
+{
+  "flow_type": "pr-completion",
+  "keywords": [
+    "pull request",
+    "pr",
+    "review",
+    "merge",
+    "docs update",
+    "documentation",
+    "configuration change",
+    "config change",
+    "config",
+    "change request",
+    "security",
+    "vulnerability",
+    "secret",
+    "token",
+    "credential",
+    "compliance",
+    "ciso",
+    "penetration",
+    "data leak"
+  ],
+  "steps": [
+    {
+      "id": "step-1",
+      "agent": "decision-maker",
+      "depends_on": ["coordinator"]
+    },
+    {
+      "id": "step-2",
+      "agent": "pr-reviewer",
+      "depends_on": ["decision-maker"]
+    },
+    {
+      "id": "step-3",
+      "agent": "ciso",
+      "depends_on": ["pr-reviewer"],
+      "enabled_if_keywords": [
+        "security",
+        "vulnerability",
+        "secret",
+        "token",
+        "credential",
+        "compliance",
+        "ciso",
+        "penetration",
+        "data leak"
+      ]
+    }
+  ]
+}
