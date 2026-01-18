@@ -1,16 +1,32 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
     "allowJs": true,
     "checkJs": false,
+    "noEmit": true,
+    "moduleResolution": "Bundler",
+    "module": "ESNext",
+    "target": "ES2022",
+    "types": [
+      "node"
+    ],
     "incremental": true,
-    "outDir": "dist",
-    "rootDir": ".",
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["./**/*.ts", "./**/*.js"],
-  "exclude": ["node_modules", "dist", "build", "out", "coverage", ".git"]
+  "include": [
+    "src/**/*",
+    "agents/**/*",
+    "rules/**/*",
+    "schemas/**/*",
+    "scripts/**/*",
+    "tests/**/*",
+    "*.ts",
+    "*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage"
+  ]
 }
