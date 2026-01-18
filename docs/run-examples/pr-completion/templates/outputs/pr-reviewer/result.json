@@ -1,0 +1,44 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-17_1200-pr-docs-and-config",
+  "task_id": "task-1234",
+  "agent": {
+    "name": "pr-reviewer",
+    "role": "PR Reviewer",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "No blocking issues. Minor improvement: clarify config comment for default behavior.",
+  "decisions": [
+    {
+      "id": "pr-dec-1",
+      "title": "Flag default doc alignment",
+      "rationale": "Docs and config are consistent; minor clarity suggestion only",
+      "scope": "config/feature-flags.yml"
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "pr-ns-1",
+      "action": "Add one-line comment in config about rollout plan",
+      "reason": "Improve maintainability",
+      "owner": "coordinator"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "pr-art-1",
+      "kind": "data",
+      "description": "PR review report",
+      "payload": {
+        "path": "artifacts/pr-review-report.txt",
+        "action": "create",
+        "content": "Findings: non_blocking: clarify config comment. No dependency changes. No security issues observed.\nRisk: low.\nTest impact: verify flag default and smoke tests if available.",
+        "content_encoding": "utf-8",
+        "mime_type": "text/plain"
+      }
+    }
+  ],
+  "errors": [],
+  "logs": []
+}

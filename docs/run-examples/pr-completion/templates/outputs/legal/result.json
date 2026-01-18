@@ -1,0 +1,36 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-17_1200-pr-docs-and-config",
+  "task_id": "task-1234",
+  "agent": {
+    "name": "legal",
+    "role": "Legal",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "No license or notice impacts. No new dependencies.",
+  "decisions": [
+    {
+      "id": "legal-dec-1",
+      "title": "License compliance",
+      "rationale": "No third party additions in scope"
+    }
+  ],
+  "next_steps": [],
+  "artifacts": [
+    {
+      "id": "legal-art-1",
+      "kind": "data",
+      "description": "LicenseComplianceReport",
+      "payload": {
+        "path": "artifacts/license-compliance-report.txt",
+        "action": "create",
+        "content": "Scope: docs and config default update. No new dependencies. Overall status: pass.",
+        "content_encoding": "utf-8",
+        "mime_type": "text/plain"
+      }
+    }
+  ],
+  "errors": [],
+  "logs": []
+}

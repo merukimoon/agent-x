@@ -1,0 +1,30 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-17_1200-pr-docs-and-config",
+  "task_id": "task-1234",
+  "agent": {
+    "name": "coordinator",
+    "role": "Coordinator",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "Flow A completed; all gates passed with one non blocking action.",
+  "decisions": [
+    {
+      "id": "coord-dec-1",
+      "title": "Route follow-up for config comment",
+      "rationale": "Address PR Reviewer suggestion before merge"
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "coord-ns-1",
+      "action": "Apply config comment",
+      "reason": "Document rollout plan",
+      "owner": "coordinator"
+    }
+  ],
+  "artifacts": [],
+  "errors": [],
+  "logs": []
+}

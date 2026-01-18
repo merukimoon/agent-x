@@ -1,0 +1,43 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-18_1015-arch-async-messaging",
+  "task_id": "task-5678",
+  "agent": {
+    "name": "data-scientist",
+    "role": "Data Scientist",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "Identified metrics and experiment design to validate performance impact; no blocking issues.",
+  "decisions": [
+    {
+      "id": "ds-dec-1",
+      "title": "Use message latency p95 and DLQ rate as primary metrics",
+      "rationale": "Measures user impact and resilience"
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "ds-ns-1",
+      "action": "Define baseline metrics and success thresholds for rollout",
+      "owner": "data-scientist",
+      "reason": "Enable comparison before/after change"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "ds-art-1",
+      "kind": "data",
+      "description": "Metrics plan",
+      "payload": {
+        "path": "artifacts/metrics-plan.md",
+        "action": "create",
+        "content": "Metrics, thresholds, and experiment outline for async messaging rollout.",
+        "content_encoding": "utf-8",
+        "mime_type": "text/markdown"
+      }
+    }
+  ],
+  "errors": [],
+  "logs": []
+}

@@ -1,0 +1,44 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-18_1015-arch-async-messaging",
+  "task_id": "task-5678",
+  "agent": {
+    "name": "qa",
+    "role": "QA",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "Defined test strategy for async messaging rollout; no blocking issues.",
+  "decisions": [
+    {
+      "id": "qa-dec-1",
+      "title": "Require regression suite with dual-write enabled",
+      "rationale": "Validate compatibility during phased rollout",
+      "classification": "non-blocking"
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "qa-ns-1",
+      "action": "Add integration tests for enqueue/dequeue, DLQ path, and retry semantics",
+      "owner": "engineering",
+      "reason": "Cover critical flows"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "qa-art-1",
+      "kind": "data",
+      "description": "QA strategy notes",
+      "payload": {
+        "path": "artifacts/qa-strategy.md",
+        "action": "create",
+        "content": "Test plan for dual-write, backpressure, DLQ, and rollback triggers.",
+        "content_encoding": "utf-8",
+        "mime_type": "text/markdown"
+      }
+    }
+  ],
+  "errors": [],
+  "logs": []
+}

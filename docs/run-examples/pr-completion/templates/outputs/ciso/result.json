@@ -1,0 +1,36 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-17_1200-pr-docs-and-config",
+  "task_id": "task-1234",
+  "agent": {
+    "name": "ciso",
+    "role": "CISO",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "No blocking security or compliance findings. Docs and config changes do not introduce new data handling.",
+  "decisions": [
+    {
+      "id": "ciso-dec-1",
+      "title": "Security review result",
+      "rationale": "No new data flows or permissions"
+    }
+  ],
+  "next_steps": [],
+  "artifacts": [
+    {
+      "id": "ciso-art-1",
+      "kind": "data",
+      "description": "SecurityComplianceReport",
+      "payload": {
+        "path": "artifacts/security-compliance-report.txt",
+        "action": "create",
+        "content": "Scope: docs and config default update.\nOverall status: pass.\nFindings: none.",
+        "content_encoding": "utf-8",
+        "mime_type": "text/plain"
+      }
+    }
+  ],
+  "errors": [],
+  "logs": []
+}

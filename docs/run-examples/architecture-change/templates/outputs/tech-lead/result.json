@@ -1,0 +1,49 @@
+{
+  "contract_version": "agent-contract/0.1",
+  "run_id": "2026-01-18_1015-arch-async-messaging",
+  "task_id": "task-5678",
+  "agent": {
+    "name": "tech-lead",
+    "role": "Tech Lead",
+    "version": "example/v0.1"
+  },
+  "status": "ok",
+  "summary": "Outlined migration plan and sequencing; identified dependencies and rollout steps.",
+  "decisions": [
+    {
+      "id": "tl-dec-1",
+      "title": "Phased rollout with dual-write period",
+      "rationale": "Allows verification before cutover; minimizes risk of dropped events"
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "tl-ns-1",
+      "action": "Implement producer shim to emit messages and HTTP responses during dual-write",
+      "owner": "engineering",
+      "reason": "Enable gradual consumer adoption"
+    },
+    {
+      "id": "tl-ns-2",
+      "action": "Add observability hooks for message latency and DLQ volume",
+      "owner": "devops",
+      "reason": "Detect regressions early"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "tl-art-1",
+      "kind": "data",
+      "description": "Migration plan outline",
+      "payload": {
+        "path": "artifacts/migration-plan-outline.md",
+        "action": "create",
+        "content": "Phased dual-write, consumer rollout, cutover, rollback triggers.",
+        "content_encoding": "utf-8",
+        "mime_type": "text/markdown"
+      }
+    }
+  ],
+  "errors": [],
+  "logs": []
+}
