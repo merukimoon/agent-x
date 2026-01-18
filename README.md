@@ -29,6 +29,19 @@ This repo does not yet publish an installable package (**TODO**). For now:
 2) Read the docs index: `docs/README.md`
 3) If you’re contributing, follow: `CONTRIBUTING.md`
 
+## Running an agent dry run
+
+1) Create a run folder: `make run-new NAME="demo-task"`
+2) Fill `runs/<RUN_ID>/inputs/request.md` and `runs/<RUN_ID>/inputs/context.md`.
+3) Execute a dry run for an agent: `make agent RUN="<RUN_ID>" AGENT="coordinator" DRY=1`
+4) Check outputs under `runs/<RUN_ID>/outputs/<agent>/` (`notes.md` and `result.json`).
+
+## Type checking for JS
+
+- The runtime stays in `.mjs` (ESM) and runs with Node directly—no build step.
+- Static typing is provided by TypeScript in `checkJs` mode with `// @ts-check` and JSDoc typedefs.
+- Run `npm install` once, then `npm run typecheck` to validate the CLI.
+
 ## Minimal usage example (pseudo-code)
 
 ```text

@@ -1,4 +1,4 @@
-.PHONY: help run-new run-tree
+.PHONY: help run-new run-tree agent
 
 help:
 	@echo "agentic-squad-framework: manual run scaffolding"
@@ -102,3 +102,24 @@ run-status:
 	echo ""; \
 	echo "Non-empty files (bytes):"; \
 	find "$$RUN_DIR" -type f -maxdepth 4 -print0 | xargs -0 wc -c | sort -n
+
+.PHONY: agent
+
+agent:
+	@set -eu; \
+	RUN="$${RUN:-}"; \
+	AGENT="$${AGENT:-}"; \
+	DRY="$${DRY:-1}"; \
+	if [ -z "$$RUN" ]; then \
+		echo "ERROR: RUN is required. Example: make agent RUN=\"2026-01-17_0930-docs-pr-audit\" AGENT=\"coordinator\" DRY=1"; \
+		exit 2; \
+	fi; \
+	if [ -z "$$AGENT" ]; then \
+		echo "ERROR: AGENT is required. Supported: coordinator decision-maker pr-reviewer ciso"; \
+		exit 2; \
+	fi; \
+	DRY_FLAG=""; \
+	if [ "$$DRY" != "0" ]; then \
+		DRY_FLAG="--dry-run"; \
+	fi; \
+	node scripts/agentic.mjs agent "$$AGENT" --run "$$RUN" $$DRY_FLAG

@@ -1,4 +1,15 @@
-# Run outputs (keep the directory README tracked)
-runs/**
-!runs/README.md
+# Node
+node_modules/
+npm-debug.log*
 
+# TypeScript
+.tsbuildinfo
+
+# Agentic runs (local executions)
+runs/*
+!runs/.gitkeep
+!runs/**/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
