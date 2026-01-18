@@ -18,29 +18,28 @@ import {
 } from "./agentic/status.js";
 import { createFlowLock, removeLock } from "./agentic/lock.js";
 import {
-  readFirstLines,
-  readFileText,
-  ensureRunAndInputs,
-  formatExcerpt,
-  buildNotes,
-  writeJsonFile,
-  writeFileAtomic,
-} from "./agentic/fs.js";
-import {
-  classifyFlow,
-  loadRulePacks,
-  validateRulePack,
-} from "./agentic/rules.js";
-import {
   validatePlan,
   gatherPlanSchemaErrors,
   runValidationChecks,
   validatePlanFiles,
   loadPlan,
   persistPlan,
+} from "./agentic/plan.js";
+import {
+  runAgent,
+  readDependencyStatus,
+  ensureDependencies,
+  checkDependenciesSatisfied,
   getCanonicalOutputs,
   validateCanonicalOutputs,
-} from "./agentic/plan.js";
+} from "./agentic/agents.js";
+import {
+  readFirstLines,
+  readFileText,
+  ensureRunAndInputs,
+  writeJsonFile,
+  writeFileAtomic,
+} from "./agentic/fs.js";
 
 /**
  * @typedef {import("./agentic/core.js").AgentName} AgentName
@@ -68,127 +67,6 @@ import {
  */
 function applyStatusTransition(plan, stepId, nextStatus, planPath, mutator) {
   applyStatusTransitionInternal(plan, stepId, nextStatus, planPath, persistPlan, mutator);
-}
-
-/**
- * Execute an agent, producing notes and result outputs.
- * Coordinator additionally writes plan.json.
- * @param {AgentName} agentName
- * @param {RunId} runId
- * @param {ExecutionMode} mode
- * @returns {AgentResult}
- */
-function runAgent(agentName, runId, mode) {
-  const runDir = path.join(process.cwd(), "runs", runId);
-  ensureRunAndInputs(runDir);
-
-  const requestPath = path.join(runDir, "inputs", "request.md");
-  const contextPath = path.join(runDir, "inputs", "context.md");
-
-  const requestExcerpt = readFirstLines(requestPath, 20);
-  const contextExcerpt = readFirstLines(contextPath, 20);
-  const createdAtUtc = new Date().toISOString();
-  const summary = `${
-    mode === "dry-run" ? "Dry run" : "Run"
-  } completed for ${agentName} on run ${runId}.`;
-
-  const outputsDir = path.join(runDir, "outputs", agentName);
-  fs.mkdirSync(outputsDir, { recursive: true });
-
-  const resultPath = path.join(outputsDir, "result.json");
-  /** @type {AgentStatus} */
-  const status = "done";
-  /** @type {AgentResult} */
-  const result = {
-    agent: agentName,
-    run_id: runId,
-    status,
-    created_at_utc: createdAtUtc,
-    summary,
-    mode,
-  };
-  writeJsonFile(resultPath, result);
-
-  const notesPath = path.join(outputsDir, "notes.md");
-  const notes = buildNotes({
-    agentName,
-    runId,
-    createdAtUtc,
-    mode,
-    requestPath,
-    contextPath,
-    requestExcerpt,
-    contextExcerpt,
-  });
-  writeFileAtomic(notesPath, notes);
-
-  if (agentName === "coordinator") {
-    const planPath = path.join(runDir, "plan.json");
-    const requestText = readFileText(requestPath);
-    const contextText = readFileText(contextPath);
-  const classification = classifyFlow(requestText, contextText);
-  /** @type {PlanStep[]} */
-  const steps = [];
-  const matchedSet = new Set(classification.signals.map((s) => s.replace(/^keyword:/, "")));
-  classification.pack.steps.forEach((stepDef) => {
-    if (
-      Array.isArray(stepDef.enabled_if_keywords) &&
-      stepDef.enabled_if_keywords.length > 0
-    ) {
-      const enabled = stepDef.enabled_if_keywords.some((k) =>
-        matchedSet.has(k)
-      );
-      if (!enabled) {
-        return;
-      }
-    }
-    const priorOutputs = stepDef.depends_on.flatMap((dep) => {
-      const outputs = getCanonicalOutputs(dep);
-      return [outputs.result, outputs.notes];
-    });
-    steps.push({
-      id: stepDef.id,
-      agent: stepDef.agent,
-      depends_on: stepDef.depends_on,
-      inputs: {
-        request: "inputs/request.md",
-        context: "inputs/context.md",
-        prior_outputs: priorOutputs,
-      },
-      outputs: getCanonicalOutputs(stepDef.agent),
-      status: "pending",
-      attempt: 0,
-      max_attempts: 1,
-      last_error: null,
-      allow_skip: true,
-    });
-  });
-
-  const rationaleSample = classification.signals.slice(0, 3).join(", ");
-  const rationale =
-    rationaleSample.length > 0
-      ? `Selected ${classification.pack.flow_type} via keywords: ${rationaleSample}`
-      : `Selected ${classification.pack.flow_type}.`;
-
-  const plan = {
-    run_id: runId,
-    created_at_utc: createdAtUtc,
-    version: PLAN_VERSION,
-    flow_type: classification.pack.flow_type,
-    rationale,
-    signals: classification.signals,
-    confidence: classification.confidence,
-    steps,
-  };
-  persistPlan(planPath, plan);
-}
-
-  const modeLabel = mode === "dry-run" ? "Dry run" : "Run";
-  console.log(
-    `${modeLabel} complete for agent "${agentName}" on run "${runId}". Outputs written to ${outputsDir}`
-  );
-
-  return result;
 }
 
 /**
@@ -316,72 +194,6 @@ function handleAgentCommand(args) {
   const mode = parsed.dryRun ? "dry-run" : "live";
 
   runAgent(agentCandidate, runId, mode);
-}
-
-/**
- * Read dependency result status.
- * @param {AgentName} agent
- * @param {string} runDir
- * @returns {{ ok: boolean; message: string | null }}
- */
-function readDependencyStatus(agent, runDir) {
-  const depResult = path.join(runDir, "outputs", agent, "result.json");
-  if (!fs.existsSync(depResult) || !fs.statSync(depResult).isFile()) {
-    return {
-      ok: false,
-      message: `Dependency result missing for ${agent} at ${depResult}.`,
-    };
-  }
-  try {
-    const raw = fs.readFileSync(depResult, "utf8");
-    const parsed = JSON.parse(raw);
-    const depStatus = parsed?.status;
-    if (depStatus !== "done") {
-      return {
-        ok: false,
-        message: `Dependency not satisfied: ${agent} status is ${String(
-          depStatus
-        )}, expected done.`,
-      };
-    }
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return {
-      ok: false,
-      message: `Dependency result unreadable for ${agent} at ${depResult}. ${reason}`,
-    };
-  }
-  return { ok: true, message: null };
-}
-
-/**
- * Ensure all dependency outputs exist and are satisfied before running a step.
- * @param {PlanStep} step
- * @param {string} runDir
- */
-function ensureDependencies(step, runDir) {
-  for (const agent of step.depends_on) {
-    const status = readDependencyStatus(agent, runDir);
-    if (!status.ok) {
-      fail(status.message ?? `Dependency not satisfied for ${agent}.`);
-    }
-  }
-}
-
-/**
- * Check whether dependencies are satisfied without throwing.
- * @param {PlanStep} step
- * @param {string} runDir
- * @returns {{ ready: boolean; blocking: string | null }}
- */
-function checkDependenciesSatisfied(step, runDir) {
-  for (const agent of step.depends_on) {
-    const status = readDependencyStatus(agent, runDir);
-    if (!status.ok) {
-      return { ready: false, blocking: status.message ?? `Dependency ${agent} not ready.` };
-    }
-  }
-  return { ready: true, blocking: null };
 }
 
 /**

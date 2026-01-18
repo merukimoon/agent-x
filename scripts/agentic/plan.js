@@ -9,34 +9,7 @@ import {
 } from "./core.js";
 import { fail } from "./errors.js";
 import { writeJsonFile } from "./fs.js";
-
-/**
- * Get canonical outputs paths for an agent.
- * @param {import("./core.js").AgentName} agent
- * @returns {{ result: string; notes: string }}
- */
-export function getCanonicalOutputs(agent) {
-  return {
-    result: `outputs/${agent}/result.json`,
-    notes: `outputs/${agent}/notes.md`,
-  };
-}
-
-/**
- * Validate rule pack outputs layout (canonical check).
- * @param {import("./core.js").PlanStep} step
- */
-export function validateCanonicalOutputs(step) {
-  const expected = getCanonicalOutputs(step.agent);
-  if (
-    step.outputs.result !== expected.result ||
-    step.outputs.notes !== expected.notes
-  ) {
-    fail(
-      `Step ${step.id} outputs must match canonical layout. Expected result=${expected.result}, notes=${expected.notes}.`
-    );
-  }
-}
+import { getCanonicalOutputs } from "./agents.js";
 
 /**
  * Validate a parsed plan object and return it if valid.
