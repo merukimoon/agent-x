@@ -1,4 +1,4 @@
-.PHONY: help run-new run-tree
+.PHONY: help run-new run-tree agent flow run-status
 
 help:
 	@echo "agentic-squad-framework: manual run scaffolding"
@@ -13,6 +13,9 @@ help:
 	@echo ""
 	@echo "  make run-tree RUN=\"<run-folder-name>\""
 	@echo "    Print a tree (or listing) for the specified run folder."
+	@echo ""
+	@echo "  make run-status RUN=\"<run-folder-name>\""
+	@echo "    Print plan status summary for the specified run."
 
 run-new:
 	@set -eu; \
@@ -70,3 +73,51 @@ run-tree:
 		echo "tree not found; using find"; \
 		find "$$RUN_DIR" -print; \
 	fi
+
+.PHONY: run-status
+
+run-status:
+	@set -eu; \
+	RUN="$${RUN:-}"; \
+	if [ -z "$$RUN" ]; then \
+		echo "ERROR: RUN is required. Example: make run-status RUN=\"2026-01-18_1124-pr-docs-and-config-3\""; \
+		exit 2; \
+	fi; \
+	node scripts/agentic.js status --run "$$RUN"
+
+.PHONY: agent
+
+agent:
+	@set -eu; \
+	RUN="$${RUN:-}"; \
+	AGENT="$${AGENT:-}"; \
+	DRY="$${DRY:-1}"; \
+	if [ -z "$$RUN" ]; then \
+		echo "ERROR: RUN is required. Example: make agent RUN=\"2026-01-17_0930-docs-pr-audit\" AGENT=\"coordinator\" DRY=1"; \
+		exit 2; \
+	fi; \
+	if [ -z "$$AGENT" ]; then \
+		echo "ERROR: AGENT is required. Supported: coordinator decision-maker pr-reviewer ciso"; \
+		exit 2; \
+	fi; \
+	DRY_FLAG=""; \
+	if [ "$$DRY" != "0" ]; then \
+		DRY_FLAG="--dry-run"; \
+	fi; \
+	node scripts/agentic.js agent "$$AGENT" --run "$$RUN" $$DRY_FLAG
+
+.PHONY: flow
+
+flow:
+	@set -eu; \
+	RUN="$${RUN:-}"; \
+	DRY="$${DRY:-1}"; \
+	if [ -z "$$RUN" ]; then \
+		echo "ERROR: RUN is required. Example: make flow RUN=\"2026-01-17_0930-docs-pr-audit\" DRY=1"; \
+		exit 2; \
+	fi; \
+	DRY_FLAG=""; \
+	if [ "$$DRY" != "0" ]; then \
+		DRY_FLAG="--dry-run"; \
+	fi; \
+	node scripts/agentic.js flow --run "$$RUN" $$DRY_FLAG

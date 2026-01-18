@@ -1,0 +1,59 @@
+{
+  "run_id": "test-run",
+  "created_at_utc": "2026-01-01T00:00:00.000Z",
+  "version": "0.1",
+  "flow_type": "pr-completion",
+  "rationale": "Fixture plan for tests",
+  "signals": [
+    "keyword:pull request",
+    "keyword:pr",
+    "keyword:review"
+  ],
+  "confidence": "high",
+  "steps": [
+    {
+      "id": "step-1",
+      "agent": "decision-maker",
+      "depends_on": ["coordinator"],
+      "inputs": {
+        "request": "inputs/request.md",
+        "context": "inputs/context.md",
+        "prior_outputs": [
+          "outputs/coordinator/result.json",
+          "outputs/coordinator/notes.md"
+        ]
+      },
+      "outputs": {
+        "result": "outputs/decision-maker/result.json",
+        "notes": "outputs/decision-maker/notes.md"
+      },
+      "status": "pending",
+      "attempt": 0,
+      "max_attempts": 2,
+      "last_error": null,
+      "allow_skip": true
+    },
+    {
+      "id": "step-2",
+      "agent": "pr-reviewer",
+      "depends_on": ["decision-maker"],
+      "inputs": {
+        "request": "inputs/request.md",
+        "context": "inputs/context.md",
+        "prior_outputs": [
+          "outputs/decision-maker/result.json",
+          "outputs/decision-maker/notes.md"
+        ]
+      },
+      "outputs": {
+        "result": "outputs/pr-reviewer/result.json",
+        "notes": "outputs/pr-reviewer/notes.md"
+      },
+      "status": "pending",
+      "attempt": 0,
+      "max_attempts": 2,
+      "last_error": null,
+      "allow_skip": true
+    }
+  ]
+}

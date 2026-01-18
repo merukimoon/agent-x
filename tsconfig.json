@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "moduleResolution": "Bundler",
+    "module": "ESNext",
+    "target": "ES2022",
+    "types": [
+      "node"
+    ],
+    "allowImportingTsExtensions": true,
+    "incremental": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "src/**/*",
+    "agents/**/*",
+    "rules/**/*",
+    "schemas/**/*",
+    "scripts/**/*",
+    "tests/**/*",
+    "*.ts",
+    "*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage"
+  ]
+}

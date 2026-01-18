@@ -1,0 +1,82 @@
+[
+  {
+    "name": "help",
+    "args": [
+      "scripts/agentic.js",
+      "--help"
+    ],
+    "mutation": null
+  },
+  {
+    "name": "validate",
+    "args": [
+      "scripts/agentic.js",
+      "validate",
+      "--run",
+      "test-run"
+    ],
+    "mutation": null
+  },
+  {
+    "name": "status",
+    "args": [
+      "scripts/agentic.js",
+      "status",
+      "--run",
+      "test-run"
+    ],
+    "mutation": null
+  },
+  {
+    "name": "agent-coordinator",
+    "args": [
+      "scripts/agentic.js",
+      "agent",
+      "coordinator",
+      "--run",
+      "test-run",
+      "--dry-run"
+    ],
+    "mutation": null
+  },
+  {
+    "name": "flow",
+    "args": [
+      "scripts/agentic.js",
+      "flow",
+      "--run",
+      "test-run",
+      "--dry-run"
+    ],
+    "mutation": null
+  },
+  {
+    "name": "retry",
+    "args": [
+      "scripts/agentic.js",
+      "retry",
+      "--run",
+      "test-run",
+      "--step",
+      "step-2"
+    ],
+    "mutation": {
+      "type": "setStatus",
+      "stepId": "step-2",
+      "status": "failed",
+      "attempt": 0
+    }
+  },
+  {
+    "name": "skip",
+    "args": [
+      "scripts/agentic.js",
+      "skip",
+      "--run",
+      "test-run",
+      "--step",
+      "step-1"
+    ],
+    "mutation": null
+  }
+]

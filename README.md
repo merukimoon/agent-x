@@ -21,6 +21,14 @@ These terms describe the intended shape of the project; adjust as the codebase e
 
 More detail: `docs/concepts.md`.
 
+## ESM defaults
+
+- Repository uses native Node.js ESM (`"type": "module"`).
+- Use `.js` for ESM modules with explicit `.js` extensions on relative imports.
+- Use `.cjs` only when a tool requires CommonJS configuration.
+- `.mjs` files are not expected in the codebase.
+- Guardrails exist to block CommonJS patterns; run `npm run verify:esm`.
+
 ## Quick start
 
 This repo does not yet publish an installable package (**TODO**). For now:
@@ -28,6 +36,62 @@ This repo does not yet publish an installable package (**TODO**). For now:
 1) Clone the repo
 2) Read the docs index: `docs/README.md`
 3) If you’re contributing, follow: `CONTRIBUTING.md`
+
+## Running an agent dry run
+
+1) Create a run folder: `make run-new NAME="demo-task"`
+2) Fill `runs/<RUN_ID>/inputs/request.md` and `runs/<RUN_ID>/inputs/context.md`.
+3) Execute a dry run for an agent: `make agent RUN="<RUN_ID>" AGENT="coordinator" DRY=1`
+4) Check outputs under `runs/<RUN_ID>/outputs/<agent>/` (`notes.md` and `result.json`).
+
+## Coordinator plan and flow execution
+
+- Run the coordinator to produce `plan.json`: `node scripts/agentic.js agent coordinator --run "<RUN_ID>" --dry-run`
+- Execute the plan-driven flow: `node scripts/agentic.js flow --run "<RUN_ID>" --dry-run`
+- Makefile helper: `make flow RUN="<RUN_ID>" DRY=1` (omit `DRY=1` to run without the dry-run flag; current Step 2 behavior is the same).
+- Validate a run: `node scripts/agentic.js validate --run "<RUN_ID>"`
+- Retry or skip a step: `node scripts/agentic.js retry --run "<RUN_ID>" --step "<STEP_ID>"` or `... skip ...`
+- View plan status: `make run-status RUN="<RUN_ID>"` (or `node scripts/agentic.js status --run "<RUN_ID>"`)
+
+## Coordinator planning logic (rules-based)
+
+- The coordinator classifies inputs into flows without LLMs.
+- Supported flows:
+  - PR Completion: decision-maker -> pr-reviewer (+ ciso if security keywords appear).
+  - Architecture Change: decision-maker -> pr-reviewer -> ciso.
+- Rule packs live under `rules/flows/*.json`; add a new flow by creating a pack with keywords and step definitions.
+- Classification relies on keywords in `inputs/request.md` and `inputs/context.md` and records `flow_type` plus a short rationale in `plan.json`.
+- Explainability: plan records matched keyword signals and a confidence level (high/medium/low). Status output shows flow, confidence, and signals (capped preview).
+- Flow selection: evaluates rule packs, picks the flow with the most keyword matches (ties favor architecture-change when applicable).
+- Rule pack shape (example): `{"flow_type":"pr-completion","keywords":["pull request",...],"steps":[{"id":"step-1","agent":"decision-maker","depends_on":["coordinator"]},...]}`.
+
+## Reliability notes (Step 3)
+
+- Writes to plan and agent outputs are atomic (temp + rename) to avoid partial files.
+- Flow execution uses a lock file (`runs/<RUN_ID>/.lock`); if present, flow refuses to start. Delete only if confirmed stale.
+- Validation exit codes: 10 (plan missing/invalid JSON), 11 (missing files referenced by plan or inputs), 12 (schema/invariant violations). Errors are printed with `ERROR:` prefixes.
+- Step state machine: pending→running→(done|failed); pending→skipped; failed→pending (retry); failed→skipped. Other transitions are rejected.
+- Retry: allowed only from failed, increments attempt, clears `last_error`, sets status to pending.
+- Skip: allowed only from pending or failed when `allow_skip` is true; keeps attempt and `last_error`, sets status to skipped.
+- Windows note: fsync may be rejected on some file systems; atomic writes are best-effort and fall back to temp+rename when fsync is not permitted.
+- Status dashboard example:
+  ```
+  Run: 2026-01-18_1315-flow-step3-prod
+  Plan: version=0.1 created_at_utc=2026-01-18T12:26:31Z
+  Counts: pending=1 running=0 done=2 failed=0 skipped=0
+  LOCK: none
+  Steps:
+  id             agent             status     attempt      depends_on
+  step-1         decision-maker    done       0/1          coordinator
+  step-2         pr-reviewer       pending    1/2          decision-maker
+  NEXT: step step-2 is ready
+  ```
+
+## Type checking for JS
+
+- The runtime stays in `.js` (ESM) and runs with Node directly—no build step.
+- Static typing is provided by TypeScript in `checkJs` mode with `// @ts-check` and JSDoc typedefs.
+- Run `npm install` once, then `npm run typecheck` to validate the CLI.
 
 ## Minimal usage example (pseudo-code)
 

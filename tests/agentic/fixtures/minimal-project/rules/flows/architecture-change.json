@@ -1,0 +1,30 @@
+{
+  "flow_type": "architecture-change",
+  "keywords": [
+    "architecture",
+    "architectural",
+    "design",
+    "system change",
+    "refactor",
+    "scalability",
+    "performance",
+    "rearchitecture"
+  ],
+  "steps": [
+    {
+      "id": "step-1",
+      "agent": "decision-maker",
+      "depends_on": ["coordinator"]
+    },
+    {
+      "id": "step-2",
+      "agent": "pr-reviewer",
+      "depends_on": ["decision-maker"]
+    },
+    {
+      "id": "step-3",
+      "agent": "ciso",
+      "depends_on": ["pr-reviewer"]
+    }
+  ]
+}
