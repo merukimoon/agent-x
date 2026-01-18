@@ -18,6 +18,11 @@ function setupWorkdir(prefix) {
   const tmp = mkdtempSync(path.join(os.tmpdir(), prefix));
   copyDir(fixtureDir, tmp);
   copyDir(scriptsDir, path.join(tmp, "scripts"));
+  const tsEntrypoint = path.join(tmp, "scripts", "agentic.ts");
+  const jsEntrypoint = path.join(tmp, "scripts", "agentic.js");
+  if (fs.existsSync(tsEntrypoint) && !fs.existsSync(jsEntrypoint)) {
+    fs.copyFileSync(tsEntrypoint, jsEntrypoint);
+  }
   return { tmp, runDir: path.join(tmp, "runs", "test-run") };
 }
 

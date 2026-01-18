@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// @ts-check
 
 import { USAGE } from "./agentic/core.js";
 import { handleFatalError } from "./agentic/errors.js";
