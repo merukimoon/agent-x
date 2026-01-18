@@ -71,6 +71,12 @@ import process from "process";
  *   steps: PlanStep[];
  * }} Plan
  */
+/**
+ * @typedef {{
+ *   missingPaths: string[];
+ *   schemaErrors: string[];
+ * }} ValidationResult
+ */
 
 const PLAN_VERSION = "0.1";
 
@@ -253,12 +259,79 @@ function ensureRunAndInputs(runDir) {
 
 /**
  * Write JSON to disk with trailing newline.
+ * Uses atomic write (temp file + rename) to reduce partial writes.
+ * @param {string} filePath
+ * @param {string | Buffer} data
+ */
+function writeFileAtomic(filePath, data) {
+  const dir = path.dirname(filePath);
+  fs.mkdirSync(dir, { recursive: true });
+  const tempName = `${path.basename(filePath)}.tmp.${process.pid}.${Date.now()}`;
+  const tempPath = path.join(dir, tempName);
+  fs.writeFileSync(tempPath, data, { encoding: typeof data === "string" ? "utf8" : undefined });
+  const fd = fs.openSync(tempPath, "r");
+  try {
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+  fs.renameSync(tempPath, filePath);
+}
+
+/**
+ * Write JSON with trailing newline via atomic write.
  * @param {string} filePath
  * @param {unknown} data
  */
 function writeJsonFile(filePath, data) {
   const serialized = `${JSON.stringify(data, null, 2)}\n`;
-  fs.writeFileSync(filePath, serialized, "utf8");
+  writeFileAtomic(filePath, serialized);
+}
+
+/**
+ * Create a lock file for flow execution.
+ * @param {string} runDir
+ * @param {RunId} runId
+ * @param {ExecutionMode} mode
+ * @returns {string} lockPath
+ */
+function createFlowLock(runDir, runId, mode) {
+  const lockPath = path.join(runDir, ".lock");
+  if (fs.existsSync(lockPath)) {
+    const existing = fs.readFileSync(lockPath, "utf8");
+    fail(
+      `Lock exists at ${lockPath}. Another flow may be running. If stale, remove the lock and retry. Contents:\n${existing}`
+    );
+  }
+  const startedAt = new Date().toISOString();
+  const content = [
+    `pid=${process.pid}`,
+    `started_at_utc=${startedAt}`,
+    `command=flow run=${runId} mode=${mode}`,
+    "",
+  ].join("\n");
+  try {
+    fs.writeFileSync(lockPath, content, { encoding: "utf8", flag: "wx" });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    fail(`Unable to create lock at ${lockPath}. ${reason}`);
+  }
+  return lockPath;
+}
+
+/**
+ * Remove lock file if present.
+ * @param {string} lockPath
+ */
+function removeLock(lockPath) {
+  try {
+    if (fs.existsSync(lockPath)) {
+      fs.unlinkSync(lockPath);
+    }
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error(`WARN: Unable to remove lock ${lockPath}: ${reason}`);
+  }
 }
 
 /**
@@ -347,81 +420,164 @@ function buildDefaultPlan(runId, createdAtUtc) {
  * @returns {Plan}
  */
 function validatePlan(candidate, expectedRunId) {
+  const { plan, schemaErrors } = gatherPlanSchemaErrors(candidate, expectedRunId);
+  if (schemaErrors.length > 0) {
+    fail(schemaErrors[0]);
+  }
+  return plan;
+}
+
+/**
+ * Gather schema and invariant errors without throwing.
+ * @param {unknown} candidate
+ * @param {RunId} expectedRunId
+ * @returns {{ plan: Plan; schemaErrors: string[] }}
+ */
+function gatherPlanSchemaErrors(candidate, expectedRunId) {
+  const plan = /** @type {Partial<Plan>} */ (candidate);
+  /** @type {string[]} */
+  const errors = [];
+
   if (!candidate || typeof candidate !== "object") {
-    fail("plan.json is invalid: expected an object.");
+    errors.push("plan.json is invalid: expected an object.");
+    return { plan: /** @type {Plan} */ (plan), schemaErrors: errors };
   }
 
-  const plan = /** @type {Partial<Plan>} */ (candidate);
-
   if (!plan.run_id || plan.run_id !== expectedRunId) {
-    fail(
-      `plan.json run_id mismatch. Expected ${expectedRunId}, found ${plan.run_id}.`
+    errors.push(
+      `plan.json run_id mismatch. Expected ${expectedRunId}, found ${String(
+        plan.run_id
+      )}.`
     );
   }
 
-  if (!plan.version || plan.version !== PLAN_VERSION) {
-    fail(
+  if (!plan.version || typeof plan.version !== "string") {
+    errors.push("plan.json version missing or not a string.");
+  } else if (plan.version !== PLAN_VERSION) {
+    errors.push(
       `plan.json version mismatch. Expected ${PLAN_VERSION}, found ${plan.version}.`
     );
   }
 
   if (!plan.created_at_utc || typeof plan.created_at_utc !== "string") {
-    fail("plan.json missing created_at_utc.");
+    errors.push("plan.json missing created_at_utc.");
   }
 
   if (!Array.isArray(plan.steps) || plan.steps.length === 0) {
-    fail("plan.json must include at least one step.");
+    errors.push("plan.json must include at least one step.");
   }
 
-  plan.steps.forEach((step, index) => {
+  /** @type {Set<string>} */
+  const stepIds = new Set();
+  /** @type {Set<AgentName>} */
+  const agentsInPlan = new Set();
+  if (Array.isArray(plan.steps)) {
+    plan.steps.forEach((step) => {
+      if (step && typeof step === "object" && isAgentName(step.agent)) {
+        agentsInPlan.add(step.agent);
+      }
+    });
+  }
+
+  plan.steps?.forEach((step, index) => {
     if (!step || typeof step !== "object") {
-      fail(`plan.json step at index ${index} is invalid.`);
+      errors.push(`plan.json step at index ${index} is invalid.`);
+      return;
     }
     if (!step.id || typeof step.id !== "string") {
-      fail(`plan.json step ${index} missing id.`);
+      errors.push(`plan.json step ${index} missing id.`);
+    } else {
+      if (stepIds.has(step.id)) {
+        errors.push(`plan.json step id is duplicated: ${step.id}.`);
+      }
+      stepIds.add(step.id);
     }
     if (!isAgentName(step.agent)) {
-      fail(
-        `plan.json step ${step.id} has invalid agent: ${String(step.agent)}.`
+      errors.push(
+        `plan.json step ${step.id ?? index} has invalid agent: ${String(
+          step.agent
+        )}.`
       );
     }
     if (!Array.isArray(step.depends_on)) {
-      fail(`plan.json step ${step.id} depends_on must be an array.`);
+      errors.push(`plan.json step ${step.id ?? index} depends_on must be an array.`);
+    } else {
+      step.depends_on.forEach((dep) => {
+        if (!isAgentName(dep)) {
+          errors.push(
+            `plan.json step ${step.id ?? index} has invalid dependency: ${String(
+              dep
+            )}.`
+          );
+          return;
+        }
+        if (dep !== "coordinator" && !agentsInPlan.has(dep)) {
+          errors.push(
+            `plan.json step ${step.id ?? index} depends on unknown agent: ${dep}.`
+          );
+        }
+      });
     }
-    step.depends_on.forEach((dep) => {
-      if (!isAgentName(dep)) {
-        fail(`plan.json step ${step.id} has invalid dependency: ${dep}.`);
-      }
-    });
     if (!step.inputs || typeof step.inputs !== "object") {
-      fail(`plan.json step ${step.id} missing inputs.`);
-    }
-    if (
-      !step.inputs?.request ||
-      typeof step.inputs.request !== "string" ||
-      !step.inputs?.context ||
-      typeof step.inputs.context !== "string"
-    ) {
-      fail(`plan.json step ${step.id} inputs.request/context must be strings.`);
-    }
-    if (
-      !Array.isArray(step.inputs.prior_outputs) ||
-      step.inputs.prior_outputs.some((p) => typeof p !== "string")
-    ) {
-      fail(`plan.json step ${step.id} inputs.prior_outputs must be strings.`);
+      errors.push(`plan.json step ${step.id ?? index} missing inputs.`);
+    } else {
+      if (
+        !step.inputs?.request ||
+        typeof step.inputs.request !== "string" ||
+        !step.inputs?.context ||
+        typeof step.inputs.context !== "string"
+      ) {
+        errors.push(
+          `plan.json step ${step.id ?? index} inputs.request/context must be strings.`
+        );
+      } else {
+        if (step.inputs.request !== "inputs/request.md") {
+          errors.push(
+            `plan.json step ${step.id ?? index} inputs.request must be inputs/request.md.`
+          );
+        }
+        if (step.inputs.context !== "inputs/context.md") {
+          errors.push(
+            `plan.json step ${step.id ?? index} inputs.context must be inputs/context.md.`
+          );
+        }
+      }
+      if (
+        !Array.isArray(step.inputs.prior_outputs) ||
+        step.inputs.prior_outputs.some((p) => typeof p !== "string")
+      ) {
+        errors.push(
+          `plan.json step ${step.id ?? index} inputs.prior_outputs must be strings.`
+        );
+      }
     }
     if (!step.outputs || typeof step.outputs !== "object") {
-      fail(`plan.json step ${step.id} missing outputs.`);
-    }
-    if (
-      typeof step.outputs.result !== "string" ||
-      typeof step.outputs.notes !== "string"
-    ) {
-      fail(`plan.json step ${step.id} outputs.result/notes must be strings.`);
+      errors.push(`plan.json step ${step.id ?? index} missing outputs.`);
+    } else {
+      if (
+        typeof step.outputs.result !== "string" ||
+        typeof step.outputs.notes !== "string"
+      ) {
+        errors.push(
+          `plan.json step ${step.id ?? index} outputs.result/notes must be strings.`
+        );
+      } else if (isAgentName(step.agent)) {
+        const expected = getCanonicalOutputs(step.agent);
+        if (
+          step.outputs.result !== expected.result ||
+          step.outputs.notes !== expected.notes
+        ) {
+          errors.push(
+            `plan.json step ${step.id ?? index} outputs must match canonical layout (${expected.result}, ${expected.notes}).`
+          );
+        }
+      }
     }
     if (!isStepStatus(step.status)) {
-      fail(
-        `plan.json step ${step.id} has invalid status: ${String(step.status)}.`
+      errors.push(
+        `plan.json step ${step.id ?? index} has invalid status: ${String(
+          step.status
+        )}.`
       );
     }
     if (
@@ -429,25 +585,70 @@ function validatePlan(candidate, expectedRunId) {
       !Number.isInteger(step.attempt) ||
       step.attempt < 0
     ) {
-      fail(`plan.json step ${step.id} attempt must be a non-negative integer.`);
+      errors.push(
+        `plan.json step ${step.id ?? index} attempt must be a non-negative integer.`
+      );
     }
     if (
       typeof step.max_attempts !== "number" ||
       !Number.isInteger(step.max_attempts) ||
       step.max_attempts < 1
     ) {
-      fail(`plan.json step ${step.id} max_attempts must be an integer >= 1.`);
+      errors.push(
+        `plan.json step ${step.id ?? index} max_attempts must be an integer >= 1.`
+      );
     }
     if (step.last_error !== null && typeof step.last_error !== "string") {
-      fail(`plan.json step ${step.id} last_error must be null or string.`);
+      errors.push(
+        `plan.json step ${step.id ?? index} last_error must be null or string.`
+      );
     }
     if (typeof step.allow_skip !== "boolean") {
-      fail(`plan.json step ${step.id} allow_skip must be boolean.`);
+      errors.push(`plan.json step ${step.id ?? index} allow_skip must be boolean.`);
     }
-    validateCanonicalOutputs(/** @type {PlanStep} */ (step));
   });
 
-  return /** @type {Plan} */ (plan);
+  return { plan: /** @type {Plan} */ (plan), schemaErrors: errors };
+}
+
+/**
+ * Perform validation and classify errors.
+ * @param {RunId} runId
+ * @param {string} runDir
+ * @param {string} planPath
+ * @returns {{ plan: Plan | null; schemaErrors: string[]; missingPaths: string[]; planLoadError: string | null }}
+ */
+function runValidationChecks(runId, runDir, planPath) {
+  if (!fs.existsSync(planPath) || !fs.statSync(planPath).isFile()) {
+    return {
+      plan: null,
+      schemaErrors: [],
+      missingPaths: [],
+      planLoadError: `plan.json not found at ${planPath}`,
+    };
+  }
+
+  let parsed;
+  try {
+    const raw = fs.readFileSync(planPath, "utf8");
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return {
+      plan: null,
+      schemaErrors: [],
+      missingPaths: [],
+      planLoadError: `plan.json invalid JSON at ${planPath}: ${reason}`,
+    };
+  }
+
+  const { plan, schemaErrors } = gatherPlanSchemaErrors(parsed, runId);
+  if (schemaErrors.length > 0) {
+    return { plan: null, schemaErrors, missingPaths: [], planLoadError: null };
+  }
+
+  const missingPaths = validatePlanFiles(plan, runDir);
+  return { plan, schemaErrors: [], missingPaths, planLoadError: null };
 }
 
 /**
@@ -469,53 +670,39 @@ function validatePlanFiles(plan, runDir) {
     errors.push(`Missing input: ${contextPath}`);
   }
 
-  const stepByAgent = new Map();
+  /** @type {Map<AgentName, StepStatus>} */
+  const statusByAgent = new Map();
   plan.steps.forEach((step) => {
-    if (!stepByAgent.has(step.agent)) {
-      stepByAgent.set(step.agent, step);
-    }
+    statusByAgent.set(step.agent, step.status);
   });
 
   /**
-   * Determine whether a dependency output is expected to exist now.
+   * Determine whether dependency outputs must exist now.
+   * - Coordinator dependencies are always required.
+   * - Other agents are required when their status is not pending.
    * @param {AgentName} agent
    * @returns {boolean}
    */
-  const shouldRequireDependencyOutput = (agent) => {
+  const mustRequireDependency = (agent) => {
     if (agent === "coordinator") {
       return true;
     }
-    const depStep = stepByAgent.get(agent);
-    if (!depStep) {
+    const status = statusByAgent.get(agent);
+    if (!status) {
       errors.push(`Dependency agent ${agent} not found in plan steps.`);
       return false;
     }
-    return depStep.status === "done";
+    return status !== "pending";
   };
 
   plan.steps.forEach((step) => {
-    const expected = getCanonicalOutputs(step.agent);
-    if (
-      step.outputs.result !== expected.result ||
-      step.outputs.notes !== expected.notes
-    ) {
-      errors.push(
-        `Step ${step.id} outputs must match canonical layout (expected ${expected.result} and ${expected.notes}).`
-      );
-    }
-    if (step.inputs.request !== "inputs/request.md") {
-      errors.push(`Step ${step.id} inputs.request must be inputs/request.md.`);
-    }
-    if (step.inputs.context !== "inputs/context.md") {
-      errors.push(`Step ${step.id} inputs.context must be inputs/context.md.`);
-    }
-
     step.inputs.prior_outputs.forEach((relPath) => {
       const fullPath = path.join(runDir, relPath);
       const match = relPath.match(/^outputs\/([^/]+)\/(result\.json|notes\.md)$/);
-      const depAgent = match && isAgentName(match[1]) ? /** @type {AgentName} */ (match[1]) : null;
-      const mustExist = depAgent ? shouldRequireDependencyOutput(depAgent) : true;
-      if (mustExist) {
+      const depAgent =
+        match && isAgentName(match[1]) ? /** @type {AgentName} */ (match[1]) : null;
+      const requireNow = depAgent ? mustRequireDependency(depAgent) : true;
+      if (requireNow) {
         if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
           errors.push(
             `Step ${step.id} prior output missing: ${fullPath} (from ${relPath}).`
@@ -526,8 +713,8 @@ function validatePlanFiles(plan, runDir) {
 
     step.depends_on.forEach((dep) => {
       const depResult = path.join(runDir, getCanonicalOutputs(dep).result);
-      const mustExist = shouldRequireDependencyOutput(dep);
-      if (mustExist) {
+      const requireNow = mustRequireDependency(dep);
+      if (requireNow) {
         if (!fs.existsSync(depResult) || !fs.statSync(depResult).isFile()) {
           errors.push(
             `Step ${step.id} dependency missing result: ${depResult} (dependency ${dep}).`
@@ -648,7 +835,7 @@ function runAgent(agentName, runId, mode) {
     requestExcerpt,
     contextExcerpt,
   });
-  fs.writeFileSync(notesPath, notes, "utf8");
+  writeFileAtomic(notesPath, notes);
 
   if (agentName === "coordinator") {
     const planPath = path.join(runDir, "plan.json");
@@ -814,78 +1001,112 @@ function ensureDependencies(step, runDir) {
  */
 function runFlow(runId, mode) {
   const runDir = path.join(process.cwd(), "runs", runId);
-  ensureRunAndInputs(runDir);
-
-  const planPath = path.join(runDir, "plan.json");
-
-  if (!fs.existsSync(planPath)) {
-    console.log("plan.json not found; running coordinator to generate plan.");
-    runAgent("coordinator", runId, mode);
+  if (!fs.existsSync(runDir) || !fs.statSync(runDir).isDirectory()) {
+    fail(`Run directory not found: ${runDir}`, { exitCode: 11 });
   }
 
-  let plan = loadPlan(planPath, runId);
-
-  const validationErrors = validatePlanFiles(plan, runDir);
-  if (validationErrors.length > 0) {
-    console.error("Validation failed:");
-    validationErrors.forEach((err) => console.error(`- ${err}`));
-    process.exit(3);
+  const missingInputs = validatePlanFiles(
+    {
+      run_id: runId,
+      created_at_utc: "",
+      version: PLAN_VERSION,
+      steps: [],
+    },
+    runDir
+  ).filter((msg) => msg.startsWith("Missing input"));
+  if (missingInputs.length > 0) {
+    missingInputs.forEach((msg) => console.error(`ERROR: ${msg}`));
+    fail("Missing required inputs.", { exitCode: 11 });
   }
 
-  plan.steps.forEach((step) => {
-    if (step.status === "failed") {
-      fail(
-        `Cannot continue: step ${step.id} is already failed. Update plan.json before rerunning flow.`
-      );
-    }
-    if (step.status === "running") {
-      fail(
-        `Cannot continue: step ${step.id} is marked running. Update plan.json before rerunning flow.`
-      );
-    }
-    if (step.status === "done" || step.status === "skipped") {
-      return;
+  const lockPath = createFlowLock(runDir, runId, mode);
+  try {
+    const planPath = path.join(runDir, "plan.json");
+
+    if (!fs.existsSync(planPath)) {
+      console.log("plan.json not found; running coordinator to generate plan.");
+      runAgent("coordinator", runId, mode);
     }
 
-    if (step.attempt >= step.max_attempts) {
-      fail(
-        `Step ${step.id} has reached max attempts (${step.attempt}/${step.max_attempts}). Use retry or skip to continue.`
-      );
+    let validation = runValidationChecks(runId, runDir, planPath);
+    if (validation.planLoadError) {
+      console.error(`ERROR: ${validation.planLoadError}`);
+      fail("Validation failed.", { exitCode: 10 });
+    }
+    if (validation.schemaErrors.length > 0) {
+      validation.schemaErrors.forEach((err) => console.error(`ERROR: ${err}`));
+      fail("Validation failed.", { exitCode: 12 });
+    }
+    if (validation.missingPaths.length > 0) {
+      validation.missingPaths.forEach((err) => console.error(`ERROR: ${err}`));
+      fail("Validation failed.", { exitCode: 11 });
+    }
+    const planMaybe = validation.plan;
+    if (!planMaybe) {
+      fail("Unable to load plan.", { exitCode: 10 });
     }
 
-    ensureDependencies(step, runDir);
+    const planPathFinal = planPath;
+    /** @type {Plan} */
+    let plan = planMaybe;
 
-    updatePlanStep(plan, step.id, (s) => {
-      if (s.attempt < 1) {
-        s.attempt = 1;
+    plan.steps.forEach((step) => {
+      if (step.status === "failed") {
+        fail(
+          `Cannot continue: step ${step.id} is already failed. Update plan.json before rerunning flow.`
+        );
       }
-      s.status = "running";
-      s.last_error = null;
-    }, planPath);
-    plan = loadPlan(planPath, runId);
+      if (step.status === "running") {
+        fail(
+          `Cannot continue: step ${step.id} is marked running. Update plan.json before rerunning flow.`
+        );
+      }
+      if (step.status === "done" || step.status === "skipped") {
+        return;
+      }
 
-    try {
-      runAgent(step.agent, runId, mode);
+      if (step.attempt >= step.max_attempts) {
+        fail(
+          `Step ${step.id} has reached max attempts (${step.attempt}/${step.max_attempts}). Use retry or skip to continue.`
+        );
+      }
+
+      ensureDependencies(step, runDir);
+
       updatePlanStep(plan, step.id, (s) => {
-        s.status = "done";
+        if (s.attempt < 1) {
+          s.attempt = 1;
+        }
+        s.status = "running";
         s.last_error = null;
-      }, planPath);
-      plan = loadPlan(planPath, runId);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      const truncated = reason.replace(/\s+/g, " ").slice(0, 200);
-      updatePlanStep(plan, step.id, (s) => {
-        s.status = "failed";
-        s.last_error = truncated;
-      }, planPath);
-      throw error;
-    }
-  });
+      }, planPathFinal);
+      plan = loadPlan(planPathFinal, runId);
 
-  const summary = plan.steps
-    .map((step) => `${step.id}:${step.agent}=${step.status}`)
-    .join(", ");
-  console.log(`Flow complete for run ${runId}. Steps: ${summary}`);
+      try {
+        runAgent(step.agent, runId, mode);
+        updatePlanStep(plan, step.id, (s) => {
+          s.status = "done";
+          s.last_error = null;
+        }, planPathFinal);
+        plan = loadPlan(planPathFinal, runId);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        const truncated = reason.replace(/\s+/g, " ").slice(0, 200);
+        updatePlanStep(plan, step.id, (s) => {
+          s.status = "failed";
+          s.last_error = truncated;
+        }, planPathFinal);
+        throw error;
+      }
+    });
+
+    const summary = plan.steps
+      .map((step) => `${step.id}:${step.agent}=${step.status}`)
+      .join(", ");
+    console.log(`Flow complete for run ${runId}. Steps: ${summary}`);
+  } finally {
+    removeLock(lockPath);
+  }
 }
 
 /**
@@ -911,17 +1132,23 @@ function handleValidateCommand(args) {
     fail(`Unknown arguments: ${parsed.remainder.join(" ")}`, { showUsage: true });
   }
   const runDir = path.join(process.cwd(), "runs", parsed.runId);
-  ensureRunAndInputs(runDir);
-  const planPath = path.join(runDir, "plan.json");
-  if (!fs.existsSync(planPath) || !fs.statSync(planPath).isFile()) {
-    fail(`plan.json not found at ${planPath}`);
+  if (!fs.existsSync(runDir) || !fs.statSync(runDir).isDirectory()) {
+    console.error(`ERROR: Run directory not found: ${runDir}`);
+    process.exit(11);
   }
-  const plan = loadPlan(planPath, parsed.runId);
-  const errors = validatePlanFiles(plan, runDir);
-  if (errors.length > 0) {
-    console.error("Validation failed:");
-    errors.forEach((err) => console.error(`- ${err}`));
-    process.exit(3);
+  const planPath = path.join(runDir, "plan.json");
+  const result = runValidationChecks(parsed.runId, runDir, planPath);
+  if (result.planLoadError) {
+    console.error(`ERROR: ${result.planLoadError}`);
+    process.exit(10);
+  }
+  if (result.schemaErrors.length > 0) {
+    result.schemaErrors.forEach((err) => console.error(`ERROR: ${err}`));
+    process.exit(12);
+  }
+  if (result.missingPaths.length > 0) {
+    result.missingPaths.forEach((err) => console.error(`ERROR: ${err}`));
+    process.exit(11);
   }
   console.log("OK");
 }

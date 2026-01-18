@@ -45,6 +45,12 @@ This repo does not yet publish an installable package (**TODO**). For now:
 - Retry or skip a step: `node scripts/agentic.mjs retry --run "<RUN_ID>" --step "<STEP_ID>"` or `... skip ...`
 - View plan status: `make run-status RUN="<RUN_ID>"` (or `node scripts/agentic.mjs status --run "<RUN_ID>"`)
 
+## Reliability notes (Step 3)
+
+- Writes to plan and agent outputs are atomic (temp + rename) to avoid partial files.
+- Flow execution uses a lock file (`runs/<RUN_ID>/.lock`); if present, flow refuses to start. Delete only if confirmed stale.
+- Validation exit codes: 10 (plan missing/invalid JSON), 11 (missing files referenced by plan or inputs), 12 (schema/invariant violations). Errors are printed with `ERROR:` prefixes.
+
 ## Type checking for JS
 
 - The runtime stays in `.mjs` (ESM) and runs with Node directly—no build step.
