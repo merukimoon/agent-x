@@ -122,14 +122,6 @@ export const USAGE = [
 ].join("\n");
 
 /** @type {Record<StepStatus, Set<StepStatus>>} */
-export const ALLOWED_TRANSITIONS = {
-  pending: new Set(["running", "skipped"]),
-  running: new Set(["done", "failed"]),
-  done: new Set(),
-  failed: new Set(["pending", "skipped"]),
-  skipped: new Set(),
-};
-
 /**
  * Determine whether a value is a supported agent name.
  * @param {string} value
@@ -152,18 +144,4 @@ export function isStepStatus(value) {
     value === "failed" ||
     value === "skipped"
   );
-}
-
-/**
- * Determine if a status transition is allowed.
- * @param {StepStatus} from
- * @param {StepStatus} to
- * @returns {boolean}
- */
-export function isAllowedStatusTransition(from, to) {
-  if (from === to) {
-    return true;
-  }
-  const allowed = ALLOWED_TRANSITIONS[from];
-  return allowed ? allowed.has(to) : false;
 }

@@ -13,9 +13,13 @@ import {
   USAGE,
   isAgentName,
   isStepStatus,
-  isAllowedStatusTransition,
 } from "./agentic/core.js";
 import { fail, handleFatalError } from "./agentic/errors.js";
+import {
+  isAllowedStatusTransition,
+  applyStatusTransition as applyStatusTransitionInternal,
+} from "./agentic/status.js";
+import { createFlowLock, removeLock } from "./agentic/lock.js";
 
 /**
  * @typedef {import("./agentic/core.js").AgentName} AgentName
@@ -203,52 +207,6 @@ function writeFileAtomic(filePath, data) {
 function writeJsonFile(filePath, data) {
   const serialized = `${JSON.stringify(data, null, 2)}\n`;
   writeFileAtomic(filePath, serialized);
-}
-
-/**
- * Create a lock file for flow execution.
- * @param {string} runDir
- * @param {RunId} runId
- * @param {ExecutionMode} mode
- * @returns {string} lockPath
- */
-function createFlowLock(runDir, runId, mode) {
-  const lockPath = path.join(runDir, ".lock");
-  if (fs.existsSync(lockPath)) {
-    const existing = fs.readFileSync(lockPath, "utf8");
-    fail(
-      `Lock exists at ${lockPath}. Another flow may be running. If stale, remove the lock and retry. Contents:\n${existing}`
-    );
-  }
-  const startedAt = new Date().toISOString();
-  const content = [
-    `pid=${process.pid}`,
-    `started_at_utc=${startedAt}`,
-    `command=flow run=${runId} mode=${mode}`,
-    "",
-  ].join("\n");
-  try {
-    fs.writeFileSync(lockPath, content, { encoding: "utf8", flag: "wx" });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    fail(`Unable to create lock at ${lockPath}. ${reason}`);
-  }
-  return lockPath;
-}
-
-/**
- * Remove lock file if present.
- * @param {string} lockPath
- */
-function removeLock(lockPath) {
-  try {
-    if (fs.existsSync(lockPath)) {
-      fs.unlinkSync(lockPath);
-    }
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    console.error(`WARN: Unable to remove lock ${lockPath}: ${reason}`);
-  }
 }
 
 /**
@@ -748,21 +706,7 @@ function persistPlan(planPath, plan) {
  * @param {(step: PlanStep) => void} [mutator]
  */
 function applyStatusTransition(plan, stepId, nextStatus, planPath, mutator) {
-  const target = plan.steps.find((step) => step.id === stepId);
-  if (!target) {
-    fail(`Step ${stepId} not found in plan.`);
-  }
-  const current = target.status;
-  if (!isAllowedStatusTransition(current, nextStatus)) {
-    fail(
-      `Invalid status transition for step ${stepId}: ${current} -> ${nextStatus}.`
-    );
-  }
-  if (mutator) {
-    mutator(target);
-  }
-  target.status = nextStatus;
-  persistPlan(planPath, plan);
+  applyStatusTransitionInternal(plan, stepId, nextStatus, planPath, persistPlan, mutator);
 }
 
 /**
