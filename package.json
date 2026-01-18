@@ -11,7 +11,8 @@
     "verify:esm": "node scripts/verify-esm.js",
     "dev": "tsx scripts/agentic.js",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/scripts/agentic.js"
+    "start": "node dist/scripts/agentic.js",
+    "doctor:native": "npm ls rollup @rollup/rollup-linux-x64-gnu @rollup/rollup-win32-x64-msvc"
   },
   "devDependencies": {
     "@rollup/rollup-linux-x64-gnu": "^4.55.1",
