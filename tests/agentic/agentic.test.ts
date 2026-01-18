@@ -4,11 +4,10 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { mkdtempSync } from "fs";
-import { test } from "node:test";
-import assert from "node:assert/strict";
-import { copyDir, runCli, normalizeOutput, applyMutation } from "./_utils.js";
 import { fileURLToPath } from "url";
 import { spawnSync } from "child_process";
+import { describe, it, expect, beforeAll } from "vitest";
+import { copyDir, runCli, normalizeOutput, applyMutation } from "./_utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,39 +37,42 @@ function ensureManifest() {
     if (fs.existsSync(manifestPath)) {
       manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
     }
-    return;
   }
 }
 
 ensureManifest();
 
 if (!manifest) {
-  test("golden snapshots unavailable", (t) => {
-    t.skip("Golden manifest not found. Run `npm run test:golden` (or set AGENTIC_AUTOGEN_GOLDENS=1).");
+  describe.skip("CLI golden snapshots", () => {
+    it("goldens missing", () => {
+      // skipped
+    });
+  });
+} else {
+  describe("CLI golden snapshots", () => {
+    manifest?.forEach((entry) => {
+      it(`CLI snapshot: ${entry.name}`, () => {
+        const tmp = mkdtempSync(path.join(os.tmpdir(), "agentic-test-"));
+        copyDir(fixtureDir, tmp);
+        const runDir = path.join(tmp, "runs", "test-run");
+        if (entry.mutation) {
+          applyMutation(runDir, entry.mutation);
+        }
+
+        const result = runCli({ cwd: tmp, args: entry.args });
+        const stdout = normalizeOutput(result.stdout, { cwd: tmp });
+        const stderr = normalizeOutput(result.stderr, { cwd: tmp });
+
+        const expStdout = fs.readFileSync(path.join(goldenDir, `${entry.name}.stdout.txt`), "utf8");
+        const expStderr = fs.readFileSync(path.join(goldenDir, `${entry.name}.stderr.txt`), "utf8");
+        const expCode = Number(
+          fs.readFileSync(path.join(goldenDir, `${entry.name}.code.txt`), "utf8").trim()
+        );
+
+        expect(stdout).toBe(expStdout);
+        expect(stderr).toBe(expStderr);
+        expect(result.code).toBe(expCode);
+      });
+    });
   });
 }
-
-manifest?.forEach((entry) => {
-  test(`CLI snapshot: ${entry.name}`, () => {
-    const tmp = mkdtempSync(path.join(os.tmpdir(), "agentic-test-"));
-    copyDir(fixtureDir, tmp);
-    const runDir = path.join(tmp, "runs", "test-run");
-    if (entry.mutation) {
-      applyMutation(runDir, entry.mutation);
-    }
-
-    const result = runCli({ cwd: tmp, args: entry.args });
-    const stdout = normalizeOutput(result.stdout, { cwd: tmp });
-    const stderr = normalizeOutput(result.stderr, { cwd: tmp });
-
-    const expStdout = fs.readFileSync(path.join(goldenDir, `${entry.name}.stdout.txt`), "utf8");
-    const expStderr = fs.readFileSync(path.join(goldenDir, `${entry.name}.stderr.txt`), "utf8");
-    const expCode = Number(
-      fs.readFileSync(path.join(goldenDir, `${entry.name}.code.txt`), "utf8").trim()
-    );
-
-    assert.equal(stdout, expStdout, "stdout mismatch");
-    assert.equal(stderr, expStderr, "stderr mismatch");
-    assert.equal(result.code, expCode, "exit code mismatch");
-  });
-});

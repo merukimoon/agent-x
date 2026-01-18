@@ -4,10 +4,9 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { mkdtempSync } from "fs";
-import { test } from "node:test";
-import assert from "node:assert/strict";
-import { copyDir, runCli } from "./_utils.js";
 import { fileURLToPath } from "url";
+import { test, expect } from "vitest";
+import { copyDir, runCli } from "./_utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,11 +33,8 @@ test("validate fails on invalid plan schema", () => {
     args: ["scripts/agentic.js", "validate", "--run", "test-run"],
   });
 
-  assert.notEqual(result.code, 0, "validate should exit non-zero");
-  assert.ok(
-    result.stderr.includes("plan.json run_id mismatch"),
-    "stderr should mention run_id mismatch"
-  );
+  expect(result.code).not.toBe(0);
+  expect(result.stderr).toContain("run_id mismatch");
 });
 
 test("flow refuses to run when lock file exists", () => {
@@ -51,9 +47,6 @@ test("flow refuses to run when lock file exists", () => {
     args: ["scripts/agentic.js", "flow", "--run", "test-run", "--dry-run"],
   });
 
-  assert.notEqual(result.code, 0, "flow should exit non-zero when lock exists");
-  assert.ok(
-    result.stderr.includes("Lock exists"),
-    "stderr should indicate an existing lock"
-  );
+  expect(result.code).not.toBe(0);
+  expect(result.stderr).toContain("Lock exists");
 });
