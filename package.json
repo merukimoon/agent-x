@@ -6,7 +6,8 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --test",
-    "test:golden": "node tests/agentic/generate-golden.js"
+    "test:golden": "node tests/agentic/generate-golden.js",
+    "verify:esm": "node scripts/verify-esm.js"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",

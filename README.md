@@ -21,6 +21,14 @@ These terms describe the intended shape of the project; adjust as the codebase e
 
 More detail: `docs/concepts.md`.
 
+## ESM defaults
+
+- Repository uses native Node.js ESM (`"type": "module"`).
+- Use `.js` for ESM modules with explicit `.js` extensions on relative imports.
+- Use `.cjs` only when a tool requires CommonJS configuration.
+- `.mjs` files are not expected in the codebase.
+- Guardrails exist to block CommonJS patterns; run `npm run verify:esm`.
+
 ## Quick start
 
 This repo does not yet publish an installable package (**TODO**). For now:
@@ -81,7 +89,7 @@ This repo does not yet publish an installable package (**TODO**). For now:
 
 ## Type checking for JS
 
-- The runtime stays in `.mjs` (ESM) and runs with Node directly—no build step.
+- The runtime stays in `.js` (ESM) and runs with Node directly—no build step.
 - Static typing is provided by TypeScript in `checkJs` mode with `// @ts-check` and JSDoc typedefs.
 - Run `npm install` once, then `npm run typecheck` to validate the CLI.
 
