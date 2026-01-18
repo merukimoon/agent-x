@@ -66,3 +66,10 @@
 
 ## Summary
 Two-phase flow: the coordinator produces a plan listing ordered, dependency-aware steps; the engine executes those steps exactly as defined. The plan remains the single source of truth for execution order, required inputs, and canonical outputs, enabling deterministic and auditable runs without implicit sequencing.
+
+## Step 3: Execution Hardening and Operability
+- Atomic execution guarantees: plan, result, and notes are written via temp-and-rename to avoid observable partial writes; atomic rename is the primary consistency mechanism.
+- Locking model: flow execution uses a run-level lock; only one flow may execute per run; lock presence prevents concurrent execution; stale lock recovery is manual by design.
+- Validation as a gate: validation runs before execution; execution does not proceed with invalid plans or missing inputs; explicit exit codes distinguish invalid plans, missing files, and invariant violations.
+- Step lifecycle model: steps use states pending, running, done, failed, skipped; state transitions are enforced; retry and skip are explicit operator actions; no automatic retries by the engine.
+- Observability: execution state is surfaced via status derived solely from plan.json; plan.json remains the single source of truth.
