@@ -1,5 +1,3 @@
-// @ts-check
-
 import fs from "fs";
 import path from "path";
 import process from "process";
@@ -26,16 +24,15 @@ import {
   validateCanonicalOutputs,
 } from "./agents.js";
 import { readFirstLines, ensureRunAndInputs, writeJsonFile, writeFileAtomic } from "./fs.js";
-
-/**
- * @typedef {import("./core.js").AgentName} AgentName
- * @typedef {import("./core.js").AgentStatus} AgentStatus
- * @typedef {import("./core.js").ExecutionMode} ExecutionMode
- * @typedef {import("./core.js").StepStatus} StepStatus
- * @typedef {import("./core.js").RunId} RunId
- * @typedef {import("./core.js").PlanStep} PlanStep
- * @typedef {import("./core.js").Plan} Plan
- */
+import type {
+  AgentName,
+  AgentStatus,
+  ExecutionMode,
+  StepStatus,
+  RunId,
+  PlanStep,
+  Plan,
+} from "./core.js";
 
 /**
  * Apply a status transition with optional mutation and persist atomically.
@@ -45,7 +42,13 @@ import { readFirstLines, ensureRunAndInputs, writeJsonFile, writeFileAtomic } fr
  * @param {string} planPath
  * @param {(step: PlanStep) => void} [mutator]
  */
-function applyStatusTransition(plan, stepId, nextStatus, planPath, mutator) {
+function applyStatusTransition(
+  plan: Plan,
+  stepId: string,
+  nextStatus: StepStatus,
+  planPath: string,
+  mutator?: (step: PlanStep) => void
+) {
   applyStatusTransitionInternal(plan, stepId, nextStatus, planPath, persistPlan, mutator);
 }
 

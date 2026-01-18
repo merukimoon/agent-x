@@ -18,11 +18,6 @@ function setupWorkdir(prefix) {
   const tmp = mkdtempSync(path.join(os.tmpdir(), prefix));
   copyDir(fixtureDir, tmp);
   copyDir(scriptsDir, path.join(tmp, "scripts"));
-  const tsEntrypoint = path.join(tmp, "scripts", "agentic.ts");
-  const jsEntrypoint = path.join(tmp, "scripts", "agentic.js");
-  if (fs.existsSync(tsEntrypoint) && !fs.existsSync(jsEntrypoint)) {
-    fs.copyFileSync(tsEntrypoint, jsEntrypoint);
-  }
   return { tmp, runDir: path.join(tmp, "runs", "test-run") };
 }
 
@@ -35,7 +30,8 @@ test("validate fails on invalid plan schema", () => {
 
   const result = runCli({
     cwd: tmp,
-    args: ["scripts/agentic.js", "validate", "--run", "test-run"],
+    args: ["scripts/agentic.ts", "validate", "--run", "test-run"],
+    useTsx: true,
   });
 
   expect(result.code).not.toBe(0);
@@ -49,7 +45,8 @@ test("flow refuses to run when lock file exists", () => {
 
   const result = runCli({
     cwd: tmp,
-    args: ["scripts/agentic.js", "flow", "--run", "test-run", "--dry-run"],
+    args: ["scripts/agentic.ts", "flow", "--run", "test-run", "--dry-run"],
+    useTsx: true,
   });
 
   expect(result.code).not.toBe(0);

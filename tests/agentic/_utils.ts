@@ -4,14 +4,25 @@ import { spawnSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const TSX_IMPORT = require.resolve('tsx');
 
 /**
  * Spawn the CLI with given args.
- * @param {{ cwd: string; args: string[] }} options
- * @returns {{ stdout: string; stderr: string; code: number }}
  */
-export function runCli({ cwd, args }) {
-  const result = spawnSync('node', args, {
+export function runCli({
+  cwd,
+  args,
+  useTsx = false,
+}: {
+  cwd: string;
+  args: string[];
+  useTsx?: boolean;
+}) {
+  const finalArgs = useTsx ? ['--import', TSX_IMPORT, ...args] : args;
+  const result = spawnSync('node', finalArgs, {
     cwd,
     encoding: 'utf8',
     env: { ...process.env, TZ: 'UTC' },

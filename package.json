@@ -7,9 +7,9 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:golden": "node tests/agentic/generate-golden.js",
-    "verify:esm": "node scripts/verify-esm.js",
-    "dev": "tsx scripts/agentic.js",
+    "test:golden": "node --import tsx tests/agentic/generate-golden.ts",
+    "verify:esm": "node --import tsx scripts/verify-esm.ts",
+    "dev": "node --import tsx scripts/agentic.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/scripts/agentic.js",
     "doctor:native": "npm ls rollup @rollup/rollup-linux-x64-gnu @rollup/rollup-win32-x64-msvc"

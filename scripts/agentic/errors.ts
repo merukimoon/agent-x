@@ -1,13 +1,10 @@
-// @ts-check
-
 import process from "process";
 
 export class CLIError extends Error {
-  /**
-   * @param {string} message
-   * @param {{ exitCode?: number; showUsage?: boolean }} [options]
-   */
-  constructor(message, options) {
+  exitCode: number;
+  showUsage: boolean;
+
+  constructor(message: string, options: { exitCode?: number; showUsage?: boolean } = {}) {
     super(message);
     this.name = "CLIError";
     this.exitCode = options?.exitCode ?? 2;
@@ -17,21 +14,21 @@ export class CLIError extends Error {
 
 /**
  * Raise a CLI error.
- * @param {string} message
- * @param {{ showUsage?: boolean; exitCode?: number }} [options]
- * @returns {never}
  */
-export function fail(message, options) {
+export function fail(
+  message: string,
+  options?: {
+    showUsage?: boolean;
+    exitCode?: number;
+  }
+): never {
   throw new CLIError(message, options);
 }
 
 /**
  * Handle fatal errors consistently.
- * @param {unknown} error
- * @param {string} [usage]
- * @returns {never}
  */
-export function handleFatalError(error, usage) {
+export function handleFatalError(error: unknown, usage?: string): never {
   if (error instanceof CLIError) {
     console.error(`ERROR: ${error.message}`);
     if (error.showUsage && usage) {
