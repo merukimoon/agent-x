@@ -52,6 +52,7 @@ This repo does not yet publish an installable package (**TODO**). For now:
   - PR Completion: decision-maker -> pr-reviewer (+ ciso if security keywords appear).
   - Architecture Change: decision-maker -> pr-reviewer -> ciso.
 - Classification relies on keywords in `inputs/request.md` and `inputs/context.md` and records `flow_type` plus a short rationale in `plan.json`.
+- Explainability: plan records matched keyword signals and a confidence level (high/medium/low). Status output shows flow, confidence, and signals (capped preview).
 
 ## Reliability notes (Step 3)
 

@@ -18,6 +18,9 @@ import process from "process";
  * @typedef {"pending" | "running" | "done" | "failed" | "skipped"} StepStatus
  */
 /**
+ * @typedef {"high" | "medium" | "low"} ConfidenceLevel
+ */
+/**
  * @typedef {string} RunId
  */
 /**
@@ -70,6 +73,8 @@ import process from "process";
  *   version: string;
  *   flow_type: string;
  *   rationale: string;
+ *   signals: string[];
+ *   confidence: ConfidenceLevel;
  *   steps: PlanStep[];
  * }} Plan
  */
@@ -418,7 +423,15 @@ function removeLock(lockPath) {
  * @param {boolean} includeCiso
  * @returns {Plan}
  */
-function buildPlanFromFlow(runId, createdAtUtc, flowType, rationale, includeCiso) {
+function buildPlanFromFlow(
+  runId,
+  createdAtUtc,
+  flowType,
+  rationale,
+  includeCiso,
+  /** @type {string[]} */ signals,
+  /** @type {ConfidenceLevel} */ confidence
+) {
   const request = "inputs/request.md";
   const context = "inputs/context.md";
 
@@ -499,6 +512,8 @@ function buildPlanFromFlow(runId, createdAtUtc, flowType, rationale, includeCiso
     version: PLAN_VERSION,
     flow_type: flowType,
     rationale,
+    signals,
+    confidence,
     steps,
   };
 }
@@ -528,7 +543,7 @@ function findKeywords(text, keywords) {
  * Classify flow based on request and context contents.
  * @param {string} requestText
  * @param {string} contextText
- * @returns {{ flowType: string; rationale: string; includeCiso: boolean }}
+ * @returns {{ flowType: string; rationale: string; includeCiso: boolean; signals: string[]; confidence: ConfidenceLevel }}
  */
 function classifyFlow(requestText, contextText) {
   const combined = `${requestText}\n${contextText}`;
@@ -540,10 +555,14 @@ function classifyFlow(requestText, contextText) {
     const rationale = `Detected architecture change flow via keywords: ${archHits.join(
       ", "
     )}.`;
+    const confidence = archHits.length >= 3 ? "high" : archHits.length === 2 ? "medium" : "low";
+    const signals = archHits.map((k) => `keyword:${k}`);
     return {
       flowType: FLOW_ARCH_CHANGE,
       rationale,
       includeCiso: true,
+      signals,
+      confidence,
     };
   }
 
@@ -551,14 +570,23 @@ function classifyFlow(requestText, contextText) {
     const rationale = `Detected PR completion flow via keywords: ${prHits.join(
       ", "
     )}.`;
+    const confidence = prHits.length >= 3 ? "high" : prHits.length === 2 ? "medium" : "low";
+    const signals = prHits.map((k) => `keyword:${k}`);
+    if (securityHits.length > 0) {
+      securityHits.forEach((k) => {
+        signals.push(`keyword:${k}`);
+      });
+    }
     return {
       flowType: FLOW_PR_COMPLETION,
       rationale,
       includeCiso: securityHits.length > 0,
+      signals,
+      confidence,
     };
   }
 
-  fail("Unable to classify request into a known flow type.");
+  fail("Unable to classify request into a known flow type. Add clearer keywords to inputs.");
 }
 
 /**
@@ -620,6 +648,19 @@ function gatherPlanSchemaErrors(candidate, expectedRunId) {
   }
   if (!plan.rationale || typeof plan.rationale !== "string") {
     errors.push("plan.json rationale missing or not a string.");
+  }
+  if (!Array.isArray(plan.signals)) {
+    errors.push("plan.json signals missing or not an array.");
+  }
+  if (
+    plan.confidence !== "high" &&
+    plan.confidence !== "medium" &&
+    plan.confidence !== "low"
+  ) {
+    errors.push("plan.json confidence missing or invalid (expected high|medium|low).");
+  }
+  if (Array.isArray(plan.signals) && plan.signals.length === 0 && plan.confidence !== "low") {
+    errors.push("plan.json signals empty but confidence is not low.");
   }
 
   /** @type {Set<string>} */
@@ -1010,7 +1051,9 @@ function runAgent(agentName, runId, mode) {
       createdAtUtc,
       classification.flowType,
       classification.rationale,
-      classification.includeCiso
+      classification.includeCiso,
+      classification.signals,
+      classification.confidence
     );
     persistPlan(planPath, plan);
   }
@@ -1234,6 +1277,8 @@ function runFlow(runId, mode) {
       version: PLAN_VERSION,
       flow_type: "",
       rationale: "",
+      signals: [],
+      confidence: "low",
       steps: [],
     },
     runDir
@@ -1511,6 +1556,13 @@ function handleStatusCommand(args) {
   console.log(`Run: ${parsed.runId}`);
   console.log(
     `Plan: version=${plan.version} created_at_utc=${plan.created_at_utc}`
+  );
+  const signalsPreview =
+    plan.signals.length > 8
+      ? `${plan.signals.slice(0, 8).join(",")} , ...`
+      : plan.signals.join(",") || "-";
+  console.log(
+    `Flow: ${plan.flow_type} | confidence=${plan.confidence} | signals=${signalsPreview}`
   );
   console.log(
     `Counts: pending=${counts.pending} running=${counts.running} done=${counts.done} failed=${counts.failed} skipped=${counts.skipped}`
