@@ -98,6 +98,15 @@ const USAGE = [
   "  node scripts/agentic.mjs status --run <RUN_ID>",
 ].join("\n");
 
+/** @type {Record<StepStatus, Set<StepStatus>>} */
+const ALLOWED_TRANSITIONS = {
+  pending: new Set(["running", "skipped"]),
+  running: new Set(["done", "failed"]),
+  done: new Set(),
+  failed: new Set(["pending", "skipped"]),
+  skipped: new Set(),
+};
+
 class CLIError extends Error {
   /**
    * @param {string} message
@@ -754,34 +763,42 @@ function persistPlan(planPath, plan) {
 }
 
 /**
- * Update the status of a plan step and persist.
- * @param {Plan} plan
- * @param {string} stepId
- * @param {StepStatus} status
- * @param {string} planPath
+ * Determine if a status transition is allowed.
+ * @param {StepStatus} from
+ * @param {StepStatus} to
+ * @returns {boolean}
  */
-function updatePlanStepStatus(plan, stepId, status, planPath) {
-  const target = plan.steps.find((step) => step.id === stepId);
-  if (!target) {
-    fail(`Step ${stepId} not found in plan.`);
+function isAllowedStatusTransition(from, to) {
+  if (from === to) {
+    return true;
   }
-  target.status = status;
-  persistPlan(planPath, plan);
+  const allowed = ALLOWED_TRANSITIONS[from];
+  return allowed ? allowed.has(to) : false;
 }
 
 /**
- * Update a plan step with a mutator and persist.
+ * Apply a status transition with optional mutation and persist atomically.
  * @param {Plan} plan
  * @param {string} stepId
- * @param {(step: PlanStep) => void} mutator
+ * @param {StepStatus} nextStatus
  * @param {string} planPath
+ * @param {(step: PlanStep) => void} [mutator]
  */
-function updatePlanStep(plan, stepId, mutator, planPath) {
+function applyStatusTransition(plan, stepId, nextStatus, planPath, mutator) {
   const target = plan.steps.find((step) => step.id === stepId);
   if (!target) {
     fail(`Step ${stepId} not found in plan.`);
   }
-  mutator(target);
+  const current = target.status;
+  if (!isAllowedStatusTransition(current, nextStatus)) {
+    fail(
+      `Invalid status transition for step ${stepId}: ${current} -> ${nextStatus}.`
+    );
+  }
+  if (mutator) {
+    mutator(target);
+  }
+  target.status = nextStatus;
   persistPlan(planPath, plan);
 }
 
@@ -979,19 +996,69 @@ function handleAgentCommand(args) {
 }
 
 /**
- * Ensure all dependency outputs exist before running a step.
+ * Read dependency result status.
+ * @param {AgentName} agent
+ * @param {string} runDir
+ * @returns {{ ok: boolean; message: string | null }}
+ */
+function readDependencyStatus(agent, runDir) {
+  const depResult = path.join(runDir, "outputs", agent, "result.json");
+  if (!fs.existsSync(depResult) || !fs.statSync(depResult).isFile()) {
+    return {
+      ok: false,
+      message: `Dependency result missing for ${agent} at ${depResult}.`,
+    };
+  }
+  try {
+    const raw = fs.readFileSync(depResult, "utf8");
+    const parsed = JSON.parse(raw);
+    const depStatus = parsed?.status;
+    if (depStatus !== "done") {
+      return {
+        ok: false,
+        message: `Dependency not satisfied: ${agent} status is ${String(
+          depStatus
+        )}, expected done.`,
+      };
+    }
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return {
+      ok: false,
+      message: `Dependency result unreadable for ${agent} at ${depResult}. ${reason}`,
+    };
+  }
+  return { ok: true, message: null };
+}
+
+/**
+ * Ensure all dependency outputs exist and are satisfied before running a step.
  * @param {PlanStep} step
  * @param {string} runDir
  */
 function ensureDependencies(step, runDir) {
-  step.depends_on.forEach((agent) => {
-    const depResult = path.join(runDir, "outputs", agent, "result.json");
-    if (!fs.existsSync(depResult) || !fs.statSync(depResult).isFile()) {
-      fail(
-        `Dependency result missing for ${agent} at ${depResult}. Cannot run ${step.id}.`
-      );
+  for (const agent of step.depends_on) {
+    const status = readDependencyStatus(agent, runDir);
+    if (!status.ok) {
+      fail(status.message ?? `Dependency not satisfied for ${agent}.`);
     }
-  });
+  }
+}
+
+/**
+ * Check whether dependencies are satisfied without throwing.
+ * @param {PlanStep} step
+ * @param {string} runDir
+ * @returns {{ ready: boolean; blocking: string | null }}
+ */
+function checkDependenciesSatisfied(step, runDir) {
+  for (const agent of step.depends_on) {
+    const status = readDependencyStatus(agent, runDir);
+    if (!status.ok) {
+      return { ready: false, blocking: status.message ?? `Dependency ${agent} not ready.` };
+    }
+  }
+  return { ready: true, blocking: null };
 }
 
 /**
@@ -1065,7 +1132,7 @@ function runFlow(runId, mode) {
         return;
       }
 
-      if (step.attempt >= step.max_attempts) {
+      if (step.attempt > step.max_attempts) {
         fail(
           `Step ${step.id} has reached max attempts (${step.attempt}/${step.max_attempts}). Use retry or skip to continue.`
         );
@@ -1073,29 +1140,41 @@ function runFlow(runId, mode) {
 
       ensureDependencies(step, runDir);
 
-      updatePlanStep(plan, step.id, (s) => {
-        if (s.attempt < 1) {
-          s.attempt = 1;
+      applyStatusTransition(
+        plan,
+        step.id,
+        "running",
+        planPathFinal,
+        (s) => {
+          s.last_error = null;
         }
-        s.status = "running";
-        s.last_error = null;
-      }, planPathFinal);
+      );
       plan = loadPlan(planPathFinal, runId);
 
       try {
         runAgent(step.agent, runId, mode);
-        updatePlanStep(plan, step.id, (s) => {
-          s.status = "done";
-          s.last_error = null;
-        }, planPathFinal);
+        applyStatusTransition(
+          plan,
+          step.id,
+          "done",
+          planPathFinal,
+          (s) => {
+            s.last_error = null;
+          }
+        );
         plan = loadPlan(planPathFinal, runId);
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         const truncated = reason.replace(/\s+/g, " ").slice(0, 200);
-        updatePlanStep(plan, step.id, (s) => {
-          s.status = "failed";
-          s.last_error = truncated;
-        }, planPathFinal);
+        applyStatusTransition(
+          plan,
+          step.id,
+          "failed",
+          planPathFinal,
+          (s) => {
+            s.last_error = truncated;
+          }
+        );
         throw error;
       }
     });
@@ -1180,12 +1259,20 @@ function handleRetryCommand(args) {
       `Max attempts reached for step ${target.id} (${target.attempt}/${target.max_attempts}).`
     );
   }
-  updatePlanStep(plan, target.id, (s) => {
-    s.status = "pending";
-    s.attempt += 1;
-    s.last_error = null;
-  }, planPath);
-  console.log(`Step ${target.id} marked pending for retry (attempt ${target.attempt}/${target.max_attempts}).`);
+  const nextAttempt = target.attempt + 1;
+  applyStatusTransition(
+    plan,
+    target.id,
+    "pending",
+    planPath,
+    (s) => {
+      s.attempt = nextAttempt;
+      s.last_error = null;
+    }
+  );
+  console.log(
+    `Step ${target.id} marked pending for retry (attempt ${nextAttempt}/${target.max_attempts}).`
+  );
 }
 
 /**
@@ -1215,10 +1302,7 @@ function handleSkipCommand(args) {
       `Skip allowed only when status is pending or failed (current ${target.status}).`
     );
   }
-  updatePlanStep(plan, target.id, (s) => {
-    s.status = "skipped";
-    s.last_error = null;
-  }, planPath);
+  applyStatusTransition(plan, target.id, "skipped", planPath);
   console.log(`Step ${target.id} marked skipped.`);
 }
 
@@ -1233,10 +1317,24 @@ function handleStatusCommand(args) {
   }
   const runDir = path.join(process.cwd(), "runs", parsed.runId);
   const planPath = path.join(runDir, "plan.json");
-  if (!fs.existsSync(planPath)) {
-    fail(`plan.json not found at ${planPath}`);
+  const validation = runValidationChecks(parsed.runId, runDir, planPath);
+  if (validation.planLoadError) {
+    console.error(`ERROR: ${validation.planLoadError}`);
+    process.exit(10);
   }
-  const plan = loadPlan(planPath, parsed.runId);
+  if (validation.schemaErrors.length > 0) {
+    validation.schemaErrors.forEach((err) => console.error(`ERROR: ${err}`));
+    process.exit(12);
+  }
+  if (validation.missingPaths.length > 0) {
+    validation.missingPaths.forEach((err) => console.error(`ERROR: ${err}`));
+    process.exit(11);
+  }
+  if (!validation.plan) {
+    console.error("ERROR: Unable to load plan.");
+    process.exit(10);
+  }
+  const plan = validation.plan;
   const counts = {
     pending: 0,
     running: 0,
@@ -1247,16 +1345,69 @@ function handleStatusCommand(args) {
   plan.steps.forEach((step) => {
     counts[step.status] += 1;
   });
+
+  const lockPath = path.join(runDir, ".lock");
+  const lockStatus = fs.existsSync(lockPath)
+    ? `LOCK: present (${lockPath})`
+    : "LOCK: none";
+
   console.log(`Run: ${parsed.runId}`);
   console.log(
-    `Plan: total=${plan.steps.length} pending=${counts.pending} running=${counts.running} done=${counts.done} failed=${counts.failed} skipped=${counts.skipped}`
+    `Plan: version=${plan.version} created_at_utc=${plan.created_at_utc}`
   );
+  console.log(
+    `Counts: pending=${counts.pending} running=${counts.running} done=${counts.done} failed=${counts.failed} skipped=${counts.skipped}`
+  );
+  console.log(lockStatus);
+
   console.log("Steps:");
+  const headers = [
+    "id".padEnd(14),
+    "agent".padEnd(18),
+    "status".padEnd(10),
+    "attempt".padEnd(12),
+    "depends_on",
+  ].join(" ");
+  console.log(headers);
   plan.steps.forEach((step) => {
+    const attemptStr = `${step.attempt}/${step.max_attempts}`;
+    const deps = step.depends_on.length > 0 ? step.depends_on.join(",") : "-";
     console.log(
-      `- ${step.id} | ${step.agent} | ${step.status} | attempt ${step.attempt}/${step.max_attempts}`
+      [
+        step.id.padEnd(14),
+        step.agent.padEnd(18),
+        step.status.padEnd(10),
+        attemptStr.padEnd(12),
+        deps,
+      ].join(" ")
     );
   });
+
+  let nextAction = "NEXT: run flow";
+  const failedStep = plan.steps.find((s) => s.status === "failed");
+  if (failedStep) {
+    nextAction = `NEXT: retry or skip step ${failedStep.id}`;
+  } else {
+    const pendingSteps = plan.steps.filter((s) => s.status === "pending");
+    const readyStep = pendingSteps.find((step) => {
+      const depCheck = checkDependenciesSatisfied(step, runDir);
+      return depCheck.ready;
+    });
+    if (readyStep) {
+      nextAction = `NEXT: step ${readyStep.id} is ready`;
+    } else if (pendingSteps.length > 0) {
+      const blocking = pendingSteps[0];
+      const depCheck = checkDependenciesSatisfied(blocking, runDir);
+      const reason = depCheck.blocking
+        ? depCheck.blocking
+        : `waiting on dependencies for ${blocking.id}`;
+      nextAction = `BLOCKED: step ${blocking.id} ${reason}`;
+    } else if (counts.done + counts.skipped === plan.steps.length) {
+      nextAction = "DONE: plan complete";
+    }
+  }
+
+  console.log(nextAction);
 }
 
 function main() {

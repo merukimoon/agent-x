@@ -50,6 +50,21 @@ This repo does not yet publish an installable package (**TODO**). For now:
 - Writes to plan and agent outputs are atomic (temp + rename) to avoid partial files.
 - Flow execution uses a lock file (`runs/<RUN_ID>/.lock`); if present, flow refuses to start. Delete only if confirmed stale.
 - Validation exit codes: 10 (plan missing/invalid JSON), 11 (missing files referenced by plan or inputs), 12 (schema/invariant violations). Errors are printed with `ERROR:` prefixes.
+- Step state machine: pending→running→(done|failed); pending→skipped; failed→pending (retry); failed→skipped. Other transitions are rejected.
+- Retry: allowed only from failed, increments attempt, clears `last_error`, sets status to pending.
+- Skip: allowed only from pending or failed when `allow_skip` is true; keeps attempt and `last_error`, sets status to skipped.
+- Status dashboard example:
+  ```
+  Run: 2026-01-18_1315-flow-step3-prod
+  Plan: version=0.1 created_at_utc=2026-01-18T12:26:31Z
+  Counts: pending=1 running=0 done=2 failed=0 skipped=0
+  LOCK: none
+  Steps:
+  id             agent             status     attempt      depends_on
+  step-1         decision-maker    done       0/1          coordinator
+  step-2         pr-reviewer       pending    1/2          decision-maker
+  NEXT: step step-2 is ready
+  ```
 
 ## Type checking for JS
 
