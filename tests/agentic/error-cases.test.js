@@ -1,0 +1,59 @@
+// @ts-check
+
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { mkdtempSync } from "fs";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { copyDir, runCli } from "./_utils.js";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const REPO_ROOT = path.resolve(__dirname, "..", "..");
+const fixtureDir = path.join(REPO_ROOT, "tests", "agentic", "fixtures", "minimal-project");
+const scriptsDir = path.join(REPO_ROOT, "scripts");
+
+function setupWorkdir(prefix) {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), prefix));
+  copyDir(fixtureDir, tmp);
+  copyDir(scriptsDir, path.join(tmp, "scripts"));
+  return { tmp, runDir: path.join(tmp, "runs", "test-run") };
+}
+
+test("validate fails on invalid plan schema", () => {
+  const { tmp, runDir } = setupWorkdir("agentic-negative-");
+  const planPath = path.join(runDir, "plan.json");
+  const plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
+  delete plan.run_id; // make schema invalid
+  fs.writeFileSync(planPath, JSON.stringify(plan, null, 2) + "\n", "utf8");
+
+  const result = runCli({
+    cwd: tmp,
+    args: ["scripts/agentic.js", "validate", "--run", "test-run"],
+  });
+
+  assert.notEqual(result.code, 0, "validate should exit non-zero");
+  assert.ok(
+    result.stderr.includes("plan.json run_id mismatch"),
+    "stderr should mention run_id mismatch"
+  );
+});
+
+test("flow refuses to run when lock file exists", () => {
+  const { tmp, runDir } = setupWorkdir("agentic-lock-");
+  const lockPath = path.join(runDir, ".lock");
+  fs.writeFileSync(lockPath, "pid=1234\nstarted_at_utc=now\ncommand=flow\n", "utf8");
+
+  const result = runCli({
+    cwd: tmp,
+    args: ["scripts/agentic.js", "flow", "--run", "test-run", "--dry-run"],
+  });
+
+  assert.notEqual(result.code, 0, "flow should exit non-zero when lock exists");
+  assert.ok(
+    result.stderr.includes("Lock exists"),
+    "stderr should indicate an existing lock"
+  );
+});
