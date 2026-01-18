@@ -1,13 +1,16 @@
 {
   "compilerOptions": {
-    "allowJs": true,
-    "checkJs": true,
-    "noEmit": true,
-    "strict": true,
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "types": ["node"]
+    "allowJs": true,
+    "checkJs": false,
+    "incremental": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["scripts/**/*"]
+  "include": ["./**/*.ts", "./**/*.js"],
+  "exclude": ["node_modules", "dist", "build", "out", "coverage", ".git"]
 }

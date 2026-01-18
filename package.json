@@ -4,13 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test",
     "test:golden": "node tests/agentic/generate-golden.js",
-    "verify:esm": "node scripts/verify-esm.js"
+    "verify:esm": "node scripts/verify-esm.js",
+    "dev": "tsx scripts/agentic.js",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/scripts/agentic.js"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
+    "tsx": "^4.19.1",
     "typescript": "^5.6.2"
   }
 }
