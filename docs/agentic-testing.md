@@ -11,6 +11,7 @@ npm run test:golden
 ```
 
 This copies a minimal fixture into a temp folder, runs each CLI command, normalizes output (paths, temp dirs, ISO timestamps), and writes golden stdout/stderr/exit-code files under `tests/agentic/golden/` along with `manifest.json`.
+Generation resolves paths from the repo root via `import.meta.url`, so it is independent of your current working directory on Windows, macOS, or Linux.
 
 ## How normalization works
 

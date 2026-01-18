@@ -5,11 +5,15 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { mkdtempSync } from "fs";
+import { fileURLToPath } from "url";
 import { copyDir, runCli, normalizeOutput, applyMutation } from "./_utils.mjs";
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
-const fixtureDir = path.join(__dirname, "fixtures", "minimal-project");
-const goldenDir = path.join(__dirname, "golden");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// Resolve from repo root so execution is stable regardless of cwd.
+const REPO_ROOT = path.resolve(__dirname, "..", "..");
+const fixtureDir = path.join(REPO_ROOT, "tests", "agentic", "fixtures", "minimal-project");
+const goldenDir = path.join(REPO_ROOT, "tests", "agentic", "golden");
 
 /** @type {{ name: string; args: string[]; mutation?: { type: "setStatus"; stepId: string; status: string; attempt?: number } }[]} */
 const commands = [
@@ -27,6 +31,10 @@ const commands = [
 ];
 
 function ensureDirs() {
+  const rel = path.relative(REPO_ROOT, goldenDir);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) {
+    throw new Error(`Golden directory resolved outside repo root: ${goldenDir}`);
+  }
   fs.mkdirSync(goldenDir, { recursive: true });
 }
 
