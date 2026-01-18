@@ -37,6 +37,9 @@ export function normalizeOutput(text, { cwd }) {
   out = out.replace(new RegExp(tmpDir, "g"), "<TMP>");
   out = out.replace(/\\+/g, "/");
   out = out.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z/g, "<ISO_DATE>");
+  out = out.replace(/Node\.js v\d+\.\d+\.\d+/g, "Node.js vX.Y.Z");
+  out = out.replace(/node:internal[^\\s:]*(?::\d+){1,2}/g, (m) => m.replace(/:\d+/g, ":<LINE>"));
+  out = out.replace(/\(node:internal[^)]+\)/g, (m) => m.replace(/:\d+/g, ":<LINE>"));
   return out;
 }
 
