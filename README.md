@@ -53,6 +53,7 @@ This repo does not yet publish an installable package (**TODO**). For now:
 - Step state machine: pending→running→(done|failed); pending→skipped; failed→pending (retry); failed→skipped. Other transitions are rejected.
 - Retry: allowed only from failed, increments attempt, clears `last_error`, sets status to pending.
 - Skip: allowed only from pending or failed when `allow_skip` is true; keeps attempt and `last_error`, sets status to skipped.
+- Windows note: fsync may be rejected on some file systems; atomic writes are best-effort and fall back to temp+rename when fsync is not permitted.
 - Status dashboard example:
   ```
   Run: 2026-01-18_1315-flow-step3-prod

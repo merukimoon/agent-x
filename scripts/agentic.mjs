@@ -278,11 +278,26 @@ function writeFileAtomic(filePath, data) {
   const tempName = `${path.basename(filePath)}.tmp.${process.pid}.${Date.now()}`;
   const tempPath = path.join(dir, tempName);
   fs.writeFileSync(tempPath, data, { encoding: typeof data === "string" ? "utf8" : undefined });
-  const fd = fs.openSync(tempPath, "r");
+  let fd = -1;
   try {
-    fs.fsyncSync(fd);
+    fd = fs.openSync(tempPath, "r");
+    try {
+      fs.fsyncSync(fd);
+    } catch (error) {
+      const code = /** @type {{ code?: string }} */ (error)?.code;
+      if (code !== "EPERM" && code !== "EINVAL" && code !== "EACCES") {
+        throw error;
+      }
+      // Best effort: ignore fsync portability errors on some platforms.
+    }
   } finally {
-    fs.closeSync(fd);
+    if (fd !== -1) {
+      try {
+        fs.closeSync(fd);
+      } catch {
+        // ignore close errors
+      }
+    }
   }
   fs.renameSync(tempPath, filePath);
 }
