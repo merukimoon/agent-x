@@ -1,4 +1,4 @@
-.PHONY: help run-new run-tree agent
+.PHONY: help run-new run-tree agent flow
 
 help:
 	@echo "agentic-squad-framework: manual run scaffolding"
@@ -123,3 +123,19 @@ agent:
 		DRY_FLAG="--dry-run"; \
 	fi; \
 	node scripts/agentic.mjs agent "$$AGENT" --run "$$RUN" $$DRY_FLAG
+
+.PHONY: flow
+
+flow:
+	@set -eu; \
+	RUN="$${RUN:-}"; \
+	DRY="$${DRY:-1}"; \
+	if [ -z "$$RUN" ]; then \
+		echo "ERROR: RUN is required. Example: make flow RUN=\"2026-01-17_0930-docs-pr-audit\" DRY=1"; \
+		exit 2; \
+	fi; \
+	DRY_FLAG=""; \
+	if [ "$$DRY" != "0" ]; then \
+		DRY_FLAG="--dry-run"; \
+	fi; \
+	node scripts/agentic.mjs flow --run "$$RUN" $$DRY_FLAG

@@ -36,6 +36,12 @@ This repo does not yet publish an installable package (**TODO**). For now:
 3) Execute a dry run for an agent: `make agent RUN="<RUN_ID>" AGENT="coordinator" DRY=1`
 4) Check outputs under `runs/<RUN_ID>/outputs/<agent>/` (`notes.md` and `result.json`).
 
+## Coordinator plan and flow execution
+
+- Run the coordinator to produce `plan.json`: `node scripts/agentic.mjs agent coordinator --run "<RUN_ID>" --dry-run`
+- Execute the plan-driven flow: `node scripts/agentic.mjs flow --run "<RUN_ID>" --dry-run`
+- Makefile helper: `make flow RUN="<RUN_ID>" DRY=1` (omit `DRY=1` to run without the dry-run flag; current Step 2 behavior is the same).
+
 ## Type checking for JS
 
 - The runtime stays in `.mjs` (ESM) and runs with Node directly—no build step.
