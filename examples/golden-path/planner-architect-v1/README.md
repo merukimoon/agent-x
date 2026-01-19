@@ -66,6 +66,22 @@ Check the complete flow outcome:
 ls -la runs/$RUN_ID/
 ```
 
+## One-command E2E run
+
+You can run the entire flow (Planner → Architect) with a single command using the Orchestrator. This ensures policy enforcement and proper context handoff.
+
+```bash
+make orchestrator-planner-architect \
+  GOAL="$(cat examples/golden-path/planner-architect-v1/sample-goal.txt)" \
+  CONTEXT="$(cat examples/golden-path/planner-architect-v1/sample-context.txt)"
+```
+
+This will:
+1. Run the **Planner** with retries for network errors.
+2. If successful, prepare a derived context mapping the plan to the architect's input.
+3. Run the **Architect** to review the plan.
+4. Generate a `flow_summary.md`.
+
 ## Output Artifacts
 
 ### Planner Artifacts (Step 1)

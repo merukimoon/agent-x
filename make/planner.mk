@@ -35,3 +35,15 @@ orchestrator-planner:
 		exit 2; \
 	fi; \
 	node --import tsx scripts/orchestrator/run-planner-with-policy.ts --goal "$$GOAL" --context "$$CONTEXT"
+
+$(call register_target,orchestrator-planner-architect,PLANNER,Run Planner -> Architect end-to-end flow.,make orchestrator-planner-architect GOAL=\"...\" CONTEXT=\"...\")
+.PHONY: orchestrator-planner-architect
+orchestrator-planner-architect:
+	@set -eu; \
+	GOAL="$${GOAL:-}"; \
+	CONTEXT="$${CONTEXT:-}"; \
+	if [ -z "$$GOAL" ]; then \
+		echo "ERROR: GOAL is required. Example: make orchestrator-planner-architect GOAL=\"...\""; \
+		exit 2; \
+	fi; \
+	node --import tsx scripts/orchestrator/run-planner-architect-with-policy.ts --goal "$$GOAL" --context "$$CONTEXT"

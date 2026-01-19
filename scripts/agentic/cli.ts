@@ -62,6 +62,7 @@ export function parseRunArgs(args) {
   /** @type {RunId | null} */
   let runId = null;
   let dryRun = false;
+  let contextPath = null;
   const remainder = [];
 
   for (let i = 0; i < args.length; i += 1) {
@@ -79,6 +80,15 @@ export function parseRunArgs(args) {
       runId = arg.slice("--run=".length);
       continue;
     }
+    if (arg === "--context") {
+      const value = args[i + 1];
+      if (!value || value.startsWith("--")) {
+        fail("Value required for --context <PATH>.", { showUsage: true });
+      }
+      contextPath = value;
+      i += 1;
+      continue;
+    }
     if (arg === "--dry-run") {
       dryRun = true;
       continue;
@@ -90,7 +100,7 @@ export function parseRunArgs(args) {
     fail("RUN_ID is required via --run <RUN_ID>.", { showUsage: true });
   }
 
-  return { runId, dryRun, remainder };
+  return { runId, dryRun, contextPath, remainder };
 }
 
 /**
@@ -177,7 +187,7 @@ export function handleAgentCommand(args) {
   const runId = parsed.runId;
   const mode = parsed.dryRun ? "dry-run" : "live";
 
-  runAgent(agentCandidate, runId, mode);
+  runAgent(agentCandidate, runId, mode, parsed.contextPath);
 }
 
 /**
