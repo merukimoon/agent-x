@@ -121,21 +121,21 @@ export function ensureDependencies(step, runDir) {
  * @param {AgentName} agentName
  * @param {RunId} runId
  * @param {ExecutionMode} mode
+ * @param {string | null} [contextOverridePath]
  * @returns {AgentResult}
  */
-export function runAgent(agentName, runId, mode) {
+export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   const runDir = path.join(process.cwd(), "runs", runId);
   ensureRunAndInputs(runDir);
 
   const requestPath = path.join(runDir, "inputs", "request.md");
-  const contextPath = path.join(runDir, "inputs", "context.md");
+  const contextPath = contextOverridePath ? path.resolve(contextOverridePath) : path.join(runDir, "inputs", "context.md");
 
   const requestExcerpt = readFirstLines(requestPath, 20);
   const contextExcerpt = readFirstLines(contextPath, 20);
   const createdAtUtc = new Date().toISOString();
-  const summary = `${
-    mode === "dry-run" ? "Dry run" : "Run"
-  } completed for ${agentName} on run ${runId}.`;
+  const summary = `${mode === "dry-run" ? "Dry run" : "Run"
+    } completed for ${agentName} on run ${runId}.`;
 
   const outputsDir = path.join(runDir, "outputs", agentName);
   fs.mkdirSync(outputsDir, { recursive: true });

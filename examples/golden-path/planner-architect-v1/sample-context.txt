@@ -1,0 +1,17 @@
+Repository Context:
+- Framework: Agentic Squad Framework (agent orchestration system)
+- Current structure: Agents produce artifacts (plans, reviews, decisions)
+- Key constraint: Thinking-only flows must have no side effects
+- Existing components: Planner agent, Architect agent, Orchestrator layer
+
+Architecture Principles:
+- Clear separation between planning and execution
+- Agent outputs must be reviewable artifacts
+- Multi-agent flows should compose naturally from single-agent patterns
+- Exit codes signal quality and safety gates
+
+Relevant Files:
+- docs/flow-contract.md: Defines flow boundaries and responsibilities
+- docs/agent-contract.md: Standard input/output envelope for all agents
+- agents/planner/: Plan-only agent specification
+- agents/architect/: Architecture decision agent specification

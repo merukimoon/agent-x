@@ -14,9 +14,11 @@
 
 As AI agents become part of everyday engineering workflows, teams increasingly face a new class of problems: semantic drift, unclear responsibilities, fragile automation, and loss of shared context.
 
-This paper introduces Agentic Squad Framework, a lightweight, governance-first approach to building and operating AI agent systems as part of real engineering organizations. Instead of treating agents as isolated tools, the framework treats them as role-based participants in a system, governed by explicit contracts, terminology, and verification stages.
+This paper introduces Agentic Squad Framework as a governance-first framework for agentic systems. This is not a library, SDK, or toolkit. It defines how agentic systems are structured, governed, and executed through explicit agent contracts and rule-based, deterministic validation and enforcement gates.
 
-The goal is not more automation, but predictable, scalable collaboration between humans and agents.
+Instead of treating agents as isolated tools, the framework treats them as role-based participants in a system, governed by explicit contracts, terminology, and verification stages that are structured, validated, and enforced.
+
+The goal is not more automation, but predictable, reviewable, and auditable collaboration between humans and agents.
 
 This paper is for engineers and maintainers who need agent behavior to be reviewable and repeatable. Read it to understand the core roles, shared terminology, and verification boundaries that make multi-agent work operationally safe.
 
@@ -25,6 +27,7 @@ This paper is for engineers and maintainers who need agent behavior to be review
 - Role-based agents, not prompt-centric helpers: responsibilities and boundaries come first, prompts follow.
 - Terminology as a first-class system component: shared meaning is treated as infrastructure, not optional documentation.
 - Verification as an explicit boundary: quality, security, and compliance gates are defined as part of the system, not left to ad-hoc review.
+- A deterministic, rule-based engine as the source of truth: it validates schemas, enforces capability boundaries, evaluates verification feasibility, and either accepts, rejects, or falls back; it does not infer, reinterpret, repair, or improvise plans.
 
 ## 1. The Problem: AI Without Structure
 
@@ -111,7 +114,11 @@ The framework uses explicit prompt models to ensure that:
 - scope is constrained
 - outputs are reviewable
 
-A prompt is treated as an executable specification, not a suggestion.
+A prompt is treated as a declarative output contract, not an execution mechanism.
+
+- Planning is performed by agents producing structured outputs.
+- Execution authority always belongs to the engine.
+- Enforcement is rule-based: the engine validates schema and constraints, enforces capability boundaries, evaluates verification feasibility, and then accepts, rejects, or falls back without reinterpretation or repair.
 
 ### 3.4 Verification Is a First-Class Concept
 

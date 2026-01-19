@@ -2,6 +2,8 @@
 
 Framework for building and running small “squads” of cooperating agents to complete engineering tasks.
 
+This is not a library. This is a framework that defines how agentic systems are structured, governed, and executed.
+
 This repository is currently in early scaffolding. Where details are not yet implemented or confirmed, this documentation uses **TODO** markers.
 
 ## Who this is for
@@ -16,54 +18,104 @@ These terms describe the intended shape of the project; adjust as the codebase e
 - **Agent**: A unit of behavior with instructions, context, and access to tools.
 - **Squad**: A collection of agents coordinated to complete a task.
 - **Task**: A bounded unit of work with inputs, constraints, and expected outputs.
-- **Orchestrator/Runner**: The component that schedules tasks, routes messages, and manages state.
+
+- **Orchestrator/Runner**: The control layer that schedules tasks, routes messages, and manages state (not an agent).
 - **Prompt**: Versioned instructions/templates used by agents.
+
+## Platform support
+
+The framework is developed on Windows (using WSL or Git Bash) and Linux.
+
+- **Make**: On Windows, you must use **Git Bash** or **WSL** to run `make` targets. PowerShell is not supported for Make commands due to shell syntax differences (`set -eu`, etc.).
+- **Node.js**: The runtime scripts (`npm run dev`) work natively in PowerShell, cmd.exe, and bash.
 
 More detail: `docs/concepts.md`.
 
 ## ESM defaults
 
-- Repository uses native Node.js ESM (`"type": "module"`).
-- Use `.js` for ESM modules with explicit `.js` extensions on relative imports.
-- Use `.cjs` only when a tool requires CommonJS configuration.
-- `.mjs` files are not expected in the codebase.
-- Guardrails exist to block CommonJS patterns; run `npm run verify:esm`.
-
-## Quick start
-
-This repo does not yet publish an installable package (**TODO**). For now:
-
-1) Clone the repo
-2) Read the docs index: `docs/README.md`
-3) If you’re contributing, follow: `CONTRIBUTING.md`
-
-## Running an agent dry run
-
-1) Create a run folder: `make run-new NAME="demo-task"`
-2) Fill `runs/<RUN_ID>/inputs/request.md` and `runs/<RUN_ID>/inputs/context.md`.
-3) Execute a dry run for an agent: `make agent RUN="<RUN_ID>" AGENT="coordinator" DRY=1`
-4) Check outputs under `runs/<RUN_ID>/outputs/<agent>/` (`notes.md` and `result.json`).
-
-## Coordinator plan and flow execution
-
-- Run the coordinator to produce `plan.json`: `node scripts/agentic.js agent coordinator --run "<RUN_ID>" --dry-run`
-- Execute the plan-driven flow: `node scripts/agentic.js flow --run "<RUN_ID>" --dry-run`
-- Makefile helper: `make flow RUN="<RUN_ID>" DRY=1` (omit `DRY=1` to run without the dry-run flag; current Step 2 behavior is the same).
-- Validate a run: `node scripts/agentic.js validate --run "<RUN_ID>"`
-- Retry or skip a step: `node scripts/agentic.js retry --run "<RUN_ID>" --step "<STEP_ID>"` or `... skip ...`
-- View plan status: `make run-status RUN="<RUN_ID>"` (or `node scripts/agentic.js status --run "<RUN_ID>"`)
-
-## Coordinator planning logic (rules-based)
-
-- The coordinator classifies inputs into flows without LLMs.
-- Supported flows:
-  - PR Completion: decision-maker -> pr-reviewer (+ ciso if security keywords appear).
-  - Architecture Change: decision-maker -> pr-reviewer -> ciso.
-- Rule packs live under `rules/flows/*.json`; add a new flow by creating a pack with keywords and step definitions.
 - Classification relies on keywords in `inputs/request.md` and `inputs/context.md` and records `flow_type` plus a short rationale in `plan.json`.
 - Explainability: plan records matched keyword signals and a confidence level (high/medium/low). Status output shows flow, confidence, and signals (capped preview).
 - Flow selection: evaluates rule packs, picks the flow with the most keyword matches (ties favor architecture-change when applicable).
 - Rule pack shape (example): `{"flow_type":"pr-completion","keywords":["pull request",...],"steps":[{"id":"step-1","agent":"decision-maker","depends_on":["coordinator"]},...]}`.
+
+## Planner (LLM-based agent)
+
+The Planner agent connects to an LLM to generate a plan based on a Goal and Context. It is a regular agent: it produces plans only and performs no execution.
+
+### Setup
+
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` and set your `LLM_API_KEY` (e.g., OpenAI key).
+
+### Usage
+
+Run the planner via Makefile:
+
+```bash
+make planner GOAL="Create a new feature" CONTEXT="Repo uses /src for code"
+```
+
+Or manually via CLI:
+
+```bash
+npm run dev planner -- --goal "Create a new feature" --context "Repo uses /src for code"
+```
+
+The planner outputs:
+- `runs/<TIMESTAMP>/planner_raw.json`: The raw LLM response.
+- `runs/<TIMESTAMP>/planner_validation.json`: Validation report (pass/fail/warnings).
+- `runs/<TIMESTAMP>/planner_summary.md`: Human-readable summary.
+
+#### Configuration (Multi-Model Strategy)
+
+The Planner is built to be **cheap by default**.
+- **Default Model**: `gpt-4-turbo-preview` (balanced).
+- **Strategy**: Use lower-cost models for routine planning. Override with high-reasoning models ONLY if validation fails (Exit 11/12).
+
+**To override the model**:
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` to set `LLM_API_KEY` (Required) and optionally `LLM_MODEL`.
+   ```bash
+   # Efficient Default
+   LLM_MODEL=gpt-4-turbo-preview
+   # Reasoning/Fallback (for complex tasks)
+   LLM_MODEL=gpt-4o
+   ```
+3. Run the planner (credentials loaded automatically):
+   ```bash
+   # Manual Goal
+   make planner GOAL="Refactor the login page"
+   
+   # Verification Demo
+   make planner-demo
+   ```
+**Security Note**: Never commit `.env` to git. It is ignored by default.
+
+#### Reliability & Contract
+
+See strictly defined docs:
+- [Planner Contract](docs/planner-contract.md) (Normative rules)
+- [Retry Policy](docs/planner-retry-policy.md) (Handling exit codes 0/10/11/12)
+
+- **No Execution**: The planner only produces artifacts. It NEVER executes the plan.
+- **Exit Codes**:
+  - `0`: Success (valid plan).
+  - `10`: Network/Internal error (retryable).
+  - `11`: Schema/Parse error (prompt refinement needed).
+  - `12`: Safety/Policy violation (gate failure).
+- **Cleanup**: Outer markdown fences (```json) are strictly stripped before parsing. If parsing fails, raw output is saved to `planner_failed_raw.txt`.
+
+### Golden Path Example
+
+For a complete, runnable example of a single-agent run using the Planner, see:
+[Golden Path: Planner-Only v1](examples/golden-path/planner-only-v1/README.md)
+
 
 ## Reliability notes (Step 3)
 
