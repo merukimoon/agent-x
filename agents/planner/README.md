@@ -49,6 +49,11 @@ Agent specific required outputs (in addition to the contract output envelope):
 - Coordinator/Orchestrator: validates and routes the plan; executes steps deterministically or falls back to rules.
 - Downstream agents (e.g., pr-reviewer, ciso): consume the validated plan to perform their scoped work.
 
+## Usage & Implementation
+
+- **Golden Path**: [Running the Planner agent](../../examples/golden-path/planner-only-v1/README.md)
+- **Orchestration Policy**: [Retry and Safety wrappers](../../docs/orchestrator-policy.md)
+
 ## Example tasks
 
 - Produce a plan to add a new documentation page with review steps and risk tags.

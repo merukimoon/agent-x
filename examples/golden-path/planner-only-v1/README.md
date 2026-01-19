@@ -1,7 +1,7 @@
 # Golden Path: Planner-Only Mode v1
 
 ## Goal
-This example demonstrates a canonical "Planner-only" run. This mode invokes the LLM to generate a structured plan (steps, rationale, dependency graph) but **stops before executing any step**. It is useful for:
+This example demonstrates running the **Planner agent** in isolation. This mode invokes the LLM to generate a structured plan (steps, rationale, dependency graph) but **stops before executing any step**. It is useful for:
 - Validating prompt engineering changes.
 - Testing the Planner's adherence to safety gates (Exit Code 12).
 - Debugging plan logic without side effects.
