@@ -9,6 +9,7 @@ import {
   handleRetryCommand,
   handleSkipCommand,
   handleStatusCommand,
+  handlePlannerCommand,
 } from "./cli.ts";
 
 /**
@@ -58,6 +59,11 @@ export function main(argv = process.argv.slice(2)) {
 
   if (command === "status") {
     handleStatusCommand(args);
+    return;
+  }
+
+  if (command === "planner") {
+    handlePlannerCommand(args);
     return;
   }
 

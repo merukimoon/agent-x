@@ -24,6 +24,7 @@ import {
   validateCanonicalOutputs,
 } from "./agents.ts";
 import { readFirstLines, ensureRunAndInputs, writeJsonFile, writeFileAtomic } from "./fs.ts";
+import { generatePlanFromLLM, validatePlannerOutput, CAPABILITIES } from "./llm-planner.ts";
 import type {
   AgentName,
   AgentStatus,
@@ -541,4 +542,97 @@ export function handleStatusCommand(args) {
 
 export function applyStatusTransitionWrapper(plan, stepId, nextStatus, planPath, mutator) {
   applyStatusTransition(plan, stepId, nextStatus, planPath, mutator);
+}
+
+/**
+ * Execute the "planner" command.
+ * @param {string[]} args
+ */
+export async function handlePlannerCommand(args) {
+  let goal = "";
+  let contextStr = "See inputs/context.md and repo structure.";
+  let runId = new Date().toISOString().replace(/[:.]/g, "-");
+  let dryRun = false;
+
+  // Simple arg parsing
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--goal") {
+      goal = args[++i];
+    } else if (arg === "--run") {
+      runId = args[++i];
+    } else if (arg === "--dry-run") {
+      dryRun = true;
+    } else if (arg === "--context") {
+      // If context is a file, read it, else use string
+      const val = args[++i];
+      if (fs.existsSync(val)) {
+        contextStr = fs.readFileSync(val, "utf8");
+      } else {
+        contextStr = val;
+      }
+    }
+  }
+
+  if (!goal) {
+    fail("Goal is required via --goal \"...\"", { showUsage: true });
+  }
+
+  const runDir = path.join(process.cwd(), "runs", runId);
+  if (!fs.existsSync(runDir)) {
+    fs.mkdirSync(runDir, { recursive: true });
+  }
+
+  console.log(`Starting Planner-only run: ${runId}`);
+  console.log(`Goal: ${goal}`);
+
+  const promptPath = path.join(process.cwd(), "prompts", "canonical", "llm-coordinator-v1-planner.prompt.md");
+
+  try {
+    // 1. Generate Plan
+    console.log("Connecting to LLM...");
+    const rawPlan = await generatePlanFromLLM(promptPath, goal, contextStr);
+
+    // Save raw
+    writeJsonFile(path.join(runDir, "planner_raw.json"), rawPlan);
+    console.log(`Raw plan saved to runs/${runId}/planner_raw.json`);
+
+    // 2. Validate
+    console.log("Validating plan...");
+    const validation = validatePlannerOutput(rawPlan, CAPABILITIES);
+
+    // Save validation report
+    const report = {
+      valid: validation.valid,
+      errors: validation.errors,
+      timestamp: new Date().toISOString()
+    };
+    writeJsonFile(path.join(runDir, "planner_validation.json"), report);
+
+    if (!validation.valid) {
+      console.error("Plan validation FAILED:");
+      validation.errors.forEach(e => console.error(`- ${e}`));
+      process.exit(1);
+    }
+
+    console.log("Plan validation PASSED.");
+
+    // 3. Summarize
+    const plan = validation.parsed;
+    const summary = `
+# Plan Summary
+Goal: ${plan.goal}
+Clarification Needed: ${plan.needs_clarification}
+Steps: ${plan.plan.length}
+
+## Steps
+${plan.plan.map(s => `- [${s.risk}] ${s.title} (${s.action_type})`).join("\n")}
+        `;
+    writeFileAtomic(path.join(runDir, "planner_summary.md"), summary.trim());
+    console.log(`Summary saved to runs/${runId}/planner_summary.md`);
+
+  } catch (error) {
+    console.error("Planner execution failed:", error);
+    process.exit(1);
+  }
 }
