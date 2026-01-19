@@ -60,6 +60,23 @@ export const CAPABILITIES = [
 ];
 
 /**
+ * Strips outer markdown fences if present.
+ * @param {string} raw
+ * @returns {string}
+ */
+export function cleanJsonOutput(raw) {
+    let text = raw.trim();
+    // Match strict outer fence: starts with ``` (optionally json), ends with ```
+    const fenceStart = /^```([a-zA-Z]*)?\n/;
+    const fenceEnd = /\n```$/;
+
+    if (fenceStart.test(text) && fenceEnd.test(text)) {
+        text = text.replace(fenceStart, "").replace(fenceEnd, "");
+    }
+    return text.trim();
+}
+
+/**
  * Simple .env loader to avoid dependencies.
  * Loads .env from CWD if present and not already set.
  */
@@ -86,12 +103,13 @@ function loadEnv() {
  * Validate the planner output against the schema and gates.
  * @param {unknown} json
  * @param {string[]} capabilities
- * @returns {{ valid: boolean; errors: string[]; parsed: PlannerOutput | null }}
+ * @returns {{ valid: boolean; errors: string[]; warnings: string[]; parsed: PlannerOutput | null }}
  */
 export function validatePlannerOutput(json, capabilities) {
     const errors = [];
+    const warnings = [];
     if (!json || typeof json !== "object") {
-        return { valid: false, errors: ["Output must be a JSON object."], parsed: null };
+        return { valid: false, errors: ["Output must be a JSON object."], warnings: [], parsed: null };
     }
 
     const output = /** @type {PlannerOutput} */ (json);
@@ -103,14 +121,24 @@ export function validatePlannerOutput(json, capabilities) {
     if (!Array.isArray(output.questions)) errors.push("Missing or invalid 'questions' array.");
     if (!Array.isArray(output.plan)) errors.push("Missing or invalid 'plan' array.");
 
+    if (errors.length > 0) {
+        return { valid: false, errors, warnings, parsed: null };
+    }
+
     // 2. Clarification Rule
     if (output.needs_clarification) {
         if (output.questions.length === 0) {
             errors.push("If 'needs_clarification' is true, 'questions' must be non-empty.");
         }
-
         if (output.plan.length > 0) {
             errors.push("If 'needs_clarification' is true, 'plan' must be empty (raw []).");
+        }
+    } else {
+        if (output.questions.length > 0) {
+            errors.push("If 'needs_clarification' is false, 'questions' must be empty.");
+        }
+        if (output.plan.length === 0) {
+            warnings.push("Plan is empty but needs_clarification is false.");
         }
     }
 
@@ -127,14 +155,22 @@ export function validatePlannerOutput(json, capabilities) {
                 errors.push(`Step ${idx} missing 'verification' array.`);
             } else {
                 step.verification.forEach((v, vIdx) => {
-                    if (!v.method || !v.success_criteria) {
-                        errors.push(`Step ${idx} verification ${vIdx} missing method or success_criteria.`);
+                    if (!v.method || !v.method.trim()) {
+                        errors.push(`Step ${idx} verification ${vIdx} missing method.`);
+                    } else if (v.method.trim().length < 10) {
+                        warnings.push(`Step ${idx} verification ${vIdx} method is short (<10 chars).`);
+                    }
+
+                    if (!v.success_criteria || !v.success_criteria.trim()) {
+                        errors.push(`Step ${idx} verification ${vIdx} missing success_criteria.`);
+                    } else if (v.success_criteria.trim().length < 10) {
+                        warnings.push(`Step ${idx} verification ${vIdx} success_criteria is short (<10 chars).`);
                     }
                 });
             }
 
             if (!["low", "medium", "high"].includes(step.risk)) {
-                errors.push(`Step ${idx} has invalid risk '${step.risk}'. Must be low|medium|high.`);
+                errors.push(`Step ${idx} has invalid risk '${step.risk}'. Must be exactly low|medium|high.`);
             }
         });
     }
@@ -142,6 +178,7 @@ export function validatePlannerOutput(json, capabilities) {
     return {
         valid: errors.length === 0,
         errors,
+        warnings,
         parsed: errors.length === 0 ? output : null
     };
 }
@@ -151,7 +188,7 @@ export function validatePlannerOutput(json, capabilities) {
  * @param {string} promptPath
  * @param {string} goal
  * @param {string} context
- * @returns {Promise<unknown>} JSON response
+ * @returns {Promise<string>} Raw output string
  */
 export async function generatePlanFromLLM(promptPath, goal, context) {
     loadEnv();
@@ -210,7 +247,7 @@ Constraints: No execution, Plan only.
 
         const data = await response.json();
         const content = data.choices[0].message.content;
-        return JSON.parse(content);
+        return content;
     } catch (err) {
         throw new Error(`LLM interaction failed: ${err.message}`);
     }

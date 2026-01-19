@@ -93,8 +93,18 @@ npm run dev planner -- --goal "Create a new feature" --context "Repo uses /src f
 
 The planner outputs:
 - `runs/<TIMESTAMP>/planner_raw.json`: The raw LLM response.
-- `runs/<TIMESTAMP>/planner_validation.json`: Validation report.
+- `runs/<TIMESTAMP>/planner_validation.json`: Validation report (pass/fail/warnings).
 - `runs/<TIMESTAMP>/planner_summary.md`: Human-readable summary.
+
+#### Reliability
+
+- **No Execution**: The planner only produces artifacts. It NEVER executes the plan.
+- **Exit Codes**:
+  - `0`: Success (valid plan).
+  - `10`: Network/Internal error (retryable).
+  - `11`: Schema/Parse error (prompt refinement needed).
+  - `12`: Safety/Policy violation (gate failure).
+- **Cleanup**: Outer markdown fences (```json) are strictly stripped before parsing. If parsing fails, raw output is saved to `planner_failed_raw.txt`.
 
 
 ## Reliability notes (Step 3)

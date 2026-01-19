@@ -24,7 +24,7 @@ import {
   validateCanonicalOutputs,
 } from "./agents.ts";
 import { readFirstLines, ensureRunAndInputs, writeJsonFile, writeFileAtomic } from "./fs.ts";
-import { generatePlanFromLLM, validatePlannerOutput, CAPABILITIES } from "./llm-planner.ts";
+import { generatePlanFromLLM, validatePlannerOutput, CAPABILITIES, cleanJsonOutput } from "./llm-planner.ts";
 import type {
   AgentName,
   AgentStatus,
@@ -591,31 +591,70 @@ export async function handlePlannerCommand(args) {
   try {
     // 1. Generate Plan
     console.log("Connecting to LLM...");
-    const rawPlan = await generatePlanFromLLM(promptPath, goal, contextStr);
+    let rawText;
+    try {
+      rawText = await generatePlanFromLLM(promptPath, goal, contextStr);
+    } catch (netErr) {
+      console.error("Network error:", netErr);
+      writeJsonFile(path.join(runDir, "planner_validation_error.json"), {
+        error_type: "network_error",
+        message: netErr.message,
+        timestamp: new Date().toISOString()
+      });
+      process.exit(10);
+    }
 
-    // Save raw
-    writeJsonFile(path.join(runDir, "planner_raw.json"), rawPlan);
-    console.log(`Raw plan saved to runs/${runId}/planner_raw.json`);
+    const cleanedText = cleanJsonOutput(rawText);
+
+    let planJson;
+    try {
+      planJson = JSON.parse(cleanedText);
+      // Successful parse -> save structure
+      writeJsonFile(path.join(runDir, "planner_raw.json"), planJson);
+      console.log(`Raw plan saved to runs/${runId}/planner_raw.json`);
+    } catch (parseErr) {
+      console.error("JSON parse failed.");
+      fs.writeFileSync(path.join(runDir, "planner_failed_raw.txt"), rawText);
+      writeJsonFile(path.join(runDir, "planner_validation_error.json"), {
+        error_type: "parse_error",
+        message: parseErr.message,
+        details: null,
+        timestamp: new Date().toISOString()
+      });
+      process.exit(11);
+    }
 
     // 2. Validate
     console.log("Validating plan...");
-    const validation = validatePlannerOutput(rawPlan, CAPABILITIES);
+    const validation = validatePlannerOutput(planJson, CAPABILITIES);
 
     // Save validation report
     const report = {
       valid: validation.valid,
       errors: validation.errors,
+      warnings: validation.warnings,
       timestamp: new Date().toISOString()
     };
     writeJsonFile(path.join(runDir, "planner_validation.json"), report);
 
     if (!validation.valid) {
-      console.error("Plan validation FAILED:");
+      console.error(`Plan validation FAILED (exit 12):`);
       validation.errors.forEach(e => console.error(`- ${e}`));
-      process.exit(1);
+
+      writeJsonFile(path.join(runDir, "planner_validation_error.json"), {
+        error_type: "gate_error",
+        message: "Validation gates failed",
+        details: validation.errors,
+        timestamp: new Date().toISOString()
+      });
+      process.exit(12);
     }
 
     console.log("Plan validation PASSED.");
+    if (validation.warnings && validation.warnings.length > 0) {
+      console.warn("Warnings:");
+      validation.warnings.forEach(w => console.warn(`- ${w}`));
+    }
 
     // 3. Summarize
     const plan = validation.parsed;
@@ -624,6 +663,9 @@ export async function handlePlannerCommand(args) {
 Goal: ${plan.goal}
 Clarification Needed: ${plan.needs_clarification}
 Steps: ${plan.plan.length}
+
+## Warnings
+${validation.warnings.length > 0 ? validation.warnings.map(w => `- ${w}`).join("\n") : "None"}
 
 ## Steps
 ${plan.plan.map(s => `- [${s.risk}] ${s.title} (${s.action_type})`).join("\n")}
