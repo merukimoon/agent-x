@@ -142,31 +142,27 @@ This mirrors how mature engineering systems evolve.
 This diagram summarizes how the principles above combine into a single system.
 
 ```mermaid
-flowchart TD
-  A[Humans and Contributors] --> B[Canonical Terminology Glossary v0]
+flowchart LR
+    A[Human Intent<br/>Defined goals and constraints]
+    B[Canonical Terminology<br/>Shared glossary and language contract]
+    C[Agentic Squad]
+    D[Structured Prompts<br/>Formal, explicit instructions]
+    E[Artifacts<br/>Reviewable outputs and records]
 
-  B --> C[Agentic Squad]
+    subgraph V[Verification]
+        V1[Soft Verify<br/>Exploratory checks]
+        V2[Strict Verify<br/>Enforcement gates]
+        V1 --> V2
+    end
 
-  C --> D1[Architect]
-  C --> D2[Tech Lead]
-  C --> D3[Coordinator]
-  C --> D4[PR Reviewer]
-  C --> D5[CISO]
+    F[Approved Change<br/>Final accepted result]
 
-  D1 --> E[Structured Prompts]
-  D2 --> E
-  D3 --> E
-  D4 --> E
-  D5 --> E
-
-  E --> F[Agent Outputs]
-
-  F --> G{Verify}
-
-  G -->|Soft Verify| H[Feedback and Notes]
-  H --> E
-
-  G -->|Strict Verify| I[Approved Change]
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> V
+    V --> F
 ```
 
 System overview  
