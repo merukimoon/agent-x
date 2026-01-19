@@ -121,3 +121,20 @@ flow:
 		DRY_FLAG="--dry-run"; \
 	fi; \
 	node scripts/agentic.js flow --run "$$RUN" $$DRY_FLAG
+
+.PHONY: planner
+
+planner:
+	@set -eu; \
+	GOAL="$${GOAL:-}"; \
+	CONTEXT="$${CONTEXT:-repo uses /docs folder}"; \
+	RUN="$${RUN:-}"; \
+	if [ -z "$$GOAL" ]; then \
+		echo "ERROR: GOAL is required. Example: make planner GOAL=\"Add new feature\""; \
+		exit 2; \
+	fi; \
+	RUN_FLAG=""; \
+	if [ ! -z "$$RUN" ]; then \
+		RUN_FLAG="--run $$RUN"; \
+	fi; \
+	npm run dev planner -- --goal "$$GOAL" --context "$$CONTEXT" $$RUN_FLAG

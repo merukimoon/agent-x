@@ -65,6 +65,38 @@ This repo does not yet publish an installable package (**TODO**). For now:
 - Flow selection: evaluates rule packs, picks the flow with the most keyword matches (ties favor architecture-change when applicable).
 - Rule pack shape (example): `{"flow_type":"pr-completion","keywords":["pull request",...],"steps":[{"id":"step-1","agent":"decision-maker","depends_on":["coordinator"]},...]}`.
 
+## Planner (LLM-based)
+
+The `planner` command connects to an LLM to generate a plan based on a Goal and Context.
+
+### Setup
+
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` and set your `LLM_API_KEY` (e.g., OpenAI key).
+
+### Usage
+
+Run the planner via Makefile:
+
+```bash
+make planner GOAL="Create a new feature" CONTEXT="Repo uses /src for code"
+```
+
+Or manually via CLI:
+
+```bash
+npm run dev planner -- --goal "Create a new feature" --context "Repo uses /src for code"
+```
+
+The planner outputs:
+- `runs/<TIMESTAMP>/planner_raw.json`: The raw LLM response.
+- `runs/<TIMESTAMP>/planner_validation.json`: Validation report.
+- `runs/<TIMESTAMP>/planner_summary.md`: Human-readable summary.
+
+
 ## Reliability notes (Step 3)
 
 - Writes to plan and agent outputs are atomic (temp + rename) to avoid partial files.

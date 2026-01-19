@@ -60,6 +60,29 @@ export const CAPABILITIES = [
 ];
 
 /**
+ * Simple .env loader to avoid dependencies.
+ * Loads .env from CWD if present and not already set.
+ */
+function loadEnv() {
+    const envPath = path.resolve(process.cwd(), ".env");
+    if (fs.existsSync(envPath)) {
+        const content = fs.readFileSync(envPath, "utf8");
+        content.split("\n").forEach(line => {
+            const trimmed = line.trim();
+            if (trimmed && !trimmed.startsWith("#")) {
+                const [key, ...rest] = trimmed.split("=");
+                if (key && rest.length > 0) {
+                    const value = rest.join("=").trim().replace(/^["']|["']$/g, ""); // basic quote removal
+                    if (!process.env[key.trim()]) {
+                        process.env[key.trim()] = value;
+                    }
+                }
+            }
+        });
+    }
+}
+
+/**
  * Validate the planner output against the schema and gates.
  * @param {unknown} json
  * @param {string[]} capabilities
@@ -131,6 +154,8 @@ export function validatePlannerOutput(json, capabilities) {
  * @returns {Promise<unknown>} JSON response
  */
 export async function generatePlanFromLLM(promptPath, goal, context) {
+    loadEnv();
+
     // Read the template
     if (!fs.existsSync(promptPath)) {
         throw new Error(`Prompt template not found at ${promptPath}`);
