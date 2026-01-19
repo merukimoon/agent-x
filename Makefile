@@ -1,3 +1,6 @@
+SHELL := /usr/bin/env bash
+.ONESHELL:
+
 # agentsquad-framework Makefile
 # See Make/help.mk for the help system.
 # Run `make help` to see available targets.

@@ -16,8 +16,16 @@ These terms describe the intended shape of the project; adjust as the codebase e
 - **Agent**: A unit of behavior with instructions, context, and access to tools.
 - **Squad**: A collection of agents coordinated to complete a task.
 - **Task**: A bounded unit of work with inputs, constraints, and expected outputs.
+
 - **Orchestrator/Runner**: The control layer that schedules tasks, routes messages, and manages state (not an agent).
 - **Prompt**: Versioned instructions/templates used by agents.
+
+## Platform support
+
+The framework is developed on Windows (using WSL or Git Bash) and Linux.
+
+- **Make**: On Windows, you must use **Git Bash** or **WSL** to run `make` targets. PowerShell is not supported for Make commands due to shell syntax differences (`set -eu`, etc.).
+- **Node.js**: The runtime scripts (`npm run dev`) work natively in PowerShell, cmd.exe, and bash.
 
 More detail: `docs/concepts.md`.
 
