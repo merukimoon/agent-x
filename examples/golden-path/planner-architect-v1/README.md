@@ -82,6 +82,20 @@ This will:
 3. Run the **Architect** to review the plan.
 4. Generate a `flow_summary.md`.
 
+## Check Status
+
+You can check the progress of the flow at any time:
+
+```bash
+# Check the latest run
+make run-status
+
+# Check a specific run
+make run-status RUN=orch-flow-2026-01-XX...
+```
+
+The output will show the flow status (e.g., `DONE: flow complete` or `FAILED`), the goal, and the status of each agent (Planner, Architect) based on the generated artifacts.
+
 ## Output Artifacts
 
 ### Planner Artifacts (Step 1)

@@ -34,8 +34,8 @@ $(call register_target,run-status,RUNS,Check status of a run/plan.,make run-stat
 run-status:
 	@set -eu; \
 	RUN="$${RUN:-}"; \
-	if [ -z "$$RUN" ]; then \
-		echo "ERROR: RUN is required. Example: make run-status RUN=\"2026-01-18_1124-pr-docs-and-config-3\""; \
-		exit 2; \
-	fi; \
-	npm run dev -- status --run "$$RUN"
+	if [ -n "$$RUN" ]; then \
+		npm run dev -- status --run "$$RUN"; \
+	else \
+		npm run dev -- status; \
+	fi
