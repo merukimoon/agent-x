@@ -1,21 +1,27 @@
 import fs from "fs";
 import path from "path";
 import process from "process";
-import { PLAN_VERSION, VALID_AGENTS, isAgentName } from "./core.ts";
-import { fail } from "./errors.ts";
-import {
-  isAllowedStatusTransition,
-  applyStatusTransition as applyStatusTransitionInternal,
-} from "./status.ts";
-import { createFlowLock, removeLock } from "./lock.ts";
-import {
+import { Core, Legacy } from "./imports.ts";
+
+const { PLAN_VERSION, VALID_AGENTS, isAgentName } = Core;
+const { fail } = Legacy;
+const { createFlowLock, removeLock } = Legacy;
+const {
   validatePlan,
   gatherPlanSchemaErrors,
   runValidationChecks,
   validatePlanFiles,
   loadPlan,
   persistPlan,
-} from "./plan.ts";
+} = Legacy;
+const { readFirstLines, ensureRunAndInputs, writeJsonFile, writeFileAtomic } = Legacy;
+const { generatePlanFromLLM, validatePlannerOutput, CAPABILITIES, cleanJsonOutput } = Legacy;
+
+import {
+  isAllowedStatusTransition,
+  applyStatusTransition as applyStatusTransitionInternal,
+} from "./status.ts";
+
 import {
   runAgent,
   ensureDependencies,
@@ -23,8 +29,7 @@ import {
   getCanonicalOutputs,
   validateCanonicalOutputs,
 } from "./agents.ts";
-import { readFirstLines, ensureRunAndInputs, writeJsonFile, writeFileAtomic } from "./fs.ts";
-import { generatePlanFromLLM, validatePlannerOutput, CAPABILITIES, cleanJsonOutput } from "./llm-planner.ts";
+
 import type {
   AgentName,
   AgentStatus,
@@ -33,7 +38,20 @@ import type {
   RunId,
   PlanStep,
   Plan,
-} from "./core.ts";
+} from "./imports.ts"; // We can't use named 'type' import from default export effectively?
+// Core is a namespace object.
+// We should import types from the source or via Core.<Type> in JSDoc.
+// For typescript 'import type' it needs to resolve to a type definition.
+// "./imports.ts" exports Core which exports * from core.ts.
+// So import type { Plan } from "./imports.ts"; might fail if imports.ts is not re-exporting types by name?
+// 'export * as Core' in imports.ts makes Core a value.
+// We need to check if 'export * from ...' preserves types.
+// The imports.ts does: 'import * as _Core ... export const Core = _Core'. This LOSES types.
+// We need imports.ts to ALSO 'export * from ...' for types?
+// Or we import types from `../../core/src/index.ts` directly for TYPE imports.
+// Constraint: "Core public surface must be stable".
+// I will update imports.ts to re-export types properly or import directly from core for types.
+
 
 /**
  * Apply a status transition with optional mutation and persist atomically.

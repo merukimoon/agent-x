@@ -114,3 +114,31 @@ export function isStepStatus(value: string): value is StepStatus {
     value === "skipped"
   );
 }
+
+/**
+ * Get canonical outputs paths for an agent.
+ * @param {AgentName} agent
+ * @returns {{ result: string; notes: string }}
+ */
+export function getCanonicalOutputs(agent: AgentName) {
+  return {
+    result: `outputs/${agent}/result.json`,
+    notes: `outputs/${agent}/notes.md`,
+  };
+}
+
+/**
+ * Ensure the outputs paths follow the canonical layout for an agent.
+ * @param {PlanStep} step
+ */
+export function validateCanonicalOutputs(step: PlanStep) {
+  const expected = getCanonicalOutputs(step.agent);
+  if (
+    step.outputs.result !== expected.result ||
+    step.outputs.notes !== expected.notes
+  ) {
+    throw new Error(
+      `Step ${step.id} outputs must match canonical layout. Expected result=${expected.result}, notes=${expected.notes}.`
+    );
+  }
+}

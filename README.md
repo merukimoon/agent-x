@@ -13,6 +13,19 @@ This repository is currently in early scaffolding. Where details are not yet imp
 - Engineers who want to build agent-based workflows (single agent or multi-agent).
 - Contributors who want to help define the framework’s API, runtime, and best practices.
 
+## Packages Overview
+
+The repository is organized into the following packages (Monorepo-ready):
+
+| Package | Description |
+| :--- | :--- |
+| `packages/core` | **Fundamentals**. Contains the core types, contracts, schemas, and shared utilities defining the "Agentic Squad" protocol. |
+| `packages/cli` | **Command Line Interface**. The `agentic` CLI implementation. Orchestrates agents, manages plans, and handles user interactions. |
+| `packages/adapters` | **Adapters** (Future). Connectors for external tools and platforms. |
+| `scripts/agentic` | **Legacy/Entrypoint**. Contains the `agentic.ts` entrypoint (which delegates to the CLI package) and legacy implementation logic being migrated. |
+
+> **Note**: While structured as packages, this is currently a **single-root project**. We use relative imports to link packages without heavyweight workspace tooling.
+
 ## Core concepts (intended)
 
 These terms describe the intended shape of the project; adjust as the codebase evolves (**TODO**).

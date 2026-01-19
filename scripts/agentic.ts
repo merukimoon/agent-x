@@ -1,11 +1,14 @@
-#!/usr/bin/env node
+/**
+ * Entry point for the Agentic Squad Framework CLI.
+ * Delegates to the internal CLI package.
+ */
 
-import { USAGE } from "./agentic/core.ts";
-import { handleFatalError } from "./agentic/errors.ts";
-import { main } from "./agentic/main.ts";
+import { runCli } from "../packages/cli/src/index.ts";
+import process from "process";
 
-try {
-  main(process.argv.slice(2));
-} catch (error) {
-  handleFatalError(error, USAGE);
-}
+// Pass arguments to the CLI handler
+// argv[0] is node, argv[1] is script path, argv[2+] are args
+runCli(process.argv).catch((err) => {
+  console.error("CLI Error:", err);
+  process.exit(1);
+});

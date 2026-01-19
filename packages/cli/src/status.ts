@@ -1,9 +1,10 @@
-import { fail } from "./errors.ts";
+import { Legacy } from "./imports.ts";
+const { fail } = Legacy;
 
 /**
- * @typedef {import("./core.ts").Plan} Plan
- * @typedef {import("./core.ts").PlanStep} PlanStep
- * @typedef {import("./core.ts").StepStatus} StepStatus
+ * @typedef {import("./imports.ts").Core.Plan} Plan
+ * @typedef {import("./imports.ts").Core.PlanStep} PlanStep
+ * @typedef {import("./imports.ts").Core.StepStatus} StepStatus
  */
 
 /** @type {Record<StepStatus, Set<StepStatus>>} */
