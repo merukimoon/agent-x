@@ -96,7 +96,39 @@ The planner outputs:
 - `runs/<TIMESTAMP>/planner_validation.json`: Validation report (pass/fail/warnings).
 - `runs/<TIMESTAMP>/planner_summary.md`: Human-readable summary.
 
-#### Reliability
+#### Configuration (Multi-Model Strategy)
+
+The Planner is built to be **cheap by default**.
+- **Default Model**: `gpt-4-turbo-preview` (balanced).
+- **Strategy**: Use lower-cost models for routine planning. Override with high-reasoning models ONLY if validation fails (Exit 11/12).
+
+**To override the model**:
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` to set `LLM_API_KEY` (Required) and optionally `LLM_MODEL`.
+   ```bash
+   # Efficient Default
+   LLM_MODEL=gpt-4-turbo-preview
+   # Reasoning/Fallback (for complex tasks)
+   LLM_MODEL=gpt-4o
+   ```
+3. Run the planner (credentials loaded automatically):
+   ```bash
+   # Manual Goal
+   make planner GOAL="Refactor the login page"
+   
+   # Verification Demo
+   make planner-demo
+   ```
+**Security Note**: Never commit `.env` to git. It is ignored by default.
+
+#### Reliability & Contract
+
+See strictly defined docs:
+- [Planner Contract](docs/planner-contract.md) (Normative rules)
+- [Retry Policy](docs/planner-retry-policy.md) (Handling exit codes 0/10/11/12)
 
 - **No Execution**: The planner only produces artifacts. It NEVER executes the plan.
 - **Exit Codes**:
@@ -105,6 +137,11 @@ The planner outputs:
   - `11`: Schema/Parse error (prompt refinement needed).
   - `12`: Safety/Policy violation (gate failure).
 - **Cleanup**: Outer markdown fences (```json) are strictly stripped before parsing. If parsing fails, raw output is saved to `planner_failed_raw.txt`.
+
+### Golden Path Example
+
+For a complete, runnable example of the Planner-only mode (including valid inputs and expected artifacts), see:
+[Golden Path: Planner-Only v1](examples/golden-path/planner-only-v1/README.md)
 
 
 ## Reliability notes (Step 3)

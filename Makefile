@@ -138,3 +138,21 @@ planner:
 		RUN_FLAG="--run $$RUN"; \
 	fi; \
 	npm run dev planner -- --goal "$$GOAL" --context "$$CONTEXT" $$RUN_FLAG
+
+.PHONY: planner-demo
+
+planner-demo:
+	@echo "Running planner demo with default goal..."
+	$(MAKE) planner GOAL="Add a section on 'Planner' to the docs/architecture.md file" CONTEXT="We have a docs/ folder and existing architecture docs."
+
+.PHONY: orchestrator-planner
+
+orchestrator-planner:
+	@set -eu; \
+	GOAL="$${GOAL:-}"; \
+	CONTEXT="$${CONTEXT:-}"; \
+	if [ -z "$$GOAL" ]; then \
+		echo "ERROR: GOAL is required. Example: make orchestrator-planner GOAL=\"...\""; \
+		exit 2; \
+	fi; \
+	node --import tsx scripts/orchestrator/run-planner-with-policy.ts --goal "$$GOAL" --context "$$CONTEXT"

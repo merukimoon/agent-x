@@ -1,0 +1,12 @@
+Repository Structure:
+- src/planner/: Contains the planner logic and validation gates.
+- tests/planner/: Unit tests for key modules.
+- docs/architectural-decisions/: ADRs concerning the planner's evolution.
+
+Current Known Issues:
+- Planner occasionally hallucinates capability names not in the allowed list.
+- JSON parsing failures on edge cases with markdown code blocks.
+- Retry logic is currently manual.
+
+Goal:
+We want to move towards a more autonomous recovery model.
