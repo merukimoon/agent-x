@@ -4,6 +4,8 @@ Framework for building and running small “squads” of cooperating agents to c
 
 This is not a library. This is a framework that defines how agentic systems are structured, governed, and executed.
 
+> **Note**: This repository is structured as a monorepo-ready project (using `packages/` layout) but currently operates as a single package.
+
 This repository is currently in early scaffolding. Where details are not yet implemented or confirmed, this documentation uses **TODO** markers.
 
 ## Who this is for
