@@ -1,0 +1,1 @@
+Design a new modular orchestration flow that allows multi-agent collaboration while maintaining strict separation of concerns. Focus on defining clear handoff points between planning and architecture phases.
