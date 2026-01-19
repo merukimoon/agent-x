@@ -452,6 +452,38 @@ export function handleSkipCommand(args) {
 // Or just duplicating simplistic parsing for status command to allow "no run id".
 
 /**
+ * Normalize a raw status string to canonical vocabulary.
+ * @param {string} raw
+ * @returns {import("./core.ts").StepStatus}
+ */
+function normalizeStatus(raw) {
+  const r = (raw || "").toLowerCase().trim();
+  switch (r) {
+    case "done":
+    case "success":
+    case "completed":
+      return "done";
+    case "failed":
+    case "error":
+    case "failure":
+      return "failed";
+    case "running":
+    case "in_progress":
+    case "active":
+      return "running";
+    case "skipped":
+      return "skipped";
+    case "pending":
+    case "blocked":
+    case "incomplete":
+      return "pending";
+    default:
+      // Safety fallback
+      return "pending";
+  }
+}
+
+/**
  * Resolve latest run ID from runs directory.
  * @returns {string | null}
  */
@@ -510,110 +542,154 @@ export function handleStatusCommand(args) {
   }
 
   const planPath = path.join(runDir, "plan.json");
+  const lockPath = path.join(runDir, ".lock");
+  const lockStatus = fs.existsSync(lockPath) ? `LOCK: present (${lockPath})` : "LOCK: none";
 
-  // === MODE A: PLAN MODE ===
+  /** @type {Array<{id: string, agent: string, status: string, artifacts: string, created_at?: string, depends_on?: string}>} */
+  let rows = [];
+  let flowMeta = "";
+  let overallStatus = "UNKNOWN";
+
+  // === MODE A: PLAN MODE (plan.json exists) ===
   if (fs.existsSync(planPath)) {
-    // ... existing plan loading logic ...
-    // I will copy-paste existing logic but wrapped in this block to preserve it.
-    // For brevity in diff, I will just re-implement the core checks.
-
     const validation = runValidationChecks(runId, runDir, planPath);
-    // ... validation handling ...
     if (validation.planLoadError) { console.error(`ERROR: ${validation.planLoadError}`); process.exit(10); }
-    // ... errors ...
 
     const plan = validation.plan;
     if (!plan) process.exit(10);
 
-    // Counts
-    const counts = { pending: 0, running: 0, done: 0, failed: 0, skipped: 0 };
-    plan.steps.forEach(s => counts[s.status] += 1);
-
-    // Lock
-    const lockPath = path.join(runDir, ".lock");
-    const lockStatus = fs.existsSync(lockPath) ? `LOCK: present (${lockPath})` : "LOCK: none";
-
-    console.log(`Run: ${runId}`);
-    console.log(`Plan: version=${plan.version} created_at_utc=${plan.created_at_utc}`);
-    // ... signals ...
+    // Plan-level metadata
     const signalsPreview = plan.signals.length > 8 ? `${plan.signals.slice(0, 8).join(",")}, ...` : plan.signals.join(",") || "-";
-    console.log(`Flow: ${plan.flow_type} | confidence=${plan.confidence} | signals=${signalsPreview}`);
-    console.log(`Counts: pending=${counts.pending} running=${counts.running} done=${counts.done} failed=${counts.failed} skipped=${counts.skipped}`);
-    console.log(lockStatus);
+    flowMeta = `Flow: ${plan.flow_type} | confidence=${plan.confidence} | signals=${signalsPreview}`;
 
-    console.log("Steps:");
-    const headers = ["id".padEnd(14), "agent".padEnd(18), "status".padEnd(10), "attempt".padEnd(12), "depends_on"].join(" ");
-    console.log(headers);
-    plan.steps.forEach(step => {
-      const attemptStr = `${step.attempt}/${step.max_attempts}`;
-      const deps = step.depends_on.length > 0 ? step.depends_on.join(",") : "-";
-      console.log([step.id.padEnd(14), step.agent.padEnd(18), step.status.padEnd(10), attemptStr.padEnd(12), deps].join(" "));
+    // Rows
+    rows = plan.steps.map(step => {
+      // Note: plan.json does not currently store start timestamps per step, only plan creation time.
+      // Future hooks: if step was updated with created_at, read it here.
+      return {
+        id: step.id,
+        agent: step.agent,
+        status: normalizeStatus(step.status),
+        artifacts: "-", // Plan mode relies on step status, not specific artifacts in summary
+        created_at: undefined, // Plan.json doesn't track execution start time per step yet
+        depends_on: step.depends_on.join(",") || "-"
+      };
     });
 
-    // Next Action logic
-    let nextAction = "NEXT: run flow";
-    const failedStep = plan.steps.find((s) => s.status === "failed");
-    if (failedStep) {
-      nextAction = `NEXT: retry or skip step ${failedStep.id}`;
-    } else if (counts.done + counts.skipped === plan.steps.length) {
-      nextAction = "DONE: plan complete";
-    } else {
-      // Check ready
-      const pendingSteps = plan.steps.filter((s) => s.status === "pending");
-      const readyStep = pendingSteps.find((step) => checkDependenciesSatisfied(step, runDir).ready);
-      if (readyStep) nextAction = `NEXT: step ${readyStep.id} is ready`;
-      else if (pendingSteps.length > 0) nextAction = "BLOCKED: waiting dependencies";
+    // Calc Overall
+    const counts = { pending: 0, running: 0, done: 0, failed: 0, skipped: 0 };
+    rows.forEach(r => counts[r.status] = (counts[r.status] || 0) + 1);
+
+    let next = "NEXT: run flow";
+    if (counts.failed > 0) next = `NEXT: retry or skip failed step(s)`;
+    else if (counts.done + counts.skipped === rows.length) next = "DONE: plan complete";
+    else if (counts.running > 0) next = "IN PROGRESS: steps running";
+
+    overallStatus = next;
+    console.log(`Run: ${runId}`);
+    console.log(`Plan: version=${plan.version} created_at_utc=${plan.created_at_utc}`); // Plan start time
+
+  } else {
+    // === MODE B: ARTIFACT INSPECTION MODE (No plan.json) ===
+    console.log(`Run: ${runId}`);
+    console.log(`Type: Flow (Artifact Inspection - No plan.json)`);
+    flowMeta = "Flow: Artifact Inspection";
+
+    // 1. Goal
+    let goal = "Unknown";
+    try { goal = readFirstLines(path.join(runDir, "inputs", "request.md"), 1)[0] || "Unknown"; } catch { }
+    console.log(`Goal: ${goal}`);
+
+    // 2. Planner
+    const plannerSummaryExists = fs.existsSync(path.join(runDir, "planner_summary.md"));
+    const plannerFailExists = fs.existsSync(path.join(runDir, "planner_validation_error.json"));
+
+    let plannerStatus = "pending";
+    if (plannerSummaryExists) plannerStatus = "done";
+    else if (plannerFailExists) plannerStatus = "failed";
+
+    rows.push({
+      id: "(planner)",
+      agent: "planner",
+      status: normalizeStatus(plannerStatus),
+      artifacts: plannerSummaryExists ? "planner_summary.md" : (plannerFailExists ? "planner_validation_error.json" : "-"),
+      created_at: undefined // Planner doesn't output result.json with timestamps in current flow wrapper
+    });
+
+    // 3. Agents (scan outputs)
+    const outputsDir = path.join(runDir, "outputs");
+    if (fs.existsSync(outputsDir)) {
+      const agents = fs.readdirSync(outputsDir).filter(name => fs.statSync(path.join(outputsDir, name)).isDirectory());
+
+      agents.forEach(agent => {
+        const resultPath = path.join(outputsDir, agent, "result.json");
+        let st = "pending";
+        let ts = undefined;
+
+        if (fs.existsSync(resultPath)) {
+          try {
+            const res = JSON.parse(fs.readFileSync(resultPath, "utf8"));
+            st = res.status || "pending";
+            ts = res.created_at_utc; // Start time available!
+          } catch { st = "failed"; } // Corrupt json -> failed
+        } else {
+          // Directory exists but no result -> "pending" (per user request)
+          st = "pending";
+        }
+
+        rows.push({
+          id: "(flow)",
+          agent: agent,
+          status: normalizeStatus(st),
+          artifacts: `outputs/${agent}/notes.md`,
+          created_at: ts
+        });
+      });
     }
-    console.log(nextAction);
-    return;
+
+    // Overall
+    const allDone = rows.every(r => r.status === "done" || r.status === "skipped");
+    const anyFailed = rows.some(r => r.status === "failed");
+    overallStatus = anyFailed ? "FAILED: flow error" : (allDone ? "DONE: flow complete" : "IN PROGRESS / PENDING");
   }
 
-  // === MODE B: ARTIFACT INSPECTION MODE ===
-  console.log(`Run: ${runId}`);
-  console.log(`Type: Flow (Artifact Inspection - No plan.json)`);
+  // === RENDER ===
+  console.log(flowMeta);
+  console.log(lockStatus);
 
-  // 1. Goal
-  let goal = "Unknown";
-  try { goal = readFirstLines(path.join(runDir, "inputs", "request.md"), 1)[0] || "Unknown"; } catch { }
-  console.log(`Goal: ${goal}`);
+  // Determine columns
+  const hasTiming = rows.some(r => !!r.created_at);
+  const showDeps = rows.some(r => r.depends_on !== undefined && r.depends_on !== "-"); // Only show depends if meaningful
 
-  // 2. Planner Status
-  // Check for validation error or summary
-  const plannerSummaryExists = fs.existsSync(path.join(runDir, "planner_summary.md"));
-  const plannerFailExists = fs.existsSync(path.join(runDir, "planner_validation_error.json"));
+  // Header construction
+  let fmt = (id, ag, st, start, art, dep) => {
+    let parts = [
+      id.padEnd(14),
+      ag.padEnd(18),
+      st.padEnd(12)
+    ];
+    if (hasTiming) parts.push((start || "-").padEnd(25));
+    // Artifacts vs DependsOn: Plan mode uses deps, Artifact uses artifacts. Mix logic?
+    // Let's print Artifacts col for everyone, or Depends col if existing.
+    // To simplify: if dependencies exist (Plan Mode), show them. Else show artifacts.
+    if (showDeps) parts.push((dep || "-").padEnd(25));
+    else parts.push((art || "-"));
 
-  let plannerStatus = "NOT RUN";
-  if (plannerSummaryExists) plannerStatus = "done";
-  else if (plannerFailExists) plannerStatus = "failed";
+    return parts.join(" ");
+  };
+
+  let headerParts = ["id".padEnd(14), "agent".padEnd(18), "status".padEnd(12)];
+  if (hasTiming) headerParts.push("Start (UTC)".padEnd(25));
+  if (showDeps) headerParts.push("depends_on");
+  else headerParts.push("artifacts");
 
   console.log("Steps:");
-  console.log(["id".padEnd(14), "agent".padEnd(18), "status".padEnd(10), "artifacts"].join(" "));
+  console.log(headerParts.join(" "));
 
-  // Planner Row
-  console.log(["(planner)".padEnd(14), "planner".padEnd(18), plannerStatus.padEnd(10), "planner_summary.md"].join(" "));
-
-  // 3. Inspect other agents via outputs directory
-  const outputsDir = path.join(runDir, "outputs");
-  if (fs.existsSync(outputsDir)) {
-    const agents = fs.readdirSync(outputsDir).filter(name => fs.statSync(path.join(outputsDir, name)).isDirectory());
-
-    agents.forEach(agent => {
-      const resultPath = path.join(outputsDir, agent, "result.json");
-      let status = "incomplete"; // Default if dir exists but no result
-
-      if (fs.existsSync(resultPath)) {
-        try {
-          const res = JSON.parse(fs.readFileSync(resultPath, "utf8"));
-          status = res.status || "active";
-        } catch { status = "error"; }
-      }
-      console.log([`(flow)`.padEnd(14), agent.padEnd(18), status.padEnd(10), `outputs/${agent}/notes.md`].join(" "));
-    });
-  }
-
-  // 4. Flow Summary
-  const flowSummaryExists = fs.existsSync(path.join(runDir, "flow_summary.md"));
-  const overallStatus = flowSummaryExists ? "DONE: flow complete" : (plannerStatus === "failed" ? "FAILED: planner error" : "IN PROGRESS / UNKNOWN");
+  rows.forEach(r => {
+    // TODO: Wire up duration/end-time when artifacts support it (e.g. r.duration, r.ended_at)
+    console.log(fmt(r.id, r.agent, r.status, r.created_at, r.artifacts, r.depends_on));
+  });
 
   console.log(overallStatus);
 }

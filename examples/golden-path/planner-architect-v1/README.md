@@ -96,6 +96,12 @@ make run-status RUN=orch-flow-2026-01-XX...
 
 The output will show the flow status (e.g., `DONE: flow complete` or `FAILED`), the goal, and the status of each agent (Planner, Architect) based on the generated artifacts.
 
+### Intent vs Reality
+
+The `run-status` command reports the **reality** of what happened based on artifacts on disk (e.g., `planner_summary.md`, `result.json`).
+- In **Plan Mode**, `plan.json` represents the **intent** (what we plan to do).
+- All reported statuses (e.g., `done`, `failed`) reflect the actual outcome of those steps as recorded in the filesystem.
+
 ## Output Artifacts
 
 ### Planner Artifacts (Step 1)
