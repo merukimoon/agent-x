@@ -16,7 +16,7 @@ These terms describe the intended shape of the project; adjust as the codebase e
 - **Agent**: A unit of behavior with instructions, context, and access to tools.
 - **Squad**: A collection of agents coordinated to complete a task.
 - **Task**: A bounded unit of work with inputs, constraints, and expected outputs.
-- **Orchestrator/Runner**: The component that schedules tasks, routes messages, and manages state.
+- **Orchestrator/Runner**: The control layer that schedules tasks, routes messages, and manages state (not an agent).
 - **Prompt**: Versioned instructions/templates used by agents.
 
 More detail: `docs/concepts.md`.
@@ -65,9 +65,9 @@ This repo does not yet publish an installable package (**TODO**). For now:
 - Flow selection: evaluates rule packs, picks the flow with the most keyword matches (ties favor architecture-change when applicable).
 - Rule pack shape (example): `{"flow_type":"pr-completion","keywords":["pull request",...],"steps":[{"id":"step-1","agent":"decision-maker","depends_on":["coordinator"]},...]}`.
 
-## Planner (LLM-based)
+## Planner (LLM-based agent)
 
-The `planner` command connects to an LLM to generate a plan based on a Goal and Context.
+The Planner agent connects to an LLM to generate a plan based on a Goal and Context. It is a regular agent: it produces plans only and performs no execution.
 
 ### Setup
 
@@ -140,7 +140,7 @@ See strictly defined docs:
 
 ### Golden Path Example
 
-For a complete, runnable example of the Planner-only mode (including valid inputs and expected artifacts), see:
+For a complete, runnable example of a single-agent run using the Planner, see:
 [Golden Path: Planner-Only v1](examples/golden-path/planner-only-v1/README.md)
 
 

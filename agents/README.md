@@ -40,6 +40,7 @@ An agent spec SHOULD state which conformance level it targets (L0/L1/L2).
 Orchestration:
 
 - [`agents/coordinator/README.md`](coordinator/README.md) Routes tasks, aggregates outputs, and produces run summaries.
+- [`agents/planner/README.md`](planner/README.md) Produces structured plans only; no execution or side effects.
 
 Decision:
 
