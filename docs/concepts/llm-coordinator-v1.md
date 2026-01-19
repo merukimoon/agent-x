@@ -6,7 +6,7 @@ Draft (v1). Planner-only. Execution is owned by the engine.
 ## Goal
 Use an LLM only as a **planner**:
 - LLM proposes a plan and candidate actions.
-- Engine verifies and executes.
+- Engine deterministically validates and executes.
 - Rules remain the fallback and circuit breaker.
 
 ## Core Principle (Contract)
@@ -19,11 +19,22 @@ Use an LLM only as a **planner**:
    - Validates schema and constraints.
    - Checks tool availability and capability boundaries.
    - Runs deterministic verification and execution.
-   - Rejects or repairs plans that do not pass gates.
+   - Either accepts, rejects, or falls back to rules.
+   - Does not fix, reinterpret, or repair plans.
 
 3. **Rules remain fallback**
    - If LLM output is invalid, risky, or unverified, engine falls back to rules.
    - Rules define the safe default behavior.
+
+## Engine Responsibilities (v1)
+- Parse and schema-validate the planner JSON output.
+- Enforce capability boundaries (allowed `action_type` values, permitted targets).
+- Evaluate verification feasibility (verification must be deterministic and runnable).
+- Enforce policy and invariants without interpretation (no implicit assumptions).
+- Decide outcome deterministically:
+  - accept and execute as-written, or
+  - reject and fall back to rules.
+- Never attempt to fix, rewrite, or reinterpret an invalid or ambiguous plan.
 
 ## Scope (v1)
 ### In scope
@@ -97,6 +108,7 @@ Engine should validate at minimum:
 - Risk thresholds policy
 - Forbidden actions policy
 - Deterministic verification feasibility
+- No plan repair or reinterpretation; accept, reject, or fall back to rules.
 
 ## Failure Modes and Fallbacks
 ### Common failure modes
@@ -115,11 +127,7 @@ Engine should validate at minimum:
 
 ## Versioning and Evolution
 - v1 is planner-only, no autonomy.
-- v2 may add:
-  - plan repair loop (LLM proposes fix after engine error report)
-  - structured tool selection (still engine-owned execution)
-- v3 may add:
-  - constrained multi-agent planning (still verified by engine)
+- Future versions are out of scope for this v1 document.
 
 ## Acceptance Criteria (v1)
 - Planner output is strictly structured (JSON schema).
