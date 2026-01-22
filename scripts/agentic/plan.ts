@@ -6,10 +6,11 @@ import {
   PLAN_VERSION,
   isAgentName,
   isStepStatus,
+  getCanonicalOutputs,
 } from "./core.ts";
 import { fail } from "./errors.ts";
 import { writeJsonFile } from "./fs.ts";
-import { getCanonicalOutputs } from "./agents.ts";
+// import { getCanonicalOutputs } from "./agents.ts"; // Moved to core
 
 /**
  * Validate a parsed plan object and return it if valid.
@@ -362,11 +363,11 @@ export function loadPlan(planPath, runId) {
   }
 }
 
- /**
- * Write the plan to disk.
- * @param {string} planPath
- * @param {import("./core.ts").Plan} plan
- */
+/**
+* Write the plan to disk.
+* @param {string} planPath
+* @param {import("./core.ts").Plan} plan
+*/
 export function persistPlan(planPath, plan) {
   writeJsonFile(planPath, plan);
 }

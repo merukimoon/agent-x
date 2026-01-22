@@ -18,6 +18,7 @@ function setupWorkdir(prefix) {
   const tmp = mkdtempSync(path.join(os.tmpdir(), prefix));
   copyDir(fixtureDir, tmp);
   copyDir(scriptsDir, path.join(tmp, "scripts"));
+  copyDir(path.join(REPO_ROOT, "packages"), path.join(tmp, "packages"));
   return { tmp, runDir: path.join(tmp, "runs", "test-run") };
 }
 

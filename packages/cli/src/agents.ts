@@ -1,58 +1,39 @@
-// @ts-check
-
 import fs from "fs";
 import path from "path";
 import process from "process";
-import {
-  PLAN_VERSION,
-  isAgentName,
-} from "./core.ts";
-import {
+import { Core, Legacy } from "./imports.ts";
+
+// Deconstruct from Legacy where helpful for cleaner code, or use Legacy.*
+const {
   readFirstLines,
   readFileText,
   ensureRunAndInputs,
   buildNotes,
   writeJsonFile,
   writeFileAtomic,
-} from "./fs.ts";
-import { classifyFlow } from "./rules.ts";
+} = Legacy;
+
+const {
+  PLAN_VERSION,
+  isAgentName,
+} = Core;
+
+
+const { classifyFlow } = Legacy;
 
 /**
- * @typedef {import("./core.ts").AgentName} AgentName
- * @typedef {import("./core.ts").AgentStatus} AgentStatus
- * @typedef {import("./core.ts").ExecutionMode} ExecutionMode
- * @typedef {import("./core.ts").RunId} RunId
- * @typedef {import("./core.ts").AgentResult} AgentResult
- * @typedef {import("./core.ts").PlanStep} PlanStep
+ * @typedef {import("./imports.ts").Core.AgentName} AgentName
+ * @typedef {import("./imports.ts").Core.AgentStatus} AgentStatus
+ * @typedef {import("./imports.ts").Core.ExecutionMode} ExecutionMode
+ * @typedef {import("./imports.ts").Core.RunId} RunId
+ * @typedef {import("./imports.ts").Core.AgentResult} AgentResult
+ * @typedef {import("./imports.ts").Core.PlanStep} PlanStep
  */
 
-/**
- * Get canonical outputs paths for an agent.
- * @param {AgentName} agent
- * @returns {{ result: string; notes: string }}
- */
-export function getCanonicalOutputs(agent) {
-  return {
-    result: `outputs/${agent}/result.json`,
-    notes: `outputs/${agent}/notes.md`,
-  };
-}
-
-/**
- * Ensure the outputs paths follow the canonical layout for an agent.
- * @param {PlanStep} step
- */
-export function validateCanonicalOutputs(step) {
-  const expected = getCanonicalOutputs(step.agent);
-  if (
-    step.outputs.result !== expected.result ||
-    step.outputs.notes !== expected.notes
-  ) {
-    throw new Error(
-      `Step ${step.id} outputs must match canonical layout. Expected result=${expected.result}, notes=${expected.notes}.`
-    );
-  }
-}
+export const {
+  getCanonicalOutputs,
+  validateCanonicalOutputs
+} = Core;
 
 /**
  * Read dependency result status.
