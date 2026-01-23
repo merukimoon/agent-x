@@ -90,6 +90,12 @@ npm run dev -- planner --run "$RUN"
 The planner outputs:
 - `runs/<RUN>/outputs/planner/result.json`
 - `runs/<RUN>/outputs/planner/notes.md`
+- `runs/<RUN>/outputs/planner/status.json`
+
+Run lifecycle (canonical):
+- `run.json` is the source of truth for run state. Created with `status: in_progress` and later set to `done` or `failed`.
+- Required fields on completion: `status`, `flow`, `started_at_utc`, `finished_at_utc`, `exit_code`, `error` (null on success).
+- Status/summary/verification commands are read-only; they do not mutate `run.json`.
 
 #### Configuration (Multi-Model Strategy)
 
@@ -169,6 +175,7 @@ For a complete, runnable example of a single-agent run using the Planner, see:
 - Quick verification: `make verify-fast` (typecheck + verify-esm; no tests).
 - Full verification: `make verify` (verify-fast + tests).
 - Product wiring verification: `make verify-flow` (creates a run, planner, status, agent dry-run, flow dry-run).
+- Run artifacts contract check: `npm run verify-run -- --run <RUN>` (or `make verify-run RUN=<RUN>`).
 
 ## Minimal usage example (pseudo-code)
 

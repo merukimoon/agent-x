@@ -106,7 +106,21 @@ Check outputs:
 - `runs/<RUN>/outputs/decision-maker/`
 - `runs/<RUN>/outputs/pr-reviewer/`
 
-### Step 6. Run Agents Directly (dry-run)
+### Step 6. Verify run artifacts
+
+Run the artifact contract verifier (read-only, exits non-zero on mismatch):
+
+Git Bash:
+```bash
+npm run verify-run -- --run "$RUN"
+```
+
+PowerShell:
+```powershell
+npm run verify-run -- --run $RUN
+```
+
+### Step 7. Run Agents Directly (dry-run)
 
 These validate the agent command path directly (agent name is positional, no `--agent` flag):
 
@@ -129,3 +143,4 @@ npm run dev -- agent pr-reviewer --run $RUN --dry-run
 - If `npm run dev -- status --run <RUN>` exits non-zero, confirm the run directory exists and you are passing the run id (not a full path).
 - If planner fails, inspect `runs/<RUN>/outputs/planner/stderr.txt` and confirm `.env` LLM configuration is valid.
 - If `flow` fails, ensure coordinator ran and created `runs/<RUN>/plan.json`.
+- If `npm run verify-run -- --run <RUN>` fails, inspect the listed missing/invalid artifacts and fix them; verify-run is read-only and will not repair the run.

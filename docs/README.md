@@ -14,6 +14,13 @@ Start here if you’re new to the project.
 - [`docs/versioning.md`](versioning.md) Versioning and compatibility policy (**TODO**)
 - [`docs/roadmap.md`](roadmap.md) Near-term project direction (**TODO**)
 
+## Verification commands (canonical)
+
+- Quick verification: `make verify-fast`
+- Full verification: `make verify`
+- Product wiring verification: `make verify-flow`
+- Run artifacts contract check: `npm run verify-run -- --run <RUN>` (or `make verify-run RUN=<RUN>`)
+
 ## Contributing docs
 
 If you update docs:

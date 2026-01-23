@@ -34,6 +34,8 @@
 - Schema (high level): Plan metadata (run id, version, created_at) plus an ordered list of steps. Each step specifies id, agent, depends_on agents, required inputs, canonical outputs, and status.
 - Steps and dependencies: depends_on indicates which agents must complete before the step may run.
 - Statuses: pending, running, done, failed, skipped; they track lifecycle of each planned execution.
+- Dependencies refer to step ids only (never agent names); cycles are invalid and rejected.
+- Planner and coordinator are explicit steps; CISO is included and may be skipped.
 - Canonical outputs: Each step points to the agent’s result and notes locations; the engine relies on these paths and does not infer alternatives.
 
 ## Engine Responsibilities
