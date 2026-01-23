@@ -501,7 +501,7 @@ function normalizeStatus(raw) {
   }
 }
 
-function selectArtifactPath(agentDir, normalizedStatus) {
+export function selectArtifactPath(agentDir, normalizedStatus) {
   const failedFirst = ["stderr.txt", "notes.md", "status.json", "result.json"];
   const defaultOrder = ["notes.md", "result.json", "status.json", "stderr.txt"];
   const candidates = normalizedStatus === "failed" ? failedFirst : defaultOrder;

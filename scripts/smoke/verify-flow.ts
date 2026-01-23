@@ -1,4 +1,4 @@
-import { spawnSync } from "child_process";
+import { spawnSync, SpawnSyncReturns } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -10,6 +10,32 @@ const repoRoot = path.resolve(__dirname, "..", "..");
 function fail(message: string): never {
   console.error(`ERROR: ${message}`);
   process.exit(1);
+}
+
+function comspec() {
+  return process.env.ComSpec || "C:\\Windows\\System32\\cmd.exe";
+}
+
+export function spawnNpmSync(
+  args: string[],
+  opts?: { cwd?: string; env?: NodeJS.ProcessEnv; stdio?: "pipe" | "inherit" }
+) {
+  const spawnOpts = {
+    cwd: opts?.cwd ?? repoRoot,
+    env: opts?.env ?? process.env,
+    stdio: opts?.stdio ?? "pipe",
+    encoding: "utf8" as const,
+    shell: false,
+  };
+
+  if (process.platform === "win32") {
+    const cmdline = ["npm", ...args]
+      .map((part) => (/\s/.test(part) ? `"${part}"` : part))
+      .join(" ");
+    return spawnSync(comspec(), ["/d", "/s", "/c", cmdline], spawnOpts as any);
+  }
+
+  return spawnSync("npm", args, spawnOpts as any);
 }
 
 export function resolveRunRequest(argv: string[], env: NodeJS.ProcessEnv) {
@@ -50,10 +76,6 @@ function runCommand(cmd: string, args: string[], opts?: { inherit?: boolean; env
   return res;
 }
 
-function npmCmd() {
-  return process.platform === "win32" ? "npm.cmd" : "npm";
-}
-
 function writeJson(filePath: string, data: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n", "utf8");
@@ -87,17 +109,14 @@ function runPlannerOrFail(runId: string, runDir: string) {
   const statusPath = path.join(outputsDir, "status.json");
   const stderrPath = path.join(outputsDir, "stderr.txt");
   const resultPath = path.join(outputsDir, "result.json");
+  const notesPath = path.join(outputsDir, "notes.md");
   const startedAt = new Date().toISOString();
   writeJson(statusPath, { status: "running", started_at: startedAt, agent: "planner", run_id: runId });
 
   try {
     const args = ["run", "dev", "--", "planner", "--run", runId];
-    const res = spawnSync(npmCmd(), args, {
-      cwd: repoRoot,
-      env: process.env,
-      stdio: "pipe",
-      encoding: "utf8",
-    });
+    const res = spawnNpmSync(args, { stdio: "pipe" });
+    const attempted = `npm ${args.join(" ")}`;
     if (res.stdout) {
       process.stdout.write(res.stdout);
     }
@@ -128,18 +147,35 @@ function runPlannerOrFail(runId: string, runDir: string) {
         run_id: runId,
         error: message,
         error_stack: res.error?.stack ?? null,
+        command: attempted,
+        cwd: repoRoot,
       });
       writeJson(resultPath, {
         agent: "planner",
         run_id: runId,
         status: "failed",
         created_at_utc: startedAt,
-        summary: message,
+        summary: `${message} (command: ${attempted})`,
         mode: "live",
         exitCode,
         error: message,
         error_stack: res.error?.stack ?? null,
+        command: attempted,
+        cwd: repoRoot,
       });
+      fs.writeFileSync(
+        notesPath,
+        [
+          "# Planner failure",
+          "",
+          `- command: ${attempted}`,
+          `- cwd: ${repoRoot}`,
+          `- exit: ${exitCode}`,
+          `- error: ${message}`,
+          tail ? `- stderr tail:\n\n${tail}` : "- stderr tail: <empty>",
+        ].join("\n"),
+        "utf8"
+      );
       writeRunJsonFailure(runDir, runId, message, finishedAt, exitCode);
       console.error(`Planner failed. Inspect ${stderrPath} and ${statusPath}.`);
       process.exit(exitCode);
@@ -152,6 +188,15 @@ function runPlannerOrFail(runId: string, runDir: string) {
       agent: "planner",
       run_id: runId,
     });
+    const notes = [
+      "# Planner succeeded",
+      "",
+      `- command: ${attempted}`,
+      `- cwd: ${repoRoot}`,
+      `- started: ${startedAt}`,
+      `- finished: ${finishedAt}`,
+    ].join("\n");
+    fs.writeFileSync(notesPath, notes, "utf8");
   } catch (err) {
     const finishedAt = new Date().toISOString();
     const message = err instanceof Error ? err.message : String(err);
@@ -171,12 +216,24 @@ function runPlannerOrFail(runId: string, runDir: string) {
       run_id: runId,
       status: "failed",
       created_at_utc: startedAt,
-      summary: message,
+      summary: `${message} (planner spawn)`,
       mode: "live",
       exitCode: 1,
       error: message,
       error_stack: stack,
     });
+    fs.writeFileSync(
+      notesPath,
+      [
+        "# Planner failure",
+        "",
+        `- command: npm run dev -- planner --run ${runId}`,
+        `- cwd: ${repoRoot}`,
+        `- error: ${message}`,
+        stack ? `- stack:\n\n${stack}` : "- stack: <none>",
+      ].join("\n"),
+      "utf8"
+    );
     writeRunJsonFailure(runDir, runId, message, finishedAt, 1);
     console.error(`Planner failed. Inspect ${stderrPath} and ${statusPath}.`);
     throw err;
@@ -302,9 +359,20 @@ function main() {
   ensureInputsPresent(runDir);
 
   runPlannerOrFail(runId, runDir);
-  runCommand(npmCmd(), ["run", "dev", "--", "status", "--run", runId], { inherit: true });
-  runCommand(npmCmd(), ["run", "dev", "--", "agent", "coordinator", "--run", runId, "--dry-run"], { inherit: true });
-  runCommand(npmCmd(), ["run", "dev", "--", "flow", "--run", runId, "--dry-run"], { inherit: true });
+  const statusArgs = ["run", "dev", "--", "status", "--run", runId];
+  const agentArgs = ["run", "dev", "--", "agent", "coordinator", "--run", runId, "--dry-run"];
+  const flowArgs = ["run", "dev", "--", "flow", "--run", runId, "--dry-run"];
+  const steps: Array<{ name: string; args: string[] }> = [
+    { name: "status", args: statusArgs },
+    { name: "coordinator", args: agentArgs },
+    { name: "flow", args: flowArgs },
+  ];
+  for (const step of steps) {
+    const res: SpawnSyncReturns<string> = spawnNpmSync(step.args, { stdio: "inherit" });
+    if (res.status !== 0) {
+      fail(`Command failed: npm ${step.args.join(" ")}`);
+    }
+  }
 
   ensurePlannerOutputs(runDir);
   listRun(runDir);

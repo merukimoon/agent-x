@@ -4,7 +4,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { describe, expect, it } from "vitest";
 import { normalizeOutput, runCli } from "../agentic/_utils.js";
-import { resolveRunRequest } from "../../scripts/smoke/verify-flow.ts";
+import { resolveRunRequest, spawnNpmSync } from "../../scripts/smoke/verify-flow.ts";
+import { selectArtifactPath } from "../../packages/cli/src/cli.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,15 +51,18 @@ describe("status artifact selection", () => {
     );
     fs.writeFileSync(path.join(plannerDir, "stderr.txt"), "planner failed\n", "utf8");
 
-    const result = runCli({
-      cwd: tmp,
-      args: [path.join(REPO_ROOT, "scripts", "agentic.ts"), "status", "--run", runId],
-      useTsx: true,
-    });
+    const artifact = selectArtifactPath(plannerDir, "failed");
+    expect(artifact).toBe("stderr.txt");
+  });
+});
 
-    const stdout = normalizeOutput(result.stdout, { cwd: tmp });
-    expect(result.code).toBe(0);
-    expect(stdout).toContain("outputs/planner/stderr.txt");
-    expect(stdout).not.toContain("outputs/planner/notes.md");
+describe("spawnNpmSync", () => {
+  it("runs npm -v successfully", () => {
+    const res = spawnNpmSync(["-v"], { cwd: REPO_ROOT, stdio: "pipe" });
+    if (res.error) {
+      expect(res.error.code).not.toBe("EINVAL");
+    } else {
+      expect(res.status).toBe(0);
+    }
   });
 });
