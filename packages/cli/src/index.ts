@@ -11,7 +11,8 @@ import {
     handleValidateCommand,
     handleRetryCommand,
     handleSkipCommand,
-    handlePlannerCommand
+    handlePlannerCommand,
+    handleVerifyRunCommand
 } from "./cli.ts";
 import { Legacy } from "./imports.ts";
 
@@ -75,6 +76,9 @@ export async function runCli(args: string[]) {
             break;
         case "skip":
             handleSkipCommand(handlerArgs);
+            break;
+        case "verify-run":
+            handleVerifyRunCommand(handlerArgs);
             break;
         default:
             console.log("Usage: node scripts/agentic.ts <command>");

@@ -11,6 +11,8 @@ This example demonstrates a **multi-agent thinking flow** where the Planner agen
 - **Architect**: Reviews the plan and produces architectural guidance, design tradeoffs, and compatibility notes.
 - **Orchestrator**: Manages sequencing, artifact handoff, and exit code policy enforcement.
 
+Current CLI behavior reads `runs/<RUN>/inputs/` for both agents and writes outputs under `outputs/<agent>/` in the same run.
+
 This is a **thinking-only flow** — no code is generated or modified.
 
 ## Prerequisites
@@ -30,20 +32,28 @@ Commonly:
 
 ### Step-by-Step Execution
 
-**Step 1: Run the Planner**
+**Step 1: Create a run and capture the RUN id**
 ```bash
 # From repository root
+make run-new NAME="planner-architect-v1"
+# Example output: Created run: runs/2026-01-23_1234-planner-architect-v1/
+RUN_ID="2026-01-23_1234-planner-architect-v1"
+```
+
+**Step 2: Run the Planner into that run**
+```bash
 make planner \
   GOAL="$(cat examples/golden-path/planner-architect-v1/sample-goal.txt)" \
-  CONTEXT="$(cat examples/golden-path/planner-architect-v1/sample-context.txt)"
+  CONTEXT="$(cat examples/golden-path/planner-architect-v1/sample-context.txt)" \
+  RUN="$RUN_ID"
 ```
 
 This produces a run directory `runs/<timestamp>/` with:
-- `planner_raw.json` — Raw LLM output
-- `planner_validation.json` — Validation report
-- `planner_summary.md` — Human-readable plan summary
+- `outputs/planner/result.json` — Planner result metadata
+- `outputs/planner/notes.md` — Request/context excerpts
+- `inputs/request.md` and `inputs/context.md` — Inputs used for the run
 
-**Step 2: Run the Architect (using the Planner's output as context)**
+**Step 3: Run the Architect (using the Planner's output as context)**
 
 The Architect reviews the plan and produces architectural decisions:
 
@@ -59,7 +69,7 @@ This produces additional artifacts in the same run directory:
 - `outputs/architect/result.json` — Structured architectural decisions
 - `outputs/architect/notes.md` — Design rationale and tradeoffs
 
-**Step 3: Review the aggregated flow**
+**Step 4: Review the aggregated flow**
 
 Check the complete flow outcome:
 ```bash
@@ -68,19 +78,7 @@ ls -la runs/$RUN_ID/
 
 ## One-command E2E run
 
-You can run the entire flow (Planner → Architect) with a single command using the Orchestrator. This ensures policy enforcement and proper context handoff.
-
-```bash
-make orchestrator-planner-architect \
-  GOAL="$(cat examples/golden-path/planner-architect-v1/sample-goal.txt)" \
-  CONTEXT="$(cat examples/golden-path/planner-architect-v1/sample-context.txt)"
-```
-
-This will:
-1. Run the **Planner** with retries for network errors.
-2. If successful, prepare a derived context mapping the plan to the architect's input.
-3. Run the **Architect** to review the plan.
-4. Generate a `flow_summary.md`.
+The existing orchestrator target still expects the legacy `--goal/--context` planner interface and should be updated before relying on it. For now, prefer the manual steps above so the planner reads from `runs/<RUN>/inputs/` via `npm run dev -- planner --run "$RUN"`.
 
 ## Check Status
 
@@ -107,9 +105,8 @@ The `run-status` command reports the **reality** of what happened based on artif
 ### Planner Artifacts (Step 1)
 | File | Description |
 |------|-------------|
-| `planner_raw.json` | Raw JSON structure from the LLM. |
-| `planner_validation.json` | Pass/fail status of safety gates and schema checks. |
-| `planner_summary.md` | Markdown summary of the plan. |
+| `outputs/planner/result.json` | Planner result metadata (run id, status, timestamps). |
+| `outputs/planner/notes.md` | Request/context excerpts captured for the run. |
 
 ### Architect Artifacts (Step 2)
 | File | Description |

@@ -35,6 +35,15 @@ export const {
   validateCanonicalOutputs
 } = Core;
 
+export function normalizeDepends(depList: string[], agentToId: Record<string, string>) {
+  return depList.map((dep) => {
+    if (agentToId[dep]) return agentToId[dep];
+    const byId = Object.values(agentToId).find((id) => id === dep);
+    if (byId) return dep;
+    throw new Error(`Unknown dependency "${dep}"`);
+  });
+}
+
 /**
  * Read dependency result status.
  * @param {AgentName} agent
@@ -74,8 +83,9 @@ export function readDependencyStatus(agent, runDir) {
  * @param {string} runDir
  * @returns {{ ready: boolean; blocking: string | null }}
  */
-export function checkDependenciesSatisfied(step, runDir) {
-  for (const agent of step.depends_on) {
+export function checkDependenciesSatisfied(step, runDir, idToAgent) {
+  for (const dep of step.depends_on) {
+    const agent = idToAgent?.[dep] ?? dep;
     const status = readDependencyStatus(agent, runDir);
     if (!status.ok) {
       return { ready: false, blocking: status.message ?? `Dependency ${agent} not ready.` };
@@ -89,8 +99,8 @@ export function checkDependenciesSatisfied(step, runDir) {
  * @param {PlanStep} step
  * @param {string} runDir
  */
-export function ensureDependencies(step, runDir) {
-  const depsStatus = checkDependenciesSatisfied(step, runDir);
+export function ensureDependencies(step, runDir, idToAgent) {
+  const depsStatus = checkDependenciesSatisfied(step, runDir, idToAgent);
   if (!depsStatus.ready) {
     throw new Error(`Dependencies not satisfied for ${step.id}: ${depsStatus.blocking ?? ""}`.trim());
   }
@@ -147,6 +157,15 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     contextExcerpt,
   });
   writeFileAtomic(notesPath, notes);
+  const statusPath = path.join(outputsDir, "status.json");
+  writeJsonFile(statusPath, {
+    agent: agentName,
+    run_id: runId,
+    status,
+    created_at_utc: createdAtUtc,
+    mode,
+    finished_at_utc: createdAtUtc,
+  });
 
   if (agentName === "coordinator") {
     const planPath = path.join(runDir, "plan.json");
@@ -156,7 +175,34 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     /** @type {PlanStep[]} */
     const steps = [];
     const matchedSet = new Set(classification.signals.map((s) => s.replace(/^keyword:/, "")));
+    const agentToId: Record<string, string> = {
+      planner: "planner",
+      coordinator: "coordinator",
+    };
+    const idToAgent: Record<string, string> = {
+      planner: "planner",
+      coordinator: "coordinator",
+    };
     classification.pack.steps.forEach((stepDef) => {
+      agentToId[stepDef.agent] = stepDef.id;
+      idToAgent[stepDef.id] = stepDef.agent;
+    });
+
+    classification.pack.steps.forEach((stepDef) => {
+      const outputs = getCanonicalOutputs(stepDef.agent);
+      const mappedDepends = normalizeDepends(stepDef.depends_on, agentToId);
+      const priorOutputs = mappedDepends.flatMap((dep) => {
+        const depAgent = idToAgent[dep];
+        if (!depAgent) {
+          throw new Error(`Unknown dependency mapping for ${dep}`);
+        }
+        const depOutputs = getCanonicalOutputs(depAgent as any);
+        return [depOutputs.result, depOutputs.notes];
+      });
+
+      let statusForStep = "pending";
+      let lastError: string | null = null;
+      const nowIso = new Date().toISOString();
       if (
         Array.isArray(stepDef.enabled_if_keywords) &&
         stepDef.enabled_if_keywords.length > 0
@@ -165,29 +211,88 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
           matchedSet.has(k)
         );
         if (!enabled) {
-          return;
+          statusForStep = "skipped";
+          lastError = "Skipped: no security signals";
+          const outputsDirSkipped = path.join(runDir, "outputs", stepDef.agent);
+          fs.mkdirSync(outputsDirSkipped, { recursive: true });
+          writeJsonFile(path.join(outputsDirSkipped, "result.json"), {
+            agent: stepDef.agent,
+            run_id: runId,
+            status: "skipped",
+            created_at_utc: nowIso,
+            summary: lastError,
+            mode,
+          });
+          writeFileAtomic(
+            path.join(outputsDirSkipped, "notes.md"),
+            `# ${stepDef.agent}\n\nSkipped: no security signals.\n`
+          );
+          writeJsonFile(path.join(outputsDirSkipped, "status.json"), {
+            agent: stepDef.agent,
+            run_id: runId,
+            status: "skipped",
+            created_at_utc: nowIso,
+            finished_at_utc: nowIso,
+            mode,
+            reason: "no security signals",
+          });
         }
       }
-      const priorOutputs = stepDef.depends_on.flatMap((dep) => {
-        const outputs = getCanonicalOutputs(dep);
-        return [outputs.result, outputs.notes];
-      });
+
       steps.push({
         id: stepDef.id,
         agent: stepDef.agent,
-        depends_on: stepDef.depends_on,
+        depends_on: mappedDepends,
         inputs: {
           request: "inputs/request.md",
           context: "inputs/context.md",
           prior_outputs: priorOutputs,
         },
-        outputs: getCanonicalOutputs(stepDef.agent),
-        status: "pending",
+        outputs,
+        status: statusForStep,
         attempt: 0,
         max_attempts: 1,
-        last_error: null,
+        last_error: lastError,
         allow_skip: true,
       });
+    });
+
+    // Coordinator explicit step
+    const coordOutputs = getCanonicalOutputs("coordinator");
+    steps.unshift({
+      id: "coordinator",
+      agent: "coordinator",
+      depends_on: [],
+      inputs: {
+        request: "inputs/request.md",
+        context: "inputs/context.md",
+        prior_outputs: [],
+      },
+      outputs: coordOutputs,
+      status: "done",
+      attempt: 0,
+      max_attempts: 1,
+      last_error: null,
+      allow_skip: true,
+    });
+
+    // Planner explicit step (already executed before coordinator in verify-flow)
+    const plannerOutputs = getCanonicalOutputs("planner");
+    steps.unshift({
+      id: "planner",
+      agent: "planner",
+      depends_on: [],
+      inputs: {
+        request: "inputs/request.md",
+        context: "inputs/context.md",
+        prior_outputs: [],
+      },
+      outputs: plannerOutputs,
+      status: "done",
+      attempt: 0,
+      max_attempts: 1,
+      last_error: null,
+      allow_skip: true,
     });
 
     const rationaleSample = classification.signals.slice(0, 3).join(", ");

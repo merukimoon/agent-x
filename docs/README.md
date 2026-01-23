@@ -14,6 +14,26 @@ Start here if you’re new to the project.
 - [`docs/versioning.md`](versioning.md) Versioning and compatibility policy (**TODO**)
 - [`docs/roadmap.md`](roadmap.md) Near-term project direction (**TODO**)
 
+## Verification commands (canonical)
+
+- Quick verification: `make verify-fast`
+- Full verification: `make verify`
+- Product wiring verification: `make verify-flow`
+- Run artifacts contract check: `make validate-run RUN=<RUN>` (alias: `make verify-run RUN=<RUN>` or `npm run verify-run -- --run <RUN>`)
+- Orchestrator validation: `make orchestrator-validate GOAL="..." [MODE=planner|planner-architect]` (default mode is planner-architect; runs orchestrator then verify-run)
+
+## Make targets
+
+### Run validation
+`make validate-run RUN=<run-id>`
+`make verify-run RUN=<run-id>` (alias to `make validate-run`)
+
+### Execution flows
+`make verify-flow`
+`make orchestrator-validate GOAL="..." [MODE=planner|planner-architect]`
+
+Definitions live in Make/verify.mk for verification targets and Make/execute.mk for execution flows.
+
 ## Contributing docs
 
 If you update docs:

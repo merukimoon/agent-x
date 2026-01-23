@@ -88,15 +88,6 @@ export function gatherPlanSchemaErrors(candidate, expectedRunId) {
 
   /** @type {Set<string>} */
   const stepIds = new Set();
-  /** @type {Set<import("./core.ts").AgentName>} */
-  const agentsInPlan = new Set();
-  if (Array.isArray(plan.steps)) {
-    plan.steps.forEach((step) => {
-      if (step && typeof step === "object" && isAgentName(step.agent)) {
-        agentsInPlan.add(step.agent);
-      }
-    });
-  }
 
   plan.steps?.forEach((step, index) => {
     if (!step || typeof step !== "object") {
@@ -122,7 +113,7 @@ export function gatherPlanSchemaErrors(candidate, expectedRunId) {
       errors.push(`plan.json step ${step.id ?? index} depends_on must be an array.`);
     } else {
       step.depends_on.forEach((dep) => {
-        if (!isAgentName(dep)) {
+        if (typeof dep !== "string") {
           errors.push(
             `plan.json step ${step.id ?? index} has invalid dependency: ${String(
               dep
@@ -130,9 +121,9 @@ export function gatherPlanSchemaErrors(candidate, expectedRunId) {
           );
           return;
         }
-        if (dep !== "coordinator" && !agentsInPlan.has(dep)) {
+        if (!stepIds.has(dep)) {
           errors.push(
-            `plan.json step ${step.id ?? index} depends on unknown agent: ${dep}.`
+            `plan.json step ${step.id ?? index} has invalid dependency: ${dep}.`
           );
         }
       });
@@ -308,7 +299,6 @@ export function validatePlanFiles(plan, runDir) {
     }
     const status = statusByAgent.get(agent);
     if (!status) {
-      errors.push(`Dependency agent ${agent} not found in plan steps.`);
       return false;
     }
     return status !== "pending";

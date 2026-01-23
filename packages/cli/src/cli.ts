@@ -208,6 +208,277 @@ export function handleAgentCommand(args) {
   runAgent(agentCandidate, runId, mode, parsed.contextPath);
 }
 
+function readRunJson(runDir) {
+  const runPath = path.join(runDir, "run.json");
+  if (!fs.existsSync(runPath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(runPath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+export function updateRunMetadata(runDir, updates) {
+  const runPath = path.join(runDir, "run.json");
+  const current = readRunJson(runDir) || {};
+  const next = {
+    ...current,
+    ...updates,
+  };
+  writeJsonFile(runPath, next);
+}
+
+function writeFlowSummary(runDir, plan, runMeta) {
+  const summaryPath = path.join(runDir, "summary", "final.md");
+  const steps = plan?.steps || [];
+  const started = runMeta?.started_at_utc || runMeta?.created_at || "-";
+  const finished = runMeta?.finished_at_utc || "-";
+  const flowType = runMeta?.flow || plan?.flow_type || "-";
+  const status = runMeta?.status || "-";
+
+  const stepLines = steps.length
+    ? steps.map((s) => `- ${s.id} (${s.agent}): ${s.status}`).join("\n")
+    : "- none";
+
+  const artifactLines = steps
+    .map((s) => {
+      const out = s.outputs || {};
+      return [
+        `- ${s.agent}:`,
+        `  - result: ${out.result ?? "?"}`,
+        `  - notes: ${out.notes ?? "?"}`,
+      ].join("\n");
+    })
+    .join("\n");
+
+  const body = [
+    "# Run summary",
+    "",
+    `- Run: ${runMeta?.id ?? path.basename(runDir)}`,
+    `- Flow: ${flowType}`,
+    `- Status: ${status}`,
+    `- Started: ${started}`,
+    `- Finished: ${finished}`,
+    "",
+    "## Steps",
+    stepLines,
+    "",
+    "## Key artifacts",
+    `- run.json`,
+    `- plan.json`,
+    artifactLines ? artifactLines : "- none",
+  ].join("\n");
+
+  writeFileAtomic(summaryPath, body);
+}
+
+function ensureCoordinatorStep(plan) {
+  const hasCoordinator = plan.steps.some((s) => s.id === "coordinator" || s.agent === "coordinator");
+  if (hasCoordinator) return plan;
+  const coordOutputs = {
+    result: "outputs/coordinator/result.json",
+    notes: "outputs/coordinator/notes.md",
+  };
+  const coordinatorStep = {
+    id: "coordinator",
+    agent: "coordinator",
+    depends_on: [],
+    inputs: {
+      request: "inputs/request.md",
+      context: "inputs/context.md",
+      prior_outputs: [],
+    },
+    outputs: coordOutputs,
+    status: "done",
+    attempt: 0,
+    max_attempts: 1,
+    last_error: null,
+    allow_skip: true,
+  };
+  plan.steps.unshift(coordinatorStep);
+  return plan;
+}
+
+function validatePlanDependenciesStrict(plan) {
+  const ids = new Set(plan.steps.map((s) => s.id));
+  plan.steps.forEach((step) => {
+    step.depends_on.forEach((dep) => {
+      if (!ids.has(dep)) {
+        fail(`Invalid dependency "${dep}" on step ${step.id}; no such step id in plan.`);
+      }
+    });
+  });
+}
+
+export function verifyRun(runDir) {
+  /** @type {string[]} */
+  const errors = [];
+
+  const runPath = path.join(runDir, "run.json");
+  const planPath = path.join(runDir, "plan.json");
+  const summaryPath = path.join(runDir, "summary", "final.md");
+
+  const requireFile = (p, code) => {
+    if (!fs.existsSync(p) || !fs.statSync(p).isFile()) {
+      errors.push(`${code} ${p}`);
+      return false;
+    }
+    return true;
+  };
+
+  const runOk = requireFile(runPath, "MISSING_FILE");
+  const planOk = requireFile(planPath, "MISSING_FILE");
+  const summaryOk = requireFile(summaryPath, "MISSING_FILE");
+
+  /** @type {any} */
+  let runJson = null;
+  if (runOk) {
+    try {
+      runJson = JSON.parse(fs.readFileSync(runPath, "utf8"));
+    } catch {
+      errors.push(`INVALID_JSON ${runPath}`);
+    }
+  }
+
+  if (runJson) {
+    const rid = runJson.run_id || runJson.id;
+    ["status", "flow"].forEach((f) => {
+      if (!runJson[f] || typeof runJson[f] !== "string") {
+        errors.push(`INVALID_RUN missing ${f}`);
+      }
+    });
+    if (!runJson.started_at_utc) {
+      errors.push("INVALID_RUN missing started_at_utc");
+    }
+    if (runJson.status === "done" || runJson.status === "failed") {
+      if (!runJson.finished_at_utc) errors.push("INVALID_RUN missing finished_at_utc");
+      if (typeof runJson.exit_code !== "number") errors.push("INVALID_RUN missing exit_code");
+      if (runJson.status === "done" && runJson.exit_code !== 0) {
+        errors.push("INVALID_RUN done exit_code must be 0");
+      }
+      if (runJson.status === "failed" && (!runJson.exit_code || runJson.exit_code === 0)) {
+        errors.push("INVALID_RUN failed exit_code must be non-zero");
+      }
+      if (runJson.status === "failed" && (!runJson.error || String(runJson.error).trim() === "")) {
+        errors.push("INVALID_RUN failed requires error");
+      }
+    }
+  }
+
+  /** @type {{ steps: any[] } | null} */
+  let plan = null;
+  if (planOk) {
+    try {
+      plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
+    } catch {
+      errors.push(`INVALID_JSON ${planPath}`);
+    }
+  }
+
+  if (plan && Array.isArray(plan.steps)) {
+    const ids = plan.steps.map((s) => s.id).filter(Boolean);
+    const uniqueIds = new Set(ids);
+    if (uniqueIds.size !== ids.length) {
+      errors.push("INVALID_PLAN duplicate step ids");
+    }
+    plan.steps.forEach((step) => {
+      if (!step.id) errors.push("INVALID_PLAN step missing id");
+      if (!step.agent) errors.push(`INVALID_PLAN ${step.id} missing agent`);
+      if (!Array.isArray(step.depends_on)) {
+        errors.push(`INVALID_PLAN ${step.id} depends_on must be array`);
+      } else {
+        step.depends_on.forEach((dep) => {
+          if (typeof dep !== "string") {
+            errors.push(`INVALID_DEP ${step.id} non-string dependency`);
+          } else if (!uniqueIds.has(dep)) {
+            errors.push(`INVALID_DEP ${step.id} references unknown step id "${dep}"`);
+          }
+        });
+      }
+    });
+
+    // simple cycle check
+    const graph = new Map();
+    plan.steps.forEach((s) => graph.set(s.id, s.depends_on || []));
+    const seen = new Set();
+    const stack = new Set();
+    const dfs = (id) => {
+      if (stack.has(id)) {
+        throw new Error(`CYCLE ${id}`);
+      }
+      if (seen.has(id)) return;
+      stack.add(id);
+      (graph.get(id) || []).forEach((d) => dfs(d));
+      stack.delete(id);
+      seen.add(id);
+    };
+    try {
+      plan.steps.forEach((s) => dfs(s.id));
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : String(err));
+    }
+
+    // artifacts per step
+    const sortedSteps = [...plan.steps].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    sortedSteps.forEach((step) => {
+      const stepDir = path.join(runDir, "outputs", step.agent);
+      if (!fs.existsSync(stepDir) || !fs.statSync(stepDir).isDirectory()) {
+        errors.push(`MISSING_DIR outputs/${step.agent}`);
+        return;
+      }
+      ["notes.md", "result.json", "status.json"].forEach((fname) => {
+        const p = path.join(stepDir, fname);
+        if (!fs.existsSync(p) || !fs.statSync(p).isFile()) {
+          errors.push(`MISSING_ARTIFACT ${path.relative(runDir, p)}`);
+        }
+      });
+      const statusPath = path.join(stepDir, "status.json");
+      if (fs.existsSync(statusPath)) {
+        try {
+          const statusJson = JSON.parse(fs.readFileSync(statusPath, "utf8"));
+          const st = normalizeStatus(statusJson.status);
+          const needsFinished = ["done", "failed", "skipped"];
+          const finished = statusJson.finished_at_utc || statusJson.finished_at;
+          if (needsFinished.includes(st) && !finished) {
+            errors.push(`INVALID_STATUS ${path.relative(runDir, statusPath)} missing finished_at_utc`);
+          }
+          const planStatusNorm = normalizeStatus(step.status);
+          if (planStatusNorm && st && planStatusNorm !== st) {
+            errors.push(`STATUS_MISMATCH ${step.id} plan=${step.status} artifact=${st}`);
+          }
+        } catch {
+          errors.push(`INVALID_JSON ${statusPath}`);
+        }
+      }
+      if (step.status === "failed") {
+        const stderrPath = path.join(stepDir, "stderr.txt");
+        if (!fs.existsSync(stderrPath) || !fs.statSync(stderrPath).isFile()) {
+          errors.push(`MISSING_ARTIFACT ${path.relative(runDir, stderrPath)}`);
+        }
+      }
+    });
+  }
+
+  if (summaryOk) {
+    try {
+      const content = fs.readFileSync(summaryPath, "utf8");
+      if (/TODO/i.test(content)) {
+        errors.push("INVALID_SUMMARY contains TODO");
+      }
+      if (runJson) {
+        const rid = runJson.run_id || runJson.id || "";
+        if (!content.includes(String(rid))) errors.push("INVALID_SUMMARY missing run id");
+        if (runJson.flow && !content.includes(String(runJson.flow))) errors.push("INVALID_SUMMARY missing flow");
+        if (runJson.status && !content.includes(String(runJson.status))) errors.push("INVALID_SUMMARY missing status");
+      }
+    } catch {
+      errors.push("INVALID_SUMMARY unreadable");
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
 /**
  * Execute steps defined in plan.json in order.
  * @param {RunId} runId
@@ -218,6 +489,12 @@ export function runFlow(runId, mode) {
   if (!fs.existsSync(runDir) || !fs.statSync(runDir).isDirectory()) {
     fail(`Run directory not found: ${runDir}`, { exitCode: 11 });
   }
+
+  const startedAt = new Date().toISOString();
+  updateRunMetadata(runDir, {
+    status: "in_progress",
+    started_at_utc: readRunJson(runDir)?.started_at_utc ?? startedAt,
+  });
 
   const missingInputs = validatePlanFiles(
     {
@@ -238,6 +515,9 @@ export function runFlow(runId, mode) {
   }
 
   const lockPath = createFlowLock(runDir, runId, mode);
+  let resolvedFlowType = "";
+  /** @type {Plan | null} */
+  let planForSummary = null;
   try {
     const planPath = path.join(runDir, "plan.json");
 
@@ -266,8 +546,15 @@ export function runFlow(runId, mode) {
 
     const planPathFinal = planPath;
     /** @type {Plan} */
-    let plan = planMaybe;
+    let plan = ensureCoordinatorStep(planMaybe);
+    if (plan !== planMaybe) {
+      persistPlan(planPathFinal, plan);
+    }
+    validatePlanDependenciesStrict(plan);
+    resolvedFlowType = plan.flow_type || resolvedFlowType || "flow";
+    planForSummary = plan;
 
+    const idToAgent = Object.fromEntries(plan.steps.map((s) => [s.id, s.agent]));
     plan.steps.forEach((step) => {
       if (step.status === "failed") {
         fail(
@@ -289,7 +576,7 @@ export function runFlow(runId, mode) {
         );
       }
 
-      ensureDependencies(step, runDir);
+      ensureDependencies(step, runDir, idToAgent);
 
       applyStatusTransition(
         plan,
@@ -330,10 +617,34 @@ export function runFlow(runId, mode) {
       }
     });
 
+    planForSummary = plan;
     const summary = plan.steps
       .map((step) => `${step.id}:${step.agent}=${step.status}`)
       .join(", ");
     console.log(`Flow complete for run ${runId}. Steps: ${summary}`);
+    updateRunMetadata(runDir, {
+      status: "done",
+      finished_at_utc: new Date().toISOString(),
+      flow: resolvedFlowType || "flow",
+      exit_code: 0,
+      error: null,
+    });
+    const metaDone = readRunJson(runDir);
+    writeFlowSummary(runDir, planForSummary, metaDone);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    updateRunMetadata(runDir, {
+      status: "failed",
+      finished_at_utc: new Date().toISOString(),
+      flow: resolvedFlowType || "flow",
+      exit_code: 1,
+      error: message,
+    });
+    const metaFailed = readRunJson(runDir);
+    if (planForSummary) {
+      try { writeFlowSummary(runDir, planForSummary, metaFailed); } catch { /* best effort */ }
+    }
+    throw error;
   } finally {
     removeLock(lockPath);
   }
@@ -458,6 +769,33 @@ export function handleSkipCommand(args) {
 }
 
 /**
+ * Execute the "verify-run" command.
+ * @param {string[]} args
+ */
+export function handleVerifyRunCommand(args) {
+  let runId = null;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--run") {
+      runId = args[i + 1];
+      i += 1;
+    } else if (args[i].startsWith("--run=")) {
+      runId = args[i].slice("--run=".length);
+    }
+  }
+  if (!runId) {
+    fail("RUN is required via --run <RUN>", { showUsage: true });
+  }
+  const runDir = path.join(process.cwd(), "runs", runId);
+  const result = verifyRun(runDir);
+  if (result.ok) {
+    console.log(`verify-run OK: ${runId}`);
+    return;
+  }
+  result.errors.forEach((e) => console.error(e));
+  process.exit(1);
+}
+
+/**
  * Execute the "status" command.
  * @param {string[]} args
  */
@@ -480,6 +818,7 @@ function normalizeStatus(raw) {
     case "done":
     case "success":
     case "completed":
+    case "ok":
       return "done";
     case "failed":
     case "error":
@@ -499,6 +838,18 @@ function normalizeStatus(raw) {
       // Safety fallback
       return "pending";
   }
+}
+
+export function selectArtifactPath(agentDir, normalizedStatus) {
+  const candidates = ["notes.md", "stderr.txt", "status.json", "result.json"];
+
+  for (const candidate of candidates) {
+    const full = path.join(agentDir, candidate);
+    if (fs.existsSync(full) && fs.statSync(full).isFile()) {
+      return candidate;
+    }
+  }
+  return null;
 }
 
 /**
@@ -618,29 +969,36 @@ export function handleStatusCommand(args) {
     try { goal = readFirstLines(path.join(runDir, "inputs", "request.md"), 1)[0] || "Unknown"; } catch { }
     console.log(`Goal: ${goal}`);
 
-    // 2. Planner
-    const plannerSummaryExists = fs.existsSync(path.join(runDir, "planner_summary.md"));
-    const plannerFailExists = fs.existsSync(path.join(runDir, "planner_validation_error.json"));
-
-    let plannerStatus = "pending";
-    if (plannerSummaryExists) plannerStatus = "done";
-    else if (plannerFailExists) plannerStatus = "failed";
-
-    rows.push({
-      id: "(planner)",
-      agent: "planner",
-      status: normalizeStatus(plannerStatus),
-      artifacts: plannerSummaryExists ? "planner_summary.md" : (plannerFailExists ? "planner_validation_error.json" : "-"),
-      created_at: undefined // Planner doesn't output result.json with timestamps in current flow wrapper
-    });
-
-    // 3. Agents (scan outputs)
+    // 2. Agents (scan outputs)
     const outputsDir = path.join(runDir, "outputs");
+    const plannerOutputsDir = path.join(outputsDir, "planner");
+    const hasPlannerOutputsDir = fs.existsSync(plannerOutputsDir) && fs.statSync(plannerOutputsDir).isDirectory();
+
+    // Legacy planner-only artifacts (only show when we do not have outputs/planner yet).
+    if (!hasPlannerOutputsDir) {
+      const plannerSummaryExists = fs.existsSync(path.join(runDir, "planner_summary.md"));
+      const plannerFailExists = fs.existsSync(path.join(runDir, "planner_validation_error.json"));
+
+      let plannerStatus = "pending";
+      if (plannerSummaryExists) plannerStatus = "done";
+      else if (plannerFailExists) plannerStatus = "failed";
+
+      rows.push({
+        id: "(planner)",
+        agent: "planner",
+        status: normalizeStatus(plannerStatus),
+        artifacts: plannerSummaryExists ? "planner_summary.md" : (plannerFailExists ? "planner_validation_error.json" : "-"),
+        created_at: undefined // Legacy planner-only mode did not write outputs/planner/result.json
+      });
+    }
+
     if (fs.existsSync(outputsDir)) {
       const agents = fs.readdirSync(outputsDir).filter(name => fs.statSync(path.join(outputsDir, name)).isDirectory());
 
       agents.forEach(agent => {
-        const resultPath = path.join(outputsDir, agent, "result.json");
+        const agentDir = path.join(outputsDir, agent);
+        const resultPath = path.join(agentDir, "result.json");
+        const statusPath = path.join(agentDir, "status.json");
         let st = "pending";
         let ts = undefined;
 
@@ -650,16 +1008,24 @@ export function handleStatusCommand(args) {
             st = res.status || "pending";
             ts = res.created_at_utc; // Start time available!
           } catch { st = "failed"; } // Corrupt json -> failed
+        } else if (fs.existsSync(statusPath)) {
+          try {
+            const res = JSON.parse(fs.readFileSync(statusPath, "utf8"));
+            st = res.status || "pending";
+            ts = res.started_at || res.finished_at;
+          } catch { st = "failed"; }
         } else {
           // Directory exists but no result -> "pending" (per user request)
           st = "pending";
         }
 
+        const normalizedStatus = normalizeStatus(st);
+        const artifactName = selectArtifactPath(agentDir, normalizedStatus);
         rows.push({
           id: "(flow)",
           agent: agent,
-          status: normalizeStatus(st),
-          artifacts: `outputs/${agent}/notes.md`,
+          status: normalizedStatus,
+          artifacts: artifactName ? `outputs/${agent}/${artifactName}` : "-",
           created_at: ts
         });
       });
