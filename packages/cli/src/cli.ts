@@ -228,6 +228,77 @@ export function updateRunMetadata(runDir, updates) {
   writeJsonFile(runPath, next);
 }
 
+function writeFlowSummary(runDir, plan, runMeta) {
+  const summaryPath = path.join(runDir, "summary", "final.md");
+  const steps = plan?.steps || [];
+  const started = runMeta?.started_at_utc || runMeta?.created_at || "-";
+  const finished = runMeta?.finished_at_utc || "-";
+  const flowType = runMeta?.flow || plan?.flow_type || "-";
+  const status = runMeta?.status || "-";
+
+  const stepLines = steps.length
+    ? steps.map((s) => `- ${s.id} (${s.agent}): ${s.status}`).join("\n")
+    : "- none";
+
+  const artifactLines = steps
+    .map((s) => {
+      const out = s.outputs || {};
+      return [
+        `- ${s.agent}:`,
+        `  - result: ${out.result ?? "?"}`,
+        `  - notes: ${out.notes ?? "?"}`,
+      ].join("\n");
+    })
+    .join("\n");
+
+  const body = [
+    "# Run summary",
+    "",
+    `- Run: ${runMeta?.id ?? path.basename(runDir)}`,
+    `- Flow: ${flowType}`,
+    `- Status: ${status}`,
+    `- Started: ${started}`,
+    `- Finished: ${finished}`,
+    "",
+    "## Steps",
+    stepLines,
+    "",
+    "## Key artifacts",
+    `- run.json`,
+    `- plan.json`,
+    artifactLines ? artifactLines : "- none",
+  ].join("\n");
+
+  writeFileAtomic(summaryPath, body);
+}
+
+function ensureCoordinatorStep(plan) {
+  const hasCoordinator = plan.steps.some((s) => s.id === "coordinator" || s.agent === "coordinator");
+  if (hasCoordinator) return plan;
+  const coordOutputs = {
+    result: "outputs/coordinator/result.json",
+    notes: "outputs/coordinator/notes.md",
+  };
+  const coordinatorStep = {
+    id: "coordinator",
+    agent: "coordinator",
+    depends_on: [],
+    inputs: {
+      request: "inputs/request.md",
+      context: "inputs/context.md",
+      prior_outputs: [],
+    },
+    outputs: coordOutputs,
+    status: "done",
+    attempt: 0,
+    max_attempts: 1,
+    last_error: null,
+    allow_skip: true,
+  };
+  plan.steps.unshift(coordinatorStep);
+  return plan;
+}
+
 /**
  * Execute steps defined in plan.json in order.
  * @param {RunId} runId
@@ -265,6 +336,8 @@ export function runFlow(runId, mode) {
 
   const lockPath = createFlowLock(runDir, runId, mode);
   let resolvedFlowType = "";
+  /** @type {Plan | null} */
+  let planForSummary = null;
   try {
     const planPath = path.join(runDir, "plan.json");
 
@@ -293,8 +366,12 @@ export function runFlow(runId, mode) {
 
     const planPathFinal = planPath;
     /** @type {Plan} */
-    let plan = planMaybe;
+    let plan = ensureCoordinatorStep(planMaybe);
+    if (plan !== planMaybe) {
+      persistPlan(planPathFinal, plan);
+    }
     resolvedFlowType = plan.flow_type || resolvedFlowType || "flow";
+    planForSummary = plan;
 
     plan.steps.forEach((step) => {
       if (step.status === "failed") {
@@ -358,6 +435,7 @@ export function runFlow(runId, mode) {
       }
     });
 
+    planForSummary = plan;
     const summary = plan.steps
       .map((step) => `${step.id}:${step.agent}=${step.status}`)
       .join(", ");
@@ -369,6 +447,8 @@ export function runFlow(runId, mode) {
       exit_code: 0,
       error: null,
     });
+    const metaDone = readRunJson(runDir);
+    writeFlowSummary(runDir, planForSummary, metaDone);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     updateRunMetadata(runDir, {
@@ -378,6 +458,10 @@ export function runFlow(runId, mode) {
       exit_code: 1,
       error: message,
     });
+    const metaFailed = readRunJson(runDir);
+    if (planForSummary) {
+      try { writeFlowSummary(runDir, planForSummary, metaFailed); } catch { /* best effort */ }
+    }
     throw error;
   } finally {
     removeLock(lockPath);
@@ -547,9 +631,7 @@ function normalizeStatus(raw) {
 }
 
 export function selectArtifactPath(agentDir, normalizedStatus) {
-  const failedFirst = ["stderr.txt", "notes.md", "status.json", "result.json"];
-  const defaultOrder = ["notes.md", "result.json", "status.json", "stderr.txt"];
-  const candidates = normalizedStatus === "failed" ? failedFirst : defaultOrder;
+  const candidates = ["notes.md", "stderr.txt", "status.json", "result.json"];
 
   for (const candidate of candidates) {
     const full = path.join(agentDir, candidate);

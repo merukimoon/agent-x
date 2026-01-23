@@ -147,6 +147,14 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     contextExcerpt,
   });
   writeFileAtomic(notesPath, notes);
+  const statusPath = path.join(outputsDir, "status.json");
+  writeJsonFile(statusPath, {
+    agent: agentName,
+    run_id: runId,
+    status,
+    created_at_utc: createdAtUtc,
+    mode,
+  });
 
   if (agentName === "coordinator") {
     const planPath = path.join(runDir, "plan.json");
@@ -157,6 +165,14 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     const steps = [];
     const matchedSet = new Set(classification.signals.map((s) => s.replace(/^keyword:/, "")));
     classification.pack.steps.forEach((stepDef) => {
+      const outputs = getCanonicalOutputs(stepDef.agent);
+      const priorOutputs = stepDef.depends_on.flatMap((dep) => {
+        const depOutputs = getCanonicalOutputs(dep);
+        return [depOutputs.result, depOutputs.notes];
+      });
+
+      let statusForStep = "pending";
+      let lastError: string | null = null;
       if (
         Array.isArray(stepDef.enabled_if_keywords) &&
         stepDef.enabled_if_keywords.length > 0
@@ -165,13 +181,35 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
           matchedSet.has(k)
         );
         if (!enabled) {
-          return;
+          statusForStep = "skipped";
+          lastError = "Skipped: no security signals";
+          const outputsDirSkipped = path.join(runDir, "outputs", stepDef.agent);
+          if (!fs.existsSync(path.join(outputsDirSkipped, "result.json"))) {
+            const createdAtSkipped = new Date().toISOString();
+            writeJsonFile(path.join(outputsDirSkipped, "result.json"), {
+              agent: stepDef.agent,
+              run_id: runId,
+              status: "skipped",
+              created_at_utc: createdAtSkipped,
+              summary: lastError,
+              mode,
+            });
+            writeFileAtomic(
+              path.join(outputsDirSkipped, "notes.md"),
+              `# ${stepDef.agent}\n\nSkipped: no security signals.\n`
+            );
+            writeJsonFile(path.join(outputsDirSkipped, "status.json"), {
+              agent: stepDef.agent,
+              run_id: runId,
+              status: "skipped",
+              created_at_utc: createdAtSkipped,
+              mode,
+              reason: "no security signals",
+            });
+          }
         }
       }
-      const priorOutputs = stepDef.depends_on.flatMap((dep) => {
-        const outputs = getCanonicalOutputs(dep);
-        return [outputs.result, outputs.notes];
-      });
+
       steps.push({
         id: stepDef.id,
         agent: stepDef.agent,
@@ -181,13 +219,32 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
           context: "inputs/context.md",
           prior_outputs: priorOutputs,
         },
-        outputs: getCanonicalOutputs(stepDef.agent),
-        status: "pending",
+        outputs,
+        status: statusForStep,
         attempt: 0,
         max_attempts: 1,
-        last_error: null,
+        last_error: lastError,
         allow_skip: true,
       });
+    });
+
+    // Coordinator explicit step
+    const coordOutputs = getCanonicalOutputs("coordinator");
+    steps.unshift({
+      id: "coordinator",
+      agent: "coordinator",
+      depends_on: [],
+      inputs: {
+        request: "inputs/request.md",
+        context: "inputs/context.md",
+        prior_outputs: [],
+      },
+      outputs: coordOutputs,
+      status: "done",
+      attempt: 0,
+      max_attempts: 1,
+      last_error: null,
+      allow_skip: true,
     });
 
     const rationaleSample = classification.signals.slice(0, 3).join(", ");
