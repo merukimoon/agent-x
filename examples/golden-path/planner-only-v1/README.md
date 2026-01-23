@@ -1,10 +1,7 @@
-# Golden Path: Planner-Only Mode v1
+# Golden Path: Planner-Only Mode v2
 
 ## Goal
-This example demonstrates running the **Planner agent** in isolation. This mode invokes the LLM to generate a structured plan (steps, rationale, dependency graph) but **stops before executing any step**. It is useful for:
-- Validating prompt engineering changes.
-- Testing the Planner's adherence to safety gates (Exit Code 12).
-- Debugging plan logic without side effects.
+This example demonstrates running the **Planner agent** in isolation using the current CLI contract. The planner reads `runs/<RUN>/inputs/` and writes planner outputs under `outputs/planner/`. Use this to validate the plumbing end to end without running additional agents.
 
 ## Prerequisites
 - **Node.js**: v18 or higher.
@@ -22,41 +19,39 @@ Commonly:
 From the repository root:
 
 ```bash
-# Basic invocation
-npm run dev -- planner \
-  --goal "$(cat examples/golden-path/planner-only-v1/sample-goal.txt)" \
-  --context examples/golden-path/planner-only-v1/sample-context.txt
+# 1) Create a run and capture the RUN id
+make run-new NAME="planner-only-v2"
+# Example output: Created run: runs/2026-01-23_1234-planner-only-v2/
+RUN="2026-01-23_1234-planner-only-v2"
 
-# Or manually specifying goal/context
-npm run dev -- planner \
-  --goal "Refactor the status command to show more details" \
-  --context "Current output is too terse."
+# 2) Use the Make convenience target (writes inputs and runs planner)
+make planner \
+  GOAL="$(cat examples/golden-path/planner-only-v1/sample-goal.txt)" \
+  CONTEXT="$(cat examples/golden-path/planner-only-v1/sample-context.txt)" \
+  RUN="$RUN"
+
+# OR: manually edit runs/$RUN/inputs/request.md and context.md, then run CLI directly
+npm run dev -- planner --run "$RUN"
 ```
 
 ## Output Artifacts
-Each run creates a unique directory in `runs/<timestamp>/`.
+Each run writes artifacts under `runs/<RUN>/`:
 
 | File | Description |
 |------|-------------|
-| `planner_raw.json` | The raw JSON structure returned by the LLM. |
-| `planner_failed_raw.txt` | (On failure) The raw text that failed JSON parsing. |
-| `planner_validation.json` | Detailed pass/fail status of all safety gates and schema checks. |
-| `planner_validation_error.json` | (On failure) Structured error info (error code, message). |
-| `planner_summary.md` | Human-readable markdown summary of the plan. |
+| `outputs/planner/result.json` | Planner result metadata (run id, status, timestamps). |
+| `outputs/planner/notes.md` | Notes capturing request/context excerpts. |
+| `inputs/request.md` | Request text used for the run. |
+| `inputs/context.md` | Context text used for the run. |
 
 ## Exit Codes
-The planner uses semantic exit codes to signal the nature of the result:
-
-- **0**: Success. Plan generated and passed all validation gates.
-- **10**: **Retryable**. Network error or internal 500. Wrappers should retry with backoff.
-- **11**: **Hard Fail**. JSON parse error or malformed schema. Do not retry; prompt or schema needs fixing.
-- **12**: **Safety Violation**. The plan contained restricted content or failed a safety gate. Do not retry.
+- **0**: Success.
+- **>0**: CLI validation failed (e.g., missing RUN, missing inputs). Messages are printed to stderr.
 
 ## Troubleshooting
 
 | Symptom | Exit Code | Action |
 |---------|-----------|--------|
-| Network timeout / 503 | 10 | Wait and retry. |
-| "JSON parse failed" | 11 | Check if the model is outputting markdown fences (```json) incorrectly or simple text. |
-| "Unknown capability" | 12 | The planner hallucinated a tool. Update `CAPABILITIES` validation list or refine system prompt. |
-| "High risk step detected" | 12 | The planner proposed a dangerous action. Review safety policy. |
+| Missing RUN | 2 | Set `RUN` from `make run-new NAME=...` and retry. |
+| Run directory not found | 2 | Create it first with `make run-new NAME=...`. |
+| Inputs/request.md empty | 0 | Fill `runs/<RUN>/inputs/request.md` before rerunning to get meaningful output. |

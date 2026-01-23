@@ -67,22 +67,29 @@ The Planner agent connects to an LLM to generate a plan based on a Goal and Cont
 
 ### Usage
 
-Run the planner via Makefile:
+Create a run and capture the RUN id:
 
 ```bash
-make planner GOAL="Create a new feature" CONTEXT="Repo uses /src for code"
+make run-new NAME="planner-demo"
+# Example output: Created run: runs/2026-01-23_1234-planner-demo/
+RUN="2026-01-23_1234-planner-demo"
 ```
 
-Or manually via CLI:
+Run the planner with convenience Make target (writes inputs/request.md and inputs/context.md for you):
 
 ```bash
-npm run dev planner -- --goal "Create a new feature" --context "Repo uses /src for code"
+make planner GOAL="Create a new feature" CONTEXT="Repo uses /src for code" RUN="$RUN"
+```
+
+Or manually via CLI after editing `runs/$RUN/inputs/request.md` and `runs/$RUN/inputs/context.md`:
+
+```bash
+npm run dev -- planner --run "$RUN"
 ```
 
 The planner outputs:
-- `runs/<TIMESTAMP>/planner_raw.json`: The raw LLM response.
-- `runs/<TIMESTAMP>/planner_validation.json`: Validation report (pass/fail/warnings).
-- `runs/<TIMESTAMP>/planner_summary.md`: Human-readable summary.
+- `runs/<RUN>/outputs/planner/result.json`
+- `runs/<RUN>/outputs/planner/notes.md`
 
 #### Configuration (Multi-Model Strategy)
 
@@ -104,11 +111,11 @@ The Planner is built to be **cheap by default**.
    ```
 3. Run the planner (credentials loaded automatically):
    ```bash
-   # Manual Goal
-   make planner GOAL="Refactor the login page"
+   # Manual Goal (requires RUN from make run-new)
+   make planner GOAL="Refactor the login page" CONTEXT="Repo uses /src for code" RUN="$RUN"
    
    # Verification Demo
-   make planner-demo
+   make planner-demo RUN="$RUN"
    ```
 **Security Note**: Never commit `.env` to git. It is ignored by default.
 
@@ -129,7 +136,7 @@ See strictly defined docs:
 ### Golden Path Example
 
 For a complete, runnable example of a single-agent run using the Planner, see:
-[Golden Path: Planner-Only v1](examples/golden-path/planner-only-v1/README.md)
+[Golden Path: Planner-Only v2](examples/golden-path/planner-only-v1/README.md)
 
 
 ## Reliability notes (Step 3)

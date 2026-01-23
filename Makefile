@@ -1,4 +1,3 @@
-SHELL := /usr/bin/env bash
 .ONESHELL:
 
 # agentsquad-framework Makefile
