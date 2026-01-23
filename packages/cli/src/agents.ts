@@ -154,6 +154,7 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     status,
     created_at_utc: createdAtUtc,
     mode,
+    finished_at_utc: createdAtUtc,
   });
 
   if (agentName === "coordinator") {
@@ -173,6 +174,7 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
 
       let statusForStep = "pending";
       let lastError: string | null = null;
+      const nowIso = new Date().toISOString();
       if (
         Array.isArray(stepDef.enabled_if_keywords) &&
         stepDef.enabled_if_keywords.length > 0
@@ -184,29 +186,28 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
           statusForStep = "skipped";
           lastError = "Skipped: no security signals";
           const outputsDirSkipped = path.join(runDir, "outputs", stepDef.agent);
-          if (!fs.existsSync(path.join(outputsDirSkipped, "result.json"))) {
-            const createdAtSkipped = new Date().toISOString();
-            writeJsonFile(path.join(outputsDirSkipped, "result.json"), {
-              agent: stepDef.agent,
-              run_id: runId,
-              status: "skipped",
-              created_at_utc: createdAtSkipped,
-              summary: lastError,
-              mode,
-            });
-            writeFileAtomic(
-              path.join(outputsDirSkipped, "notes.md"),
-              `# ${stepDef.agent}\n\nSkipped: no security signals.\n`
-            );
-            writeJsonFile(path.join(outputsDirSkipped, "status.json"), {
-              agent: stepDef.agent,
-              run_id: runId,
-              status: "skipped",
-              created_at_utc: createdAtSkipped,
-              mode,
-              reason: "no security signals",
-            });
-          }
+          fs.mkdirSync(outputsDirSkipped, { recursive: true });
+          writeJsonFile(path.join(outputsDirSkipped, "result.json"), {
+            agent: stepDef.agent,
+            run_id: runId,
+            status: "skipped",
+            created_at_utc: nowIso,
+            summary: lastError,
+            mode,
+          });
+          writeFileAtomic(
+            path.join(outputsDirSkipped, "notes.md"),
+            `# ${stepDef.agent}\n\nSkipped: no security signals.\n`
+          );
+          writeJsonFile(path.join(outputsDirSkipped, "status.json"), {
+            agent: stepDef.agent,
+            run_id: runId,
+            status: "skipped",
+            created_at_utc: nowIso,
+            finished_at_utc: nowIso,
+            mode,
+            reason: "no security signals",
+          });
         }
       }
 
@@ -240,6 +241,25 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
         prior_outputs: [],
       },
       outputs: coordOutputs,
+      status: "done",
+      attempt: 0,
+      max_attempts: 1,
+      last_error: null,
+      allow_skip: true,
+    });
+
+    // Planner explicit step (already executed before coordinator in verify-flow)
+    const plannerOutputs = getCanonicalOutputs("planner");
+    steps.unshift({
+      id: "planner",
+      agent: "planner",
+      depends_on: [],
+      inputs: {
+        request: "inputs/request.md",
+        context: "inputs/context.md",
+        prior_outputs: [],
+      },
+      outputs: plannerOutputs,
       status: "done",
       attempt: 0,
       max_attempts: 1,
