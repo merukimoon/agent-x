@@ -120,7 +120,6 @@ function main() {
   const { runId, runDir } = scaffoldRun();
   writeInputs(runDir);
 
-  runCommand("npm", ["run", "dev", "--", "status", "--run", runId], { inherit: true });
   runCommand("npm", ["run", "dev", "--", "planner", "--run", runId], { inherit: true });
   runCommand("npm", ["run", "dev", "--", "status", "--run", runId], { inherit: true });
   runCommand("npm", ["run", "dev", "--", "agent", "coordinator", "--run", runId, "--dry-run"], { inherit: true });
