@@ -618,24 +618,29 @@ export function handleStatusCommand(args) {
     try { goal = readFirstLines(path.join(runDir, "inputs", "request.md"), 1)[0] || "Unknown"; } catch { }
     console.log(`Goal: ${goal}`);
 
-    // 2. Planner
-    const plannerSummaryExists = fs.existsSync(path.join(runDir, "planner_summary.md"));
-    const plannerFailExists = fs.existsSync(path.join(runDir, "planner_validation_error.json"));
-
-    let plannerStatus = "pending";
-    if (plannerSummaryExists) plannerStatus = "done";
-    else if (plannerFailExists) plannerStatus = "failed";
-
-    rows.push({
-      id: "(planner)",
-      agent: "planner",
-      status: normalizeStatus(plannerStatus),
-      artifacts: plannerSummaryExists ? "planner_summary.md" : (plannerFailExists ? "planner_validation_error.json" : "-"),
-      created_at: undefined // Planner doesn't output result.json with timestamps in current flow wrapper
-    });
-
-    // 3. Agents (scan outputs)
+    // 2. Agents (scan outputs)
     const outputsDir = path.join(runDir, "outputs");
+    const plannerOutputsDir = path.join(outputsDir, "planner");
+    const hasPlannerOutputsDir = fs.existsSync(plannerOutputsDir) && fs.statSync(plannerOutputsDir).isDirectory();
+
+    // Legacy planner-only artifacts (only show when we do not have outputs/planner yet).
+    if (!hasPlannerOutputsDir) {
+      const plannerSummaryExists = fs.existsSync(path.join(runDir, "planner_summary.md"));
+      const plannerFailExists = fs.existsSync(path.join(runDir, "planner_validation_error.json"));
+
+      let plannerStatus = "pending";
+      if (plannerSummaryExists) plannerStatus = "done";
+      else if (plannerFailExists) plannerStatus = "failed";
+
+      rows.push({
+        id: "(planner)",
+        agent: "planner",
+        status: normalizeStatus(plannerStatus),
+        artifacts: plannerSummaryExists ? "planner_summary.md" : (plannerFailExists ? "planner_validation_error.json" : "-"),
+        created_at: undefined // Legacy planner-only mode did not write outputs/planner/result.json
+      });
+    }
+
     if (fs.existsSync(outputsDir)) {
       const agents = fs.readdirSync(outputsDir).filter(name => fs.statSync(path.join(outputsDir, name)).isDirectory());
 

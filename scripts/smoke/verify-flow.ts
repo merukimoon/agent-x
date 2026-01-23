@@ -30,6 +30,10 @@ function runCommand(cmd: string, args: string[], opts?: { inherit?: boolean; env
   return res;
 }
 
+function npmCmd() {
+  return process.platform === "win32" ? "npm.cmd" : "npm";
+}
+
 function writeJson(filePath: string, data: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n", "utf8");
@@ -68,7 +72,7 @@ function runPlannerOrFail(runId: string, runDir: string) {
 
   try {
     const args = ["run", "dev", "--", "planner", "--run", runId];
-    const res = spawnSync(process.execPath, ["--import", "tsx", path.join("scripts", "agentic.ts"), "planner", "--run", runId], {
+    const res = spawnSync(npmCmd(), args, {
       cwd: repoRoot,
       env: process.env,
       stdio: "pipe",
@@ -76,6 +80,9 @@ function runPlannerOrFail(runId: string, runDir: string) {
     });
     if (res.stdout) {
       process.stdout.write(res.stdout);
+    }
+    if (res.stderr) {
+      process.stderr.write(res.stderr);
     }
     if (res.status !== 0) {
       const finishedAt = new Date().toISOString();
@@ -263,9 +270,9 @@ function main() {
   ensureInputsPresent(runDir);
 
   runPlannerOrFail(runId, runDir);
-  runCommand("npm", ["run", "dev", "--", "status", "--run", runId], { inherit: true });
-  runCommand("npm", ["run", "dev", "--", "agent", "coordinator", "--run", runId, "--dry-run"], { inherit: true });
-  runCommand("npm", ["run", "dev", "--", "flow", "--run", runId, "--dry-run"], { inherit: true });
+  runCommand(npmCmd(), ["run", "dev", "--", "status", "--run", runId], { inherit: true });
+  runCommand(npmCmd(), ["run", "dev", "--", "agent", "coordinator", "--run", runId, "--dry-run"], { inherit: true });
+  runCommand(npmCmd(), ["run", "dev", "--", "flow", "--run", runId, "--dry-run"], { inherit: true });
 
   ensurePlannerOutputs(runDir);
   listRun(runDir);
