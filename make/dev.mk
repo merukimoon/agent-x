@@ -15,7 +15,7 @@ $(call register_target,test,DEV,Run unit tests (via vitest).)
 .PHONY: test
 test:
 	@echo "Running tests..."
-	npm run test
+	MAKEFLAGS= npm run test
 
 $(call register_target,verify-esm,DEV,Verify ESM compatibility (no require calls).)
 .PHONY: verify-esm

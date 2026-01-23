@@ -17,7 +17,7 @@ verify:
 	echo "Running tests..."; \
 	TMPDIR_RESOLVED="$${TMPDIR:-/tmp}"; \
 	mkdir -p "$$TMPDIR_RESOLVED"; \
-	TMPDIR="$$TMPDIR_RESOLVED" npm run test
+	TMPDIR="$$TMPDIR_RESOLVED" npm run test; \
 
 $(call register_target,verify-flow,VERIFY,Product wiring verification flow.,make verify-flow)
 .PHONY: verify-flow

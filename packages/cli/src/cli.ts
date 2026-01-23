@@ -299,6 +299,17 @@ function ensureCoordinatorStep(plan) {
   return plan;
 }
 
+function validatePlanDependenciesStrict(plan) {
+  const ids = new Set(plan.steps.map((s) => s.id));
+  plan.steps.forEach((step) => {
+    step.depends_on.forEach((dep) => {
+      if (!ids.has(dep)) {
+        fail(`Invalid dependency "${dep}" on step ${step.id}; no such step id in plan.`);
+      }
+    });
+  });
+}
+
 /**
  * Execute steps defined in plan.json in order.
  * @param {RunId} runId
@@ -370,9 +381,11 @@ export function runFlow(runId, mode) {
     if (plan !== planMaybe) {
       persistPlan(planPathFinal, plan);
     }
+    validatePlanDependenciesStrict(plan);
     resolvedFlowType = plan.flow_type || resolvedFlowType || "flow";
     planForSummary = plan;
 
+    const idToAgent = Object.fromEntries(plan.steps.map((s) => [s.id, s.agent]));
     plan.steps.forEach((step) => {
       if (step.status === "failed") {
         fail(
@@ -394,7 +407,7 @@ export function runFlow(runId, mode) {
         );
       }
 
-      ensureDependencies(step, runDir);
+      ensureDependencies(step, runDir, idToAgent);
 
       applyStatusTransition(
         plan,

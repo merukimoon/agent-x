@@ -35,6 +35,15 @@ export const {
   validateCanonicalOutputs
 } = Core;
 
+export function normalizeDepends(depList: string[], agentToId: Record<string, string>) {
+  return depList.map((dep) => {
+    if (agentToId[dep]) return agentToId[dep];
+    const byId = Object.values(agentToId).find((id) => id === dep);
+    if (byId) return dep;
+    throw new Error(`Unknown dependency "${dep}"`);
+  });
+}
+
 /**
  * Read dependency result status.
  * @param {AgentName} agent
@@ -74,8 +83,9 @@ export function readDependencyStatus(agent, runDir) {
  * @param {string} runDir
  * @returns {{ ready: boolean; blocking: string | null }}
  */
-export function checkDependenciesSatisfied(step, runDir) {
-  for (const agent of step.depends_on) {
+export function checkDependenciesSatisfied(step, runDir, idToAgent) {
+  for (const dep of step.depends_on) {
+    const agent = idToAgent?.[dep] ?? dep;
     const status = readDependencyStatus(agent, runDir);
     if (!status.ok) {
       return { ready: false, blocking: status.message ?? `Dependency ${agent} not ready.` };
@@ -89,8 +99,8 @@ export function checkDependenciesSatisfied(step, runDir) {
  * @param {PlanStep} step
  * @param {string} runDir
  */
-export function ensureDependencies(step, runDir) {
-  const depsStatus = checkDependenciesSatisfied(step, runDir);
+export function ensureDependencies(step, runDir, idToAgent) {
+  const depsStatus = checkDependenciesSatisfied(step, runDir, idToAgent);
   if (!depsStatus.ready) {
     throw new Error(`Dependencies not satisfied for ${step.id}: ${depsStatus.blocking ?? ""}`.trim());
   }
@@ -165,10 +175,28 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     /** @type {PlanStep[]} */
     const steps = [];
     const matchedSet = new Set(classification.signals.map((s) => s.replace(/^keyword:/, "")));
+    const agentToId: Record<string, string> = {
+      planner: "planner",
+      coordinator: "coordinator",
+    };
+    const idToAgent: Record<string, string> = {
+      planner: "planner",
+      coordinator: "coordinator",
+    };
+    classification.pack.steps.forEach((stepDef) => {
+      agentToId[stepDef.agent] = stepDef.id;
+      idToAgent[stepDef.id] = stepDef.agent;
+    });
+
     classification.pack.steps.forEach((stepDef) => {
       const outputs = getCanonicalOutputs(stepDef.agent);
-      const priorOutputs = stepDef.depends_on.flatMap((dep) => {
-        const depOutputs = getCanonicalOutputs(dep);
+      const mappedDepends = normalizeDepends(stepDef.depends_on, agentToId);
+      const priorOutputs = mappedDepends.flatMap((dep) => {
+        const depAgent = idToAgent[dep];
+        if (!depAgent) {
+          throw new Error(`Unknown dependency mapping for ${dep}`);
+        }
+        const depOutputs = getCanonicalOutputs(depAgent as any);
         return [depOutputs.result, depOutputs.notes];
       });
 
@@ -214,7 +242,7 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
       steps.push({
         id: stepDef.id,
         agent: stepDef.agent,
-        depends_on: stepDef.depends_on,
+        depends_on: mappedDepends,
         inputs: {
           request: "inputs/request.md",
           context: "inputs/context.md",
