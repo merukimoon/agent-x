@@ -178,6 +178,18 @@ For a complete, runnable example of a single-agent run using the Planner, see:
 - Run artifacts contract check: `make validate-run RUN=<RUN>` (alias: `make verify-run RUN=<RUN>` or `npm run verify-run -- --run <RUN>`).
 - Orchestrator validation: `make orchestrator-validate GOAL="..." [MODE=planner|planner-architect]` (runs orchestrator flow then verify-run; default mode is planner-architect).
 
+## Make targets
+
+Run validation  
+* make validate-run RUN=<run-id>  
+* make verify-run RUN=<run-id> (alias)
+
+Execution flows  
+* make verify-flow  
+* make orchestrator-validate GOAL="..." [MODE=planner|planner-architect]
+
+Definitions live in Make/verify.mk for verification targets and Make/execute.mk for execution flows.
+
 ## Minimal usage example (pseudo-code)
 
 ```text
