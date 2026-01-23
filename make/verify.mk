@@ -18,6 +18,7 @@ verify:
 	TMPDIR_RESOLVED="$${TMPDIR:-/tmp}"; \
 	mkdir -p "$$TMPDIR_RESOLVED"; \
 	TMPDIR="$$TMPDIR_RESOLVED" npm run test
+	$(MAKE) verify-flow; \
 
 $(call register_target,verify-flow,VERIFY,Product wiring verification flow.,make verify-flow)
 .PHONY: verify-flow

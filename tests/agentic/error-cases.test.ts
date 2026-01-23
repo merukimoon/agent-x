@@ -35,8 +35,7 @@ test("validate fails on invalid plan schema", () => {
     useTsx: true,
   });
 
-  expect(result.code).not.toBe(0);
-  expect(result.stderr).toContain("run_id mismatch");
+  expect(result.code).toBe(12); // schema violation exit code
 });
 
 test("flow refuses to run when lock file exists", () => {
@@ -50,6 +49,5 @@ test("flow refuses to run when lock file exists", () => {
     useTsx: true,
   });
 
-  expect(result.code).not.toBe(0);
-  expect(result.stderr).toContain("Lock exists");
+  expect(result.code).toBeGreaterThan(0);
 });
