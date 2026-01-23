@@ -19,10 +19,14 @@ verify:
 	mkdir -p "$$TMPDIR_RESOLVED"; \
 	TMPDIR="$$TMPDIR_RESOLVED" npm run test; \
 
-$(call register_target,verify-run,VERIFY,Verify run artifacts contract (requires RUN=<RUN>).,make verify-run)
-.PHONY: verify-run
-verify-run:
+$(call register_target,validate-run,VERIFY,Validate run artifacts contract (requires RUN=<RUN>).,make validate-run RUN=<RUN>)
+$(call register_target,verify-run,VERIFY,Alias for validate-run.,make verify-run RUN=<RUN>)
+.PHONY: validate-run
+validate-run:
 	@set -eu; \
-	if [ -z "${RUN}" ]; then echo "RUN is required. Usage: make verify-run RUN=<run-id>"; exit 1; fi; \
-	echo "Verifying run ${RUN}..."; \
+	if [ -z "${RUN}" ]; then echo "RUN is required. Usage: make validate-run RUN=<run-id>"; exit 1; fi; \
+	echo "Validating run ${RUN}..."; \
 	npm run verify-run -- --run "${RUN}"
+
+.PHONY: verify-run
+verify-run: validate-run

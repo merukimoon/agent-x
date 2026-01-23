@@ -251,11 +251,14 @@ async function main() {
 
     // === HANDOFF: PREPARE CONTEXT ===
     const runDir = path.join(process.cwd(), "runs", baseRunId);
-    const plannerSummaryPath = path.join(runDir, "planner_summary.md");
     const contextWithPlanPath = path.join(runDir, "inputs", "context_with_plan.md");
-
-    if (!fs.existsSync(plannerSummaryPath)) {
-        console.error("❌ [ERROR] Planner summary not found.");
+    const summaryCandidates = [
+        path.join(runDir, "planner_summary.md"),
+        path.join(runDir, "outputs", "planner", "notes.md"),
+    ];
+    const plannerSummaryPath = summaryCandidates.find((p) => fs.existsSync(p));
+    if (!plannerSummaryPath) {
+        console.error("❌ [ERROR] Planner summary not found (expected planner_summary.md or outputs/planner/notes.md).");
         process.exit(1);
     }
 
@@ -267,6 +270,7 @@ async function main() {
     }
 
     const plannerSummary = fs.readFileSync(plannerSummaryPath, "utf8");
+    const plannerSummaryRel = path.relative(runDir, plannerSummaryPath);
     const combinedContext = `${contextContent}\n\n# Prior Plan\n\n${plannerSummary}`;
 
     // Ensure inputs dir exists (it should, from planner run)
@@ -318,7 +322,7 @@ async function main() {
 **Status**: SUCCESS
 
 ## Planner Output
-See [Plan Summary](planner_summary.md)
+See [Plan Summary](${plannerSummaryRel})
 
 ## Architect Output
 See [Architect Notes](outputs/architect/notes.md) and [Structured Result](outputs/architect/result.json).
