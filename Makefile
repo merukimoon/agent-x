@@ -14,6 +14,7 @@ include Make/help.mk
 include Make/dev.mk
 include Make/runs.mk
 include Make/agents.mk
+include Make/verify.mk
 include Make/planner.mk
 
 # (Any root-only extras can go here, but prefer modules)

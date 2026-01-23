@@ -168,7 +168,7 @@ For a complete, runnable example of a single-agent run using the Planner, see:
 - Run `npm install` once, then `npm run typecheck` to validate the CLI.
 - Quick verification: `make verify-fast` (typecheck + verify-esm; no tests).
 - Full verification: `make verify` (verify-fast + tests).
-- Product wiring smoke test: `make product-smoke` (creates a run, planner, status, agent dry-run, flow dry-run).
+- Product wiring verification: `make verify-flow` (creates a run, planner, status, agent dry-run, flow dry-run).
 
 ## Minimal usage example (pseudo-code)
 

@@ -19,7 +19,7 @@ function runCommand(cmd: string, args: string[], opts?: { inherit?: boolean; env
     stdio: opts?.inherit ? "inherit" : "pipe",
     encoding: "utf8" as const,
   };
-  const res = spawnSync(cmd, args, spawnOpts);
+  const res = spawnSync(cmd, args, spawnOpts as any);
   if (opts?.inherit === false) {
     if (res.stdout) process.stdout.write(res.stdout);
     if (res.stderr) process.stderr.write(res.stderr);
@@ -48,7 +48,7 @@ function listRuns(): { name: string; mtime: number }[] {
 
 function scaffoldRun(): { runId: string; runDir: string } {
   const before = new Set(listRuns().map((r) => r.name));
-  const name = `product-smoke-${Date.now()}`;
+  const name = `verify-flow-${Date.now()}`;
   runCommand(
     "node",
     ["--import", "tsx", path.join("scripts", "scaffold-run.ts")],
@@ -78,24 +78,24 @@ function writeInputs(runDir: string) {
   fs.mkdirSync(inputsDir, { recursive: true });
   fs.writeFileSync(
     path.join(inputsDir, "request.md"),
-    "Product smoke request: verify wiring.\n",
+    "Product verification request: verify wiring.\n",
     "utf8"
   );
   fs.writeFileSync(
     path.join(inputsDir, "context.md"),
-    "Context: smoke test to ensure CLI plumbing works.\n",
+    "Context: verify-flow smoke to ensure CLI plumbing works.\n",
     "utf8"
   );
 }
 
 function ensurePlannerOutputs(runDir: string) {
-  const plannerDir = path.join(runDir, "outputs", "planner");
-  if (!fs.existsSync(plannerDir) || !fs.statSync(plannerDir).isDirectory()) {
-    fail(`Planner output directory missing: ${plannerDir}`);
+  const resultPath = path.join(runDir, "outputs", "planner", "result.json");
+  const notesPath = path.join(runDir, "outputs", "planner", "notes.md");
+  if (!fs.existsSync(resultPath)) {
+    fail(`Planner result missing: ${resultPath}`);
   }
-  const files = fs.readdirSync(plannerDir);
-  if (files.length === 0) {
-    fail(`Planner output directory is empty: ${plannerDir}`);
+  if (!fs.existsSync(notesPath)) {
+    fail(`Planner notes missing: ${notesPath}`);
   }
 }
 
@@ -129,7 +129,7 @@ function main() {
   ensurePlannerOutputs(runDir);
   listRun(runDir);
 
-  console.log(`Product smoke OK. RUN=${runId}`);
+  console.log(`verify-flow OK. RUN=${runId}`);
 }
 
 main();
