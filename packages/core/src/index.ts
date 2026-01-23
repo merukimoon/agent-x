@@ -27,6 +27,16 @@ export type {
     ValidationResult
 } from "../../../scripts/agentic/core.ts";
 
+export type {
+    StepResult,
+    DecisionAfterStep,
+    StepOverride,
+    ModelRef,
+    ArtifactRef,
+    CheckResult,
+    ExecutionStatus
+} from "./contracts/step.ts";
+
 // --- Constants ---
 export const PLAN_VERSION = Impl.PLAN_VERSION;
 export const FLOW_PR_COMPLETION = Impl.FLOW_PR_COMPLETION;
