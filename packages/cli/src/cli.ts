@@ -501,6 +501,20 @@ function normalizeStatus(raw) {
   }
 }
 
+function selectArtifactPath(agentDir, normalizedStatus) {
+  const failedFirst = ["stderr.txt", "notes.md", "status.json", "result.json"];
+  const defaultOrder = ["notes.md", "result.json", "status.json", "stderr.txt"];
+  const candidates = normalizedStatus === "failed" ? failedFirst : defaultOrder;
+
+  for (const candidate of candidates) {
+    const full = path.join(agentDir, candidate);
+    if (fs.existsSync(full) && fs.statSync(full).isFile()) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 /**
  * Resolve latest run ID from runs directory.
  * @returns {string | null}
@@ -645,7 +659,9 @@ export function handleStatusCommand(args) {
       const agents = fs.readdirSync(outputsDir).filter(name => fs.statSync(path.join(outputsDir, name)).isDirectory());
 
       agents.forEach(agent => {
-        const resultPath = path.join(outputsDir, agent, "result.json");
+        const agentDir = path.join(outputsDir, agent);
+        const resultPath = path.join(agentDir, "result.json");
+        const statusPath = path.join(agentDir, "status.json");
         let st = "pending";
         let ts = undefined;
 
@@ -655,16 +671,24 @@ export function handleStatusCommand(args) {
             st = res.status || "pending";
             ts = res.created_at_utc; // Start time available!
           } catch { st = "failed"; } // Corrupt json -> failed
+        } else if (fs.existsSync(statusPath)) {
+          try {
+            const res = JSON.parse(fs.readFileSync(statusPath, "utf8"));
+            st = res.status || "pending";
+            ts = res.started_at || res.finished_at;
+          } catch { st = "failed"; }
         } else {
           // Directory exists but no result -> "pending" (per user request)
           st = "pending";
         }
 
+        const normalizedStatus = normalizeStatus(st);
+        const artifactName = selectArtifactPath(agentDir, normalizedStatus);
         rows.push({
           id: "(flow)",
           agent: agent,
-          status: normalizeStatus(st),
-          artifacts: `outputs/${agent}/notes.md`,
+          status: normalizedStatus,
+          artifacts: artifactName ? `outputs/${agent}/${artifactName}` : "-",
           created_at: ts
         });
       });

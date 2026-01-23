@@ -12,6 +12,26 @@ function fail(message: string): never {
   process.exit(1);
 }
 
+export function resolveRunRequest(argv: string[], env: NodeJS.ProcessEnv) {
+  let runId = "";
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === "--run") {
+      runId = argv[i + 1] ?? "";
+      i += 1;
+      continue;
+    }
+    if (arg.startsWith("--run=")) {
+      runId = arg.slice("--run=".length);
+      continue;
+    }
+  }
+  if (!runId && env.RUN) {
+    runId = env.RUN;
+  }
+  return { runId: runId || null, shouldScaffold: !runId };
+}
+
 function runCommand(cmd: string, args: string[], opts?: { inherit?: boolean; env?: NodeJS.ProcessEnv }) {
   const spawnOpts = {
     cwd: repoRoot,
@@ -93,13 +113,13 @@ function runPlannerOrFail(runId: string, runDir: string) {
       if (tail.trim().length > 0) {
         console.error(tail);
       }
-      const stackPart = res.error?.stack ? `\n${res.error.stack}` : "";
-      fs.writeFileSync(stderrPath, (tail || stderrText || "Planner failed") + stackPart, "utf8");
       const message =
         res.error?.message ||
         lines.find((l) => l.trim().length > 0) ||
         stderrText ||
         "Planner failed";
+      const stackPart = res.error?.stack ? `\n${res.error.stack}` : "";
+      fs.writeFileSync(stderrPath, (tail || stderrText || message) + stackPart, "utf8");
       writeJson(statusPath, {
         status: "failed",
         finished_at: finishedAt,
@@ -121,7 +141,7 @@ function runPlannerOrFail(runId: string, runDir: string) {
         error_stack: res.error?.stack ?? null,
       });
       writeRunJsonFailure(runDir, runId, message, finishedAt, exitCode);
-      console.error(`Planner failed. Inspect outputs in ${path.join(runDir, "outputs", "planner")}`);
+      console.error(`Planner failed. Inspect ${stderrPath} and ${statusPath}.`);
       process.exit(exitCode);
     }
     const finishedAt = new Date().toISOString();
@@ -158,7 +178,7 @@ function runPlannerOrFail(runId: string, runDir: string) {
       error_stack: stack,
     });
     writeRunJsonFailure(runDir, runId, message, finishedAt, 1);
-    console.error(`Planner failed. Inspect outputs in ${path.join(runDir, "outputs", "planner")}`);
+    console.error(`Planner failed. Inspect ${stderrPath} and ${statusPath}.`);
     throw err;
   }
 }
@@ -203,6 +223,15 @@ function scaffoldRun(): { runId: string; runDir: string } {
     fail(`Scaffolded run directory not found: ${runDir}`);
   }
   console.log(`Scaffolded run: ${runId}`);
+  return { runId, runDir };
+}
+
+function useExistingRun(runId: string): { runId: string; runDir: string } {
+  const runDir = path.join(repoRoot, "runs", runId);
+  if (!fs.existsSync(runDir) || !fs.statSync(runDir).isDirectory()) {
+    fail(`Run directory not found for RUN=${runId}: ${runDir}`);
+  }
+  console.log(`Using run: ${runId}`);
   return { runId, runDir };
 }
 
@@ -265,7 +294,10 @@ function listRun(runDir: string) {
 }
 
 function main() {
-  const { runId, runDir } = scaffoldRun();
+  const request = resolveRunRequest(process.argv.slice(2), process.env);
+  const { runId, runDir } = request.shouldScaffold
+    ? scaffoldRun()
+    : useExistingRun(request.runId ?? "");
   writeInputs(runDir);
   ensureInputsPresent(runDir);
 
@@ -280,4 +312,6 @@ function main() {
   console.log(`verify-flow OK. RUN=${runId}`);
 }
 
-main();
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  main();
+}

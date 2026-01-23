@@ -64,7 +64,9 @@ Each step validates a different layer of the product.
 
 ### Step 1. Create Run
 
-A fresh run directory is scaffolded.
+A run directory is selected.
+If a RUN is provided, verify-flow uses that run and does not scaffold a new one.
+If no RUN is provided, a fresh run directory is scaffolded.
 
 **What this validates**
 - Run lifecycle is functional
@@ -203,8 +205,14 @@ From the repository root:
 make verify-flow
 ```
 
+To reuse an existing run:
+
+```
+make verify-flow RUN=2026-01-23_1234-existing-run
+```
+
 A successful run:
-- Creates a new run
+- Creates a new run when RUN is not provided
 - Produces planner outputs
 - Completes all dry-run steps
 - Exits with code 0
