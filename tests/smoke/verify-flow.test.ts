@@ -60,8 +60,8 @@ describe("spawnNpmSync", () => {
   it("runs npm -v successfully", () => {
     const res = spawnNpmSync(["-v"], { cwd: REPO_ROOT, stdio: "pipe" });
     if (res.error) {
-      const err = res.error as NodeJS.ErrnoException;
-      expect(err?.code).not.toBe("EINVAL");
+      const err = res.error as { code?: string };
+      expect(err.code ?? "").not.toBe("EINVAL");
     } else {
       expect(res.status).toBe(0);
     }
