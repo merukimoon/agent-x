@@ -30,6 +30,28 @@ function runCommand(cmd: string, args: string[], opts?: { inherit?: boolean; env
   return res;
 }
 
+function runPlannerOrFail(runId: string, runDir: string) {
+  const args = ["run", "dev", "--", "planner", "--run", runId];
+  const res = spawnSync("npm", args, {
+    cwd: repoRoot,
+    env: process.env,
+    stdio: "pipe",
+    encoding: "utf8",
+  });
+  if (res.stdout) {
+    process.stdout.write(res.stdout);
+  }
+  if (res.status !== 0) {
+    if (res.stderr) {
+      const lines = res.stderr.split(/\r?\n/);
+      const tail = lines.slice(-200).join("\n");
+      console.error(tail);
+    }
+    console.error(`Planner failed. Inspect outputs in ${path.join(runDir, "outputs", "planner")}`);
+    process.exit(res.status ?? 1);
+  }
+}
+
 function listRuns(): { name: string; mtime: number }[] {
   const runsDir = path.join(repoRoot, "runs");
   if (!fs.existsSync(runsDir)) {
@@ -136,7 +158,7 @@ function main() {
   writeInputs(runDir);
   ensureInputsPresent(runDir);
 
-  runCommand("npm", ["run", "dev", "--", "planner", "--run", runId], { inherit: true });
+  runPlannerOrFail(runId, runDir);
   runCommand("npm", ["run", "dev", "--", "status", "--run", runId], { inherit: true });
   runCommand("npm", ["run", "dev", "--", "agent", "coordinator", "--run", runId, "--dry-run"], { inherit: true });
   runCommand("npm", ["run", "dev", "--", "flow", "--run", runId, "--dry-run"], { inherit: true });
