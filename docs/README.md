@@ -20,6 +20,7 @@ Start here if you’re new to the project.
 - Full verification: `make verify`
 - Product wiring verification: `make verify-flow`
 - Run artifacts contract check: `npm run verify-run -- --run <RUN>` (or `make verify-run RUN=<RUN>`)
+- Orchestrator validation: `make orchestrator-validate GOAL="..." [MODE=planner|planner-architect]` (default mode is planner-architect; runs orchestrator then verify-run)
 
 ## Contributing docs
 

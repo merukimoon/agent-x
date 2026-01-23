@@ -176,6 +176,7 @@ For a complete, runnable example of a single-agent run using the Planner, see:
 - Full verification: `make verify` (verify-fast + tests).
 - Product wiring verification: `make verify-flow` (creates a run, planner, status, agent dry-run, flow dry-run).
 - Run artifacts contract check: `npm run verify-run -- --run <RUN>` (or `make verify-run RUN=<RUN>`).
+- Orchestrator validation: `make orchestrator-validate GOAL="..." [MODE=planner|planner-architect]` (runs orchestrator flow then verify-run; default mode is planner-architect).
 
 ## Minimal usage example (pseudo-code)
 

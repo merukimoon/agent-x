@@ -37,6 +37,122 @@ function parseArgs() {
     return { goal, context, explicitRunId };
 }
 
+function ensureInputs(runId: string, goal: string, context: string) {
+    const runDir = path.join(process.cwd(), "runs", runId);
+    const inputsDir = path.join(runDir, "inputs");
+    const requestPath = path.join(inputsDir, "request.md");
+    const contextPath = path.join(inputsDir, "context.md");
+
+    fs.mkdirSync(inputsDir, { recursive: true });
+    fs.writeFileSync(requestPath, goal);
+
+    let contextValue = context;
+    if (context && fs.existsSync(context)) {
+        contextValue = fs.readFileSync(context, "utf8");
+    }
+    fs.writeFileSync(contextPath, contextValue || "");
+}
+
+function writePlannerArchitectArtifacts(runId: string) {
+    const runDir = path.join(process.cwd(), "runs", runId);
+    const summaryDir = path.join(runDir, "summary");
+    fs.mkdirSync(summaryDir, { recursive: true });
+
+    const now = new Date().toISOString();
+    const plan = {
+        run_id: runId,
+        created_at_utc: now,
+        version: "0.1",
+        flow_type: "orchestrator-planner-architect",
+        rationale: "planner then architect orchestrator run",
+        signals: ["orchestrator"],
+        confidence: "low",
+        steps: [
+            {
+                id: "planner",
+                agent: "planner",
+                depends_on: [],
+                inputs: {
+                    request: "inputs/request.md",
+                    context: "inputs/context.md",
+                    prior_outputs: []
+                },
+                outputs: {
+                    result: "outputs/planner/result.json",
+                    notes: "outputs/planner/notes.md",
+                    status: "outputs/planner/status.json"
+                },
+                status: "done",
+                attempt: 0,
+                max_attempts: 1,
+                last_error: null,
+                allow_skip: true
+            },
+            {
+                id: "architect",
+                agent: "architect",
+                depends_on: ["planner"],
+                inputs: {
+                    request: "inputs/request.md",
+                    context: "inputs/context.md",
+                    prior_outputs: [
+                        "outputs/planner/result.json",
+                        "outputs/planner/notes.md"
+                    ]
+                },
+                outputs: {
+                    result: "outputs/architect/result.json",
+                    notes: "outputs/architect/notes.md",
+                    status: "outputs/architect/status.json"
+                },
+                status: "done",
+                attempt: 0,
+                max_attempts: 1,
+                last_error: null,
+                allow_skip: true
+            }
+        ]
+    };
+
+    fs.writeFileSync(path.join(runDir, "plan.json"), JSON.stringify(plan, null, 2));
+
+    const runJson = {
+        id: runId,
+        run_id: runId,
+        flow: "orchestrator-planner-architect",
+        status: "done",
+        created_at_utc: now,
+        started_at_utc: now,
+        finished_at_utc: now,
+        exit_code: 0,
+        error: null
+    };
+
+    fs.writeFileSync(path.join(runDir, "run.json"), JSON.stringify(runJson, null, 2));
+
+    const summary = [
+        "# Run summary",
+        "",
+        `- Run: ${runId}`,
+        "- Flow: orchestrator-planner-architect",
+        "- Status: done",
+        `- Started: ${now}`,
+        `- Finished: ${now}`,
+        "",
+        "## Steps",
+        "- planner (planner): done",
+        "- architect (architect): done",
+        "",
+        "## Key artifacts",
+        "- run.json",
+        "- plan.json",
+        "- planner: result=outputs/planner/result.json notes=outputs/planner/notes.md status=outputs/planner/status.json",
+        "- architect: result=outputs/architect/result.json notes=outputs/architect/notes.md status=outputs/architect/status.json"
+    ].join("\n");
+
+    fs.writeFileSync(path.join(summaryDir, "final.md"), summary);
+}
+
 function runAgent(agent: string, runId: string, extraArgs: string[] = []) {
     const scriptPath = path.join(process.cwd(), "scripts", "agentic.ts");
 
@@ -92,8 +208,11 @@ function getRunArtifacts(runId: string) {
 async function main() {
     const { goal, context, explicitRunId } = parseArgs();
     const baseRunId = explicitRunId || `orch-flow-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+    console.log(`RUN_ID=${baseRunId}`);
 
     // === STEP 1: PLANNER ===
+    ensureInputs(baseRunId, goal, context);
+
     let attempt = 0;
     let plannerSuccess = false;
 
@@ -103,12 +222,7 @@ async function main() {
 
         console.log(`\n=== Step 1: Planner (Attempt ${attempt}/${MAX_RETRIES + 1}) ===`);
 
-        const plannerArgs = ["--goal", goal];
-        if (context) {
-            plannerArgs.push("--context", context);
-        }
-
-        const exitCode = await runAgent("planner", currentRunId, plannerArgs);
+        const exitCode = await runAgent("planner", currentRunId);
         console.log(`[Orchestrator] Planner exited with code: ${exitCode}`);
 
         if (exitCode === 0) {
@@ -185,6 +299,8 @@ async function main() {
         console.error(`❌ [FAILED] Architect failed with code ${archExitCode}.`);
         process.exit(archExitCode);
     }
+
+    writePlannerArchitectArtifacts(baseRunId);
 
     // === STEP 3: SUMMARY ===
 

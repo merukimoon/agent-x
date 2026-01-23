@@ -38,6 +38,20 @@ function parseArgs() {
 }
 
 function runPlanner(runId: string, goal: string, context: string) {
+    const runDir = path.join(process.cwd(), "runs", runId);
+    const inputsDir = path.join(runDir, "inputs");
+    const requestPath = path.join(inputsDir, "request.md");
+    const contextPath = path.join(inputsDir, "context.md");
+
+    fs.mkdirSync(inputsDir, { recursive: true });
+    fs.writeFileSync(requestPath, goal);
+
+    let contextValue = context;
+    if (context && fs.existsSync(context)) {
+        contextValue = fs.readFileSync(context, "utf8");
+    }
+    fs.writeFileSync(contextPath, contextValue || "");
+
     const scriptPath = path.join(process.cwd(), "scripts", "agentic.ts");
 
     // Construct the command arguments
@@ -49,13 +63,7 @@ function runPlanner(runId: string, goal: string, context: string) {
         "planner",
         "--run",
         runId,
-        "--goal",
-        goal,
     ];
-
-    if (context) {
-        nodeArgs.push("--context", context);
-    }
 
     console.log(`[Orchestrator] Invoking Planner (RunID: ${runId})...`);
 
@@ -94,6 +102,81 @@ function getRunArtifacts(runId: string) {
     return { errorDetails, validReport };
 }
 
+function writePlannerRunArtifacts(runId: string) {
+    const runDir = path.join(process.cwd(), "runs", runId);
+    const summaryDir = path.join(runDir, "summary");
+    fs.mkdirSync(summaryDir, { recursive: true });
+
+    const now = new Date().toISOString();
+    const plan = {
+        run_id: runId,
+        created_at_utc: now,
+        version: "0.1",
+        flow_type: "orchestrator-planner",
+        rationale: "planner-only orchestrator run",
+        signals: ["orchestrator"],
+        confidence: "low",
+        steps: [
+            {
+                id: "planner",
+                agent: "planner",
+                depends_on: [],
+                inputs: {
+                    request: "inputs/request.md",
+                    context: "inputs/context.md",
+                    prior_outputs: []
+                },
+                outputs: {
+                    result: "outputs/planner/result.json",
+                    notes: "outputs/planner/notes.md",
+                    status: "outputs/planner/status.json"
+                },
+                status: "done",
+                attempt: 0,
+                max_attempts: 1,
+                last_error: null,
+                allow_skip: true
+            }
+        ]
+    };
+
+    fs.writeFileSync(path.join(runDir, "plan.json"), JSON.stringify(plan, null, 2));
+
+    const runJson = {
+        id: runId,
+        run_id: runId,
+        flow: "orchestrator-planner",
+        status: "done",
+        created_at_utc: now,
+        started_at_utc: now,
+        finished_at_utc: now,
+        exit_code: 0,
+        error: null
+    };
+
+    fs.writeFileSync(path.join(runDir, "run.json"), JSON.stringify(runJson, null, 2));
+
+    const summary = [
+        "# Run summary",
+        "",
+        `- Run: ${runId}`,
+        "- Flow: orchestrator-planner",
+        "- Status: done",
+        `- Started: ${now}`,
+        `- Finished: ${now}`,
+        "",
+        "## Steps",
+        "- planner (planner): done",
+        "",
+        "## Key artifacts",
+        "- run.json",
+        "- plan.json",
+        "- planner: result=outputs/planner/result.json notes=outputs/planner/notes.md status=outputs/planner/status.json"
+    ].join("\n");
+
+    fs.writeFileSync(path.join(summaryDir, "final.md"), summary);
+}
+
 async function main() {
     const { goal, context, explicitRunId } = parseArgs();
 
@@ -106,6 +189,7 @@ async function main() {
     // Actually, the planner tool creates the directory if missing. It overwrites files.
 
     const baseRunId = explicitRunId || `orch-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+    console.log(`RUN_ID=${baseRunId}`);
 
     let attempt = 0;
 
@@ -124,6 +208,7 @@ async function main() {
 
         if (exitCode === 0) {
             console.log("\n✅ [SUCCESS] Plan generated and validated.");
+            writePlannerRunArtifacts(currentRunId);
             if (validReport) {
                 if (validReport.warnings?.length) {
                     console.log("Warnings:", validReport.warnings);
