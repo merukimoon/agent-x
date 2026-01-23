@@ -166,6 +166,8 @@ For a complete, runnable example of a single-agent run using the Planner, see:
 - The runtime stays in `.js` (ESM) and runs with Node directly—no build step.
 - Static typing is provided by TypeScript in `checkJs` mode with `// @ts-check` and JSDoc typedefs.
 - Run `npm install` once, then `npm run typecheck` to validate the CLI.
+- Quick verification: `make verify-fast` (typecheck + verify-esm; no tests).
+- Full verification: `make verify` (verify-fast + tests).
 
 ## Minimal usage example (pseudo-code)
 
