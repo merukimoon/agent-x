@@ -49,6 +49,18 @@ export const isStepStatus = Impl.isStepStatus;
 export const getCanonicalOutputs = Impl.getCanonicalOutputs;
 export const validateCanonicalOutputs = Impl.validateCanonicalOutputs;
 
+export {
+    getStepDir,
+    getStepResultPath,
+    getDecisionPath,
+    getStepsIndexPath,
+} from "./paths/steps.ts";
+
+export type {
+    StepsIndex,
+    StepsIndexEntry,
+} from "./paths/steps.ts";
+
 // --- Internal/Legacy (Exposed but use with caution) ---
 export const RULES_DIR = Impl.RULES_DIR;
 export const USAGE = Impl.USAGE; // Primarily for CLI use

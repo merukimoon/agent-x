@@ -2,6 +2,9 @@ import fs from "fs";
 import path from "path";
 import process from "process";
 import { Core, Legacy } from "./imports.ts";
+import type { AgentName, AgentStatus } from "./imports.ts";
+import type { DecisionAfterStep, ExecutionStatus, ModelRef, StepResult } from "../../core/src/contracts/step.ts";
+import { writeDecision, writeStepResult, updateStepsIndex } from "./step_persistence.ts";
 
 // Deconstruct from Legacy where helpful for cleaner code, or use Legacy.*
 const {
@@ -118,6 +121,52 @@ export function ensureDependencies(step, runDir, idToAgent) {
 export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   const runDir = path.join(process.cwd(), "runs", runId);
   ensureRunAndInputs(runDir);
+  const { stepId, stepIndex, priorOutputs } = resolveStepMeta(runDir, agentName);
+  const startedAt = new Date();
+  const modelRef: ModelRef = {
+    provider: "unknown",
+    name: "unknown",
+    mode,
+    temperature: null,
+  };
+  const initialStepResult: StepResult = {
+    schema_version: "step-result.v1",
+    run_id: runId,
+    step_id: stepId,
+    step_index: stepIndex,
+    agent_name: agentName,
+    model: modelRef,
+    timestamps: {
+      started_at: startedAt.toISOString(),
+      finished_at: startedAt.toISOString(),
+      duration_ms: 0,
+    },
+    inputs: {
+      context_ref: "inputs/context.md",
+      request_ref: "inputs/request.md",
+      artifacts_in: priorOutputs,
+    },
+    outputs: {
+      artifacts_out: [],
+      summary_ref: null,
+    },
+    validation: {
+      hard_checks: [],
+      soft_checks: [],
+    },
+    execution: {
+      status: "ok",
+      error: null,
+    },
+    signals: {
+      matched_keywords: [],
+      confidence: null,
+    },
+    notes: {
+      warnings: [],
+    },
+  };
+  writeStepResult(runId, stepId, initialStepResult);
 
   const requestPath = path.join(runDir, "inputs", "request.md");
   const contextPath = contextOverridePath ? path.resolve(contextOverridePath) : path.join(runDir, "inputs", "context.md");
@@ -319,5 +368,93 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     `${modeLabel} complete for agent "${agentName}" on run "${runId}". Outputs written to ${outputsDir}`
   );
 
+  const finishedAt = new Date();
+  const executionStatus: ExecutionStatus = mapAgentStatusToExecutionStatus(status);
+  const finalStepResult: StepResult = {
+    ...initialStepResult,
+    timestamps: {
+      started_at: initialStepResult.timestamps.started_at,
+      finished_at: finishedAt.toISOString(),
+      duration_ms: finishedAt.getTime() - startedAt.getTime(),
+    },
+    outputs: {
+      artifacts_out: [path.join("outputs", agentName, "result.json"), path.join("outputs", agentName, "notes.md")],
+      summary_ref: path.join("outputs", agentName, "notes.md"),
+    },
+    execution: {
+      status: executionStatus,
+      error: null,
+    },
+  };
+  writeStepResult(runId, stepId, finalStepResult);
+  const decision: DecisionAfterStep = {
+    schema_version: "decision-after-step.v1",
+    run_id: runId,
+    step_id: stepId,
+    decided_at: finishedAt.toISOString(),
+    decision: {
+      action: "continue",
+      reason: "baseline decision (phase 2)",
+    },
+    routing: {
+      next_agent: null,
+      next_model: null,
+    },
+    requirements: {
+      required_inputs: [],
+      human_prompt_ref: null,
+    },
+    constraints: {
+      immutable_context: true,
+      engine_smartness: "none",
+    },
+    audit: {
+      policy_ids: [],
+      rule_ids: [],
+    },
+  };
+  writeDecision(runId, stepId, decision);
+  updateStepsIndex({
+    runId,
+    entry: {
+      step_id: stepId,
+      step_index: stepIndex,
+      agent_name: agentName,
+      status: executionStatus,
+      decision_action: decision.decision.action,
+      model: modelRef,
+      duration_ms: finalStepResult.timestamps.duration_ms,
+    },
+  });
+
   return result;
+}
+
+function mapAgentStatusToExecutionStatus(status: AgentStatus): ExecutionStatus {
+  if (status === "failed") return "failed";
+  if (status === "blocked" || status === "in_progress") return "blocked";
+  return "ok";
+}
+
+function resolveStepMeta(runDir: string, agentName: AgentName) {
+  const planPath = path.join(runDir, "plan.json");
+  let stepId: string = agentName;
+  let stepIndex = 0;
+  let priorOutputs: string[] = [];
+  if (fs.existsSync(planPath) && fs.statSync(planPath).isFile()) {
+    try {
+      const raw = fs.readFileSync(planPath, "utf8");
+      const parsed = JSON.parse(raw) as { steps?: Array<{ id: string; agent: string; inputs?: { prior_outputs?: string[] } }> };
+      const steps = parsed?.steps ?? [];
+      const idx = steps.findIndex((s) => s.agent === agentName);
+      if (idx >= 0) {
+        stepIndex = idx;
+        stepId = steps[idx].id ?? agentName;
+        priorOutputs = steps[idx].inputs?.prior_outputs ?? [];
+      }
+    } catch {
+      // ignore malformed plan
+    }
+  }
+  return { stepId, stepIndex, priorOutputs };
 }
