@@ -21,6 +21,7 @@ import {
   isAllowedStatusTransition,
   applyStatusTransition as applyStatusTransitionInternal,
 } from "./status.ts";
+import { normalizeStatus as normalizeStepsStatus, renderNormalizedStatus } from "./status_view.ts";
 
 import {
   runAgent,
