@@ -88,6 +88,21 @@ function writeInputs(runDir: string) {
   );
 }
 
+function ensureInputsPresent(runDir: string) {
+  const requestPath = path.join(runDir, "inputs", "request.md");
+  const contextPath = path.join(runDir, "inputs", "context.md");
+  [requestPath, contextPath].forEach((p) => {
+    if (!fs.existsSync(p)) {
+      fail(`Input file missing: ${p}`);
+    }
+    const content = fs.readFileSync(p, "utf8");
+    if (content.trim().length === 0) {
+      fail(`Input file is empty: ${p}`);
+    }
+  });
+  console.log(`Inputs ready:\n- ${requestPath}\n- ${contextPath}`);
+}
+
 function ensurePlannerOutputs(runDir: string) {
   const resultPath = path.join(runDir, "outputs", "planner", "result.json");
   const notesPath = path.join(runDir, "outputs", "planner", "notes.md");
@@ -119,6 +134,7 @@ function listRun(runDir: string) {
 function main() {
   const { runId, runDir } = scaffoldRun();
   writeInputs(runDir);
+  ensureInputsPresent(runDir);
 
   runCommand("npm", ["run", "dev", "--", "planner", "--run", runId], { inherit: true });
   runCommand("npm", ["run", "dev", "--", "status", "--run", runId], { inherit: true });
