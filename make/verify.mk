@@ -20,8 +20,16 @@ verify:
 	TMPDIR="$$TMPDIR_RESOLVED" npm run test; \
 
 $(call register_target,verify-flow,VERIFY,Product wiring verification flow.,make verify-flow)
+$(call register_target,verify-run,VERIFY,Verify run artifacts contract (requires RUN=<RUN>).,make verify-run)
 .PHONY: verify-flow
 verify-flow:
 	@set -eu; \
 	echo "Running verify-flow..."; \
 	node --import tsx scripts/smoke/verify-flow.ts
+
+.PHONY: verify-run
+verify-run:
+	@set -eu; \
+	if [ -z "${RUN}" ]; then echo "RUN is required. Usage: make verify-run RUN=<run-id>"; exit 1; fi; \
+	echo "Verifying run ${RUN}..."; \
+	npm run verify-run -- --run "${RUN}"

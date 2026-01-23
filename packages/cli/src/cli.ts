@@ -310,6 +310,175 @@ function validatePlanDependenciesStrict(plan) {
   });
 }
 
+export function verifyRun(runDir) {
+  /** @type {string[]} */
+  const errors = [];
+
+  const runPath = path.join(runDir, "run.json");
+  const planPath = path.join(runDir, "plan.json");
+  const summaryPath = path.join(runDir, "summary", "final.md");
+
+  const requireFile = (p, code) => {
+    if (!fs.existsSync(p) || !fs.statSync(p).isFile()) {
+      errors.push(`${code} ${p}`);
+      return false;
+    }
+    return true;
+  };
+
+  const runOk = requireFile(runPath, "MISSING_FILE");
+  const planOk = requireFile(planPath, "MISSING_FILE");
+  const summaryOk = requireFile(summaryPath, "MISSING_FILE");
+
+  /** @type {any} */
+  let runJson = null;
+  if (runOk) {
+    try {
+      runJson = JSON.parse(fs.readFileSync(runPath, "utf8"));
+    } catch {
+      errors.push(`INVALID_JSON ${runPath}`);
+    }
+  }
+
+  if (runJson) {
+    const rid = runJson.run_id || runJson.id;
+    ["status", "flow"].forEach((f) => {
+      if (!runJson[f] || typeof runJson[f] !== "string") {
+        errors.push(`INVALID_RUN missing ${f}`);
+      }
+    });
+    if (!runJson.started_at_utc) {
+      errors.push("INVALID_RUN missing started_at_utc");
+    }
+    if (runJson.status === "done" || runJson.status === "failed") {
+      if (!runJson.finished_at_utc) errors.push("INVALID_RUN missing finished_at_utc");
+      if (typeof runJson.exit_code !== "number") errors.push("INVALID_RUN missing exit_code");
+      if (runJson.status === "done" && runJson.exit_code !== 0) {
+        errors.push("INVALID_RUN done exit_code must be 0");
+      }
+      if (runJson.status === "failed" && (!runJson.exit_code || runJson.exit_code === 0)) {
+        errors.push("INVALID_RUN failed exit_code must be non-zero");
+      }
+      if (runJson.status === "failed" && (!runJson.error || String(runJson.error).trim() === "")) {
+        errors.push("INVALID_RUN failed requires error");
+      }
+    }
+  }
+
+  /** @type {{ steps: any[] } | null} */
+  let plan = null;
+  if (planOk) {
+    try {
+      plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
+    } catch {
+      errors.push(`INVALID_JSON ${planPath}`);
+    }
+  }
+
+  if (plan && Array.isArray(plan.steps)) {
+    const ids = plan.steps.map((s) => s.id).filter(Boolean);
+    const uniqueIds = new Set(ids);
+    if (uniqueIds.size !== ids.length) {
+      errors.push("INVALID_PLAN duplicate step ids");
+    }
+    plan.steps.forEach((step) => {
+      if (!step.id) errors.push("INVALID_PLAN step missing id");
+      if (!step.agent) errors.push(`INVALID_PLAN ${step.id} missing agent`);
+      if (!Array.isArray(step.depends_on)) {
+        errors.push(`INVALID_PLAN ${step.id} depends_on must be array`);
+      } else {
+        step.depends_on.forEach((dep) => {
+          if (typeof dep !== "string") {
+            errors.push(`INVALID_DEP ${step.id} non-string dependency`);
+          } else if (!uniqueIds.has(dep)) {
+            errors.push(`INVALID_DEP ${step.id} references unknown step id "${dep}"`);
+          }
+        });
+      }
+    });
+
+    // simple cycle check
+    const graph = new Map();
+    plan.steps.forEach((s) => graph.set(s.id, s.depends_on || []));
+    const seen = new Set();
+    const stack = new Set();
+    const dfs = (id) => {
+      if (stack.has(id)) {
+        throw new Error(`CYCLE ${id}`);
+      }
+      if (seen.has(id)) return;
+      stack.add(id);
+      (graph.get(id) || []).forEach((d) => dfs(d));
+      stack.delete(id);
+      seen.add(id);
+    };
+    try {
+      plan.steps.forEach((s) => dfs(s.id));
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : String(err));
+    }
+
+    // artifacts per step
+    const sortedSteps = [...plan.steps].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    sortedSteps.forEach((step) => {
+      const stepDir = path.join(runDir, "outputs", step.agent);
+      if (!fs.existsSync(stepDir) || !fs.statSync(stepDir).isDirectory()) {
+        errors.push(`MISSING_DIR outputs/${step.agent}`);
+        return;
+      }
+      ["notes.md", "result.json", "status.json"].forEach((fname) => {
+        const p = path.join(stepDir, fname);
+        if (!fs.existsSync(p) || !fs.statSync(p).isFile()) {
+          errors.push(`MISSING_ARTIFACT ${path.relative(runDir, p)}`);
+        }
+      });
+      const statusPath = path.join(stepDir, "status.json");
+      if (fs.existsSync(statusPath)) {
+        try {
+          const statusJson = JSON.parse(fs.readFileSync(statusPath, "utf8"));
+          const st = normalizeStatus(statusJson.status);
+          const needsFinished = ["done", "failed", "skipped"];
+          const finished = statusJson.finished_at_utc || statusJson.finished_at;
+          if (needsFinished.includes(st) && !finished) {
+            errors.push(`INVALID_STATUS ${path.relative(runDir, statusPath)} missing finished_at_utc`);
+          }
+          const planStatusNorm = normalizeStatus(step.status);
+          if (planStatusNorm && st && planStatusNorm !== st) {
+            errors.push(`STATUS_MISMATCH ${step.id} plan=${step.status} artifact=${st}`);
+          }
+        } catch {
+          errors.push(`INVALID_JSON ${statusPath}`);
+        }
+      }
+      if (step.status === "failed") {
+        const stderrPath = path.join(stepDir, "stderr.txt");
+        if (!fs.existsSync(stderrPath) || !fs.statSync(stderrPath).isFile()) {
+          errors.push(`MISSING_ARTIFACT ${path.relative(runDir, stderrPath)}`);
+        }
+      }
+    });
+  }
+
+  if (summaryOk) {
+    try {
+      const content = fs.readFileSync(summaryPath, "utf8");
+      if (/TODO/i.test(content)) {
+        errors.push("INVALID_SUMMARY contains TODO");
+      }
+      if (runJson) {
+        const rid = runJson.run_id || runJson.id || "";
+        if (!content.includes(String(rid))) errors.push("INVALID_SUMMARY missing run id");
+        if (runJson.flow && !content.includes(String(runJson.flow))) errors.push("INVALID_SUMMARY missing flow");
+        if (runJson.status && !content.includes(String(runJson.status))) errors.push("INVALID_SUMMARY missing status");
+      }
+    } catch {
+      errors.push("INVALID_SUMMARY unreadable");
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
 /**
  * Execute steps defined in plan.json in order.
  * @param {RunId} runId
@@ -600,6 +769,33 @@ export function handleSkipCommand(args) {
 }
 
 /**
+ * Execute the "verify-run" command.
+ * @param {string[]} args
+ */
+export function handleVerifyRunCommand(args) {
+  let runId = null;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--run") {
+      runId = args[i + 1];
+      i += 1;
+    } else if (args[i].startsWith("--run=")) {
+      runId = args[i].slice("--run=".length);
+    }
+  }
+  if (!runId) {
+    fail("RUN is required via --run <RUN>", { showUsage: true });
+  }
+  const runDir = path.join(process.cwd(), "runs", runId);
+  const result = verifyRun(runDir);
+  if (result.ok) {
+    console.log(`verify-run OK: ${runId}`);
+    return;
+  }
+  result.errors.forEach((e) => console.error(e));
+  process.exit(1);
+}
+
+/**
  * Execute the "status" command.
  * @param {string[]} args
  */
@@ -622,6 +818,7 @@ function normalizeStatus(raw) {
     case "done":
     case "success":
     case "completed":
+    case "ok":
       return "done";
     case "failed":
     case "error":
