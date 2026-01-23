@@ -5,7 +5,7 @@ import { Core, Legacy } from "./imports.ts";
 import type { AgentName, AgentStatus } from "./imports.ts";
 import type { DecisionAfterStep, ExecutionStatus, ModelRef, StepResult, StepOverride } from "../../core/src/contracts/step.ts";
 import { writeDecision, writeEffectiveDecision, writeStepResult, updateStepsIndex } from "./step_persistence.ts";
-import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy, readOverride } from "./gating.ts";
+import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy, readOverride } from "./gating_runtime.ts";
 
 // Deconstruct from Legacy where helpful for cleaner code, or use Legacy.*
 const {
