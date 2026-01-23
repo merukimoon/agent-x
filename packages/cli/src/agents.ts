@@ -3,8 +3,9 @@ import path from "path";
 import process from "process";
 import { Core, Legacy } from "./imports.ts";
 import type { AgentName, AgentStatus } from "./imports.ts";
-import type { DecisionAfterStep, ExecutionStatus, ModelRef, StepResult } from "../../core/src/contracts/step.ts";
-import { writeDecision, writeStepResult, updateStepsIndex } from "./step_persistence.ts";
+import type { DecisionAfterStep, ExecutionStatus, ModelRef, StepResult, StepOverride } from "../../core/src/contracts/step.ts";
+import { writeDecision, writeEffectiveDecision, writeStepResult, updateStepsIndex } from "./step_persistence.ts";
+import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy, readOverride } from "./gating.ts";
 
 // Deconstruct from Legacy where helpful for cleaner code, or use Legacy.*
 const {
@@ -19,6 +20,7 @@ const {
 const {
   PLAN_VERSION,
   isAgentName,
+  getStepDir,
 } = Core;
 
 
@@ -121,7 +123,7 @@ export function ensureDependencies(step, runDir, idToAgent) {
 export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   const runDir = path.join(process.cwd(), "runs", runId);
   ensureRunAndInputs(runDir);
-  const { stepId, stepIndex, priorOutputs } = resolveStepMeta(runDir, agentName);
+  const { stepId, stepIndex, priorOutputs, pipelineId } = resolveStepMeta(runDir, agentName);
   const startedAt = new Date();
   const modelRef: ModelRef = {
     provider: "unknown",
@@ -387,33 +389,22 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     },
   };
   writeStepResult(runId, stepId, finalStepResult);
-  const decision: DecisionAfterStep = {
-    schema_version: "decision-after-step.v1",
-    run_id: runId,
-    step_id: stepId,
-    decided_at: finishedAt.toISOString(),
-    decision: {
-      action: "continue",
-      reason: "baseline decision (phase 2)",
-    },
-    routing: {
-      next_agent: null,
-      next_model: null,
-    },
-    requirements: {
-      required_inputs: [],
-      human_prompt_ref: null,
-    },
-    constraints: {
-      immutable_context: true,
-      engine_smartness: "none",
-    },
-    audit: {
-      policy_ids: [],
-      rule_ids: [],
-    },
-  };
-  writeDecision(runId, stepId, decision);
+  const gatingPolicy = loadGatingPolicy();
+  const strictness = determineStrictness(gatingPolicy, { pipeline_id: pipelineId, agent_name: agentName, step_id: stepId });
+  const gateOutcome = evaluateStepGates(finalStepResult, strictness);
+  const missingInputs = detectMissingInputs(runDir, finalStepResult.inputs);
+  const baseDecision = buildDecision({
+    runId,
+    stepId,
+    finishedAt,
+    strictness,
+    gateOutcome,
+    missingInputs,
+  });
+  writeDecision(runId, stepId, baseDecision);
+  const override = readOverride(runId, stepId);
+  const effectiveDecision = applyOverride({ baseDecision, override, gateOutcome });
+  writeEffectiveDecision(runId, stepId, effectiveDecision);
   updateStepsIndex({
     runId,
     entry: {
@@ -421,13 +412,81 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
       step_index: stepIndex,
       agent_name: agentName,
       status: executionStatus,
-      decision_action: decision.decision.action,
+      decision_action: effectiveDecision.decision.action,
       model: modelRef,
       duration_ms: finalStepResult.timestamps.duration_ms,
     },
   });
 
   return result;
+}
+
+function buildDecision(params: {
+  runId: string;
+  stepId: string;
+  finishedAt: Date;
+  strictness: import("../../core/src/policy/gating.ts").Strictness;
+  gateOutcome: import("../../core/src/policy/gating.ts").GateOutcome;
+  missingInputs: string[];
+}): DecisionAfterStep {
+  const { runId, stepId, finishedAt, strictness, gateOutcome, missingInputs } = params;
+  let action: DecisionAfterStep["decision"]["action"] = "continue";
+  let reason = "checks passed";
+  const required_inputs = [...missingInputs];
+  const rule_ids: string[] = [];
+
+  if (missingInputs.length > 0) {
+    action = "request_clarification";
+    reason = `missing inputs: ${missingInputs.join(", ")}`;
+    rule_ids.push("missing_inputs");
+  } else if (gateOutcome.gate_status === "hard_fail") {
+    action = "halt";
+    reason = `hard checks failed: ${gateOutcome.hard_failed_ids.join(", ")}`;
+    rule_ids.push("hard_checks_fail");
+  } else if (gateOutcome.gate_status === "soft_fail" && strictness === "hard") {
+    action = "require_human";
+    reason = "soft failures under hard policy";
+    rule_ids.push("soft_checks_fail");
+  } else if (gateOutcome.gate_status === "soft_fail") {
+    action = "continue";
+    reason = "soft failures tolerated under soft policy";
+    rule_ids.push("soft_checks_warn");
+  }
+
+  const humanPromptRef = (action === "require_human" || action === "request_clarification")
+    ? path.join(getStepDir(runId, stepId), "human_prompt.md")
+    : null;
+  if (humanPromptRef) {
+    writeHumanPrompt(runId, stepId, { action, reason, required_inputs });
+  }
+
+  const decision: DecisionAfterStep = {
+    schema_version: "decision-after-step.v1",
+    run_id: runId,
+    step_id: stepId,
+    decided_at: finishedAt.toISOString(),
+    decision: {
+      action,
+      reason,
+    },
+    routing: {
+      next_agent: null,
+      next_model: null,
+    },
+    requirements: {
+      required_inputs,
+      human_prompt_ref: humanPromptRef,
+    },
+    constraints: {
+      immutable_context: true,
+      engine_smartness: "none",
+    },
+    audit: {
+      policy_ids: ["gating-policy.v1"],
+      rule_ids,
+    },
+  };
+  return decision;
 }
 
 function mapAgentStatusToExecutionStatus(status: AgentStatus): ExecutionStatus {
@@ -441,10 +500,12 @@ function resolveStepMeta(runDir: string, agentName: AgentName) {
   let stepId: string = agentName;
   let stepIndex = 0;
   let priorOutputs: string[] = [];
+  let pipelineId: string | null = null;
   if (fs.existsSync(planPath) && fs.statSync(planPath).isFile()) {
     try {
       const raw = fs.readFileSync(planPath, "utf8");
-      const parsed = JSON.parse(raw) as { steps?: Array<{ id: string; agent: string; inputs?: { prior_outputs?: string[] } }> };
+      const parsed = JSON.parse(raw) as { steps?: Array<{ id: string; agent: string; inputs?: { prior_outputs?: string[] } }>; flow_type?: string };
+      pipelineId = parsed?.flow_type ?? null;
       const steps = parsed?.steps ?? [];
       const idx = steps.findIndex((s) => s.agent === agentName);
       if (idx >= 0) {
@@ -456,5 +517,39 @@ function resolveStepMeta(runDir: string, agentName: AgentName) {
       // ignore malformed plan
     }
   }
-  return { stepId, stepIndex, priorOutputs };
+  return { stepId, stepIndex, priorOutputs, pipelineId };
+}
+
+function detectMissingInputs(runDir: string, inputs: StepResult["inputs"]) {
+  const missing: string[] = [];
+  const refs = [
+    inputs.context_ref,
+    inputs.request_ref,
+    ...inputs.artifacts_in,
+  ];
+  refs.forEach((rel) => {
+    const full = path.join(runDir, rel);
+    if (!fs.existsSync(full) || !fs.statSync(full).isFile()) {
+      missing.push(rel);
+    }
+  });
+  return missing;
+}
+
+function writeHumanPrompt(runId: string, stepId: string, params: { action: DecisionAfterStep["decision"]["action"]; reason: string; required_inputs: string[]; }) {
+  const stepDir = getStepDir(runId, stepId);
+  const promptPath = path.join(stepDir, "human_prompt.md");
+  const lines = [
+    `# Human decision needed for ${stepId}`,
+    "",
+    `Action requested: ${params.action}`,
+    `Reason: ${params.reason}`,
+    "",
+    "Required inputs:",
+    ...(params.required_inputs.length ? params.required_inputs.map((r) => `- ${r}`) : ["- none"]),
+    "",
+    "Provide the missing inputs and re-run the step.",
+  ].join("\n");
+  writeFileAtomic(promptPath, lines);
+  return promptPath;
 }

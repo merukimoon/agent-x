@@ -1,0 +1,9 @@
+{
+  "schema_version": "gating-policy.v1",
+  "system_default": {
+    "strictness": "soft"
+  },
+  "pipelines": {},
+  "agents": {},
+  "steps": {}
+}

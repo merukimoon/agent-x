@@ -61,6 +61,12 @@ export function writeDecision(runId: string, stepId: string, decision: DecisionA
     writeJsonAtomic(getDecisionPath(runId, stepId), decision);
 }
 
+export function writeEffectiveDecision(runId: string, stepId: string, decision: DecisionAfterStep) {
+    const stepDir = getStepDir(runId, stepId);
+    ensureDir(stepDir);
+    writeJsonAtomic(path.join(stepDir, "effective_decision.json"), decision);
+}
+
 export function updateStepsIndex(params: {
     runId: string;
     entry: {

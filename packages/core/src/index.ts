@@ -61,6 +61,17 @@ export type {
     StepsIndexEntry,
 } from "./paths/steps.ts";
 
+export type {
+    GatingPolicy,
+    Strictness,
+    GateOutcome,
+} from "./policy/gating.ts";
+
+export {
+    resolveStrictness,
+    evaluateGates,
+} from "./policy/gating.ts";
+
 // --- Internal/Legacy (Exposed but use with caution) ---
 export const RULES_DIR = Impl.RULES_DIR;
 export const USAGE = Impl.USAGE; // Primarily for CLI use

@@ -22,6 +22,8 @@ Start here if you’re new to the project.
 - Run artifacts contract check: `make validate-run RUN=<RUN>` (alias: `make verify-run RUN=<RUN>` or `npm run verify-run -- --run <RUN>`)
 - Orchestrator validation: `make orchestrator-validate GOAL="..." [MODE=planner|planner-architect]` (default mode is planner-architect; runs orchestrator then verify-run)
 
+Windows note: if `npm run test` fails due to temp directory permissions, run `TMPDIR=/tmp npm run test`.
+
 ## Make targets
 
 ### Run validation
