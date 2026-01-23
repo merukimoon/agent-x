@@ -208,6 +208,26 @@ export function handleAgentCommand(args) {
   runAgent(agentCandidate, runId, mode, parsed.contextPath);
 }
 
+function readRunJson(runDir) {
+  const runPath = path.join(runDir, "run.json");
+  if (!fs.existsSync(runPath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(runPath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+export function updateRunMetadata(runDir, updates) {
+  const runPath = path.join(runDir, "run.json");
+  const current = readRunJson(runDir) || {};
+  const next = {
+    ...current,
+    ...updates,
+  };
+  writeJsonFile(runPath, next);
+}
+
 /**
  * Execute steps defined in plan.json in order.
  * @param {RunId} runId
@@ -218,6 +238,12 @@ export function runFlow(runId, mode) {
   if (!fs.existsSync(runDir) || !fs.statSync(runDir).isDirectory()) {
     fail(`Run directory not found: ${runDir}`, { exitCode: 11 });
   }
+
+  const startedAt = new Date().toISOString();
+  updateRunMetadata(runDir, {
+    status: "in_progress",
+    started_at_utc: readRunJson(runDir)?.started_at_utc ?? startedAt,
+  });
 
   const missingInputs = validatePlanFiles(
     {
@@ -238,6 +264,7 @@ export function runFlow(runId, mode) {
   }
 
   const lockPath = createFlowLock(runDir, runId, mode);
+  let resolvedFlowType = "";
   try {
     const planPath = path.join(runDir, "plan.json");
 
@@ -267,6 +294,7 @@ export function runFlow(runId, mode) {
     const planPathFinal = planPath;
     /** @type {Plan} */
     let plan = planMaybe;
+    resolvedFlowType = plan.flow_type || resolvedFlowType || "flow";
 
     plan.steps.forEach((step) => {
       if (step.status === "failed") {
@@ -334,6 +362,23 @@ export function runFlow(runId, mode) {
       .map((step) => `${step.id}:${step.agent}=${step.status}`)
       .join(", ");
     console.log(`Flow complete for run ${runId}. Steps: ${summary}`);
+    updateRunMetadata(runDir, {
+      status: "done",
+      finished_at_utc: new Date().toISOString(),
+      flow: resolvedFlowType || "flow",
+      exit_code: 0,
+      error: null,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    updateRunMetadata(runDir, {
+      status: "failed",
+      finished_at_utc: new Date().toISOString(),
+      flow: resolvedFlowType || "flow",
+      exit_code: 1,
+      error: message,
+    });
+    throw error;
   } finally {
     removeLock(lockPath);
   }
