@@ -39,3 +39,10 @@ verify:
 	TMPDIR_RESOLVED="$${TMPDIR:-/tmp}"; \
 	mkdir -p "$$TMPDIR_RESOLVED"; \
 	TMPDIR="$$TMPDIR_RESOLVED" npm run test
+
+$(call register_target,product-smoke,DEV,Product smoke flow (status + planner + agent + flow dry-run).,make product-smoke)
+.PHONY: product-smoke
+product-smoke:
+	@set -eu; \
+	echo "Running product smoke flow..."; \
+	node --import tsx scripts/smoke/product-smoke.ts
