@@ -1,7 +1,7 @@
 # Make/dev.mk
 # Development and Verification targets
 
-$(call register_target,typecheck,DEV,Run TypeScript type checking (via tsc).)
+$(call register_target,typecheck,DEV,Run TypeScript type checking (via tsc).,make typecheck)
 .PHONY: typecheck
 typecheck:
 	@echo "Running typecheck..."
@@ -22,7 +22,7 @@ test:
 		MAKEFLAGS= npm run test; \
 	fi
 
-$(call register_target,verify-esm,DEV,Verify ESM compatibility (no require calls).)
+$(call register_target,verify-esm,DEV,Verify ESM compatibility (no require calls).,make verify-esm)
 .PHONY: verify-esm
 verify-esm:
 	npm run verify:esm

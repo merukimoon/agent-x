@@ -2,7 +2,7 @@
 # Make/planner.mk
 # Planner-related targets
 
-$(call register_target,planner,PLANNER,Run the Planner LLM (raw mode).,make planner GOAL=\"...\" CONTEXT=\"...\" RUN=\"...\")
+$(call register_target,planner,PLANNER,Run the Planner LLM (raw mode).,make planner GOAL=\"...\" CONTEXT=\"...\" RUN=\"<run-id>\")
 .PHONY: planner
 planner:
 	@set -eu; \
@@ -27,7 +27,7 @@ planner:
 	printf "%s\n" "$$CONTEXT" > "$$RUN_DIR/inputs/context.md"; \
 	npm run dev -- planner --run "$$RUN"
 
-$(call register_target,planner-demo,PLANNER,Run the Planner with a canned demo goal.,make planner-demo RUN=\"<RUN_ID>\")
+$(call register_target,planner-demo,PLANNER,Run the Planner with a canned demo goal.,make planner-demo RUN=\"<run-id>\")
 .PHONY: planner-demo
 planner-demo:
 	@set -eu; \

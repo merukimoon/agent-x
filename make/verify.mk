@@ -19,8 +19,8 @@ verify:
 	mkdir -p "$$TMPDIR_RESOLVED"; \
 	TMPDIR="$$TMPDIR_RESOLVED" npm run test; \
 
-$(call register_target,validate-run,VERIFY,Validate run artifacts contract (requires RUN=<RUN>).,make validate-run RUN=<RUN>)
-$(call register_target,verify-run,VERIFY,Alias for validate-run.,make verify-run RUN=<RUN>)
+$(call register_target,validate-run,VERIFY,Validate run artifacts contract (requires RUN=<run-id>).,make validate-run RUN=<run-id>)
+$(call register_target,verify-run,VERIFY,Alias for validate-run.,make verify-run RUN=<run-id>)
 $(call register_target,verify-flows,VERIFY,Feature-level end-to-end flow verification (includes gated pause/resume).,make verify-flows)
 $(call register_target,verify-plan-e2e,VERIFY,Planner-focused end-to-end verification (forces planner LLM invocation).,make verify-plan-e2e GOAL=\"...\" CONTEXT=\"...\" [RUN=<run-id>])
 .PHONY: validate-run

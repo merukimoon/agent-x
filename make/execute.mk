@@ -2,11 +2,11 @@
 # Execution flow targets
 
 $(call register_target,verify-flow,VERIFY,Product wiring verification flow.,make verify-flow)
-$(call register_target,orchestrator-validate,VERIFY,Run orchestrator flow then validate run artifacts.,make orchestrator-validate GOAL=\"...\" [MODE=planner|planner-architect])
+$(call register_target,orchestrator-validate,VERIFY,Run orchestrator flow then validate run artifacts.,make orchestrator-validate GOAL=\"...\" CONTEXT=\"...\" [MODE=planner|planner-architect])
 $(call register_target,orchestrator-gated-validate,VERIFY,Run gated orchestrator flow that pauses for human override.,make orchestrator-gated-validate GOAL=\"...\" [CONTEXT=\"...\"])
-$(call register_target,orchestrator-gated-resume,VERIFY,Resume a gated orchestrator run.,make orchestrator-gated-resume RUN=... DRY=0)
+$(call register_target,orchestrator-gated-resume,VERIFY,Resume a gated orchestrator run.,make orchestrator-gated-resume RUN=<run-id> DRY=0)
 $(call register_target,orchestrator-gated-demo,VERIFY,Automated gated flow demo (pause, override, resume, validate).,make orchestrator-gated-demo GOAL=\"...\" [CONTEXT=\"...\"])
-$(call register_target,e2e-plan-flow,VERIFY,Run planner with fresh inputs and full verification gates.,make e2e-plan-flow GOAL=\"...\" CONTEXT=\"...\")
+$(call register_target,e2e-plan-flow,VERIFY,Run planner with fresh inputs and full verification gates.,make e2e-plan-flow GOAL=\"...\" CONTEXT=\"...\" [RUN=<run-id>])
 
 .PHONY: verify-flow
 verify-flow:
