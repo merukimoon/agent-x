@@ -1,6 +1,6 @@
 # OpenAI Codex / GPT-5.x
 
-This adapter mirrors `assistant-agents/canonical.md`. Use it when Codex or GPT-5.x is the assistant in use.
+This adapter mirrors `agents/canonical.md`. Use it when Codex or GPT-5.x is the assistant in use.
 
 ## Recommended Use Cases
 - Complex TypeScript or Makefile edits.

@@ -1,6 +1,6 @@
 # Claude (Anthropic)
 
-Refer to `assistant-agents/canonical.md` first. Claude is preferred when clarity or policy reasoning is critical and when tasks involve human-facing documentation.
+Refer to `agents/canonical.md` first. Claude is preferred when clarity or policy reasoning is critical and when tasks involve human-facing documentation.
 
 ## Recommended Use Cases
 - Writing or improving docs, governance text, and trust statements.

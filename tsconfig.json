@@ -16,7 +16,7 @@
   },
   "include": [
     "src/**/*",
-    "agents/**/*",
+    "domain/agents/**/*",
     "rules/**/*",
     "schemas/**/*",
     "scripts/**/*",

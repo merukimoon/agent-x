@@ -2,18 +2,18 @@
 
 This document defines canonical, repeatable orchestration flows for the initial agent set:
 
-- Coordinator: [`agents/coordinator/README.md`](../agents/coordinator/README.md)
-- Decision Maker: [`agents/decision-maker/README.md`](../agents/decision-maker/README.md)
-- CISO: [`agents/ciso/README.md`](../agents/ciso/README.md)
-- Tech Lead: [`agents/tech-lead/README.md`](../agents/tech-lead/README.md)
-- Architect: [`agents/architect/README.md`](../agents/architect/README.md)
-- DBA: [`agents/dba/README.md`](../agents/dba/README.md)
-- DevOps: [`agents/devops/README.md`](../agents/devops/README.md)
-- Data Scientist: [`agents/data-scientist/README.md`](../agents/data-scientist/README.md)
-- QA: [`agents/qa/README.md`](../agents/qa/README.md)
-- Technical Writer: [`agents/technical-writer/README.md`](../agents/technical-writer/README.md)
-- Legal: [`agents/legal/README.md`](../agents/legal/README.md)
-- PR Reviewer: [`agents/pr-reviewer/README.md`](../agents/pr-reviewer/README.md)
+- Coordinator: [`domain/agents/coordinator/README.md`](../domain/agents/coordinator/README.md)
+- Decision Maker: [`domain/agents/decision-maker/README.md`](../domain/agents/decision-maker/README.md)
+- CISO: [`domain/agents/ciso/README.md`](../domain/agents/ciso/README.md)
+- Tech Lead: [`domain/agents/tech-lead/README.md`](../domain/agents/tech-lead/README.md)
+- Architect: [`domain/agents/architect/README.md`](../domain/agents/architect/README.md)
+- DBA: [`domain/agents/dba/README.md`](../domain/agents/dba/README.md)
+- DevOps: [`domain/agents/devops/README.md`](../domain/agents/devops/README.md)
+- Data Scientist: [`domain/agents/data-scientist/README.md`](../domain/agents/data-scientist/README.md)
+- QA: [`domain/agents/qa/README.md`](../domain/agents/qa/README.md)
+- Technical Writer: [`domain/agents/technical-writer/README.md`](../domain/agents/technical-writer/README.md)
+- Legal: [`domain/agents/legal/README.md`](../domain/agents/legal/README.md)
+- PR Reviewer: [`domain/agents/pr-reviewer/README.md`](../domain/agents/pr-reviewer/README.md)
 
 All agent-to-agent interaction MUST conform to the Agent Contract: [`docs/agent-contract.md`](agent-contract.md).
 

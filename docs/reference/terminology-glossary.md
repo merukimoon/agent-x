@@ -34,7 +34,7 @@ Not: An executor or implementer.
 
 ## Specialized agents
 
-Definition: Domain-specific agents pulled into flows as needed: Architect, Tech Lead, DBA, DevOps, Data Scientist, QA, Technical Writer, Legal, CISO, PR Reviewer, and others defined under `agents/`.  
+Definition: Domain-specific agents pulled into flows as needed: Architect, Tech Lead, DBA, DevOps, Data Scientist, QA, Technical Writer, Legal, CISO, PR Reviewer, and others defined under `domain/agents/`.  
 Not: General-purpose executors; they stay within their documented scope and policies.
 
 ## Task
@@ -114,7 +114,7 @@ Not: A single test case or informal read-through.
 
 ## Checklist
 
-Definition: A structured list of required actions or validations per agent (see `agents/*/checklists.md`).  
+Definition: A structured list of required actions or validations per agent (see `domain/agents/*/checklists.md`).  
 Not: Optional suggestions.
 
 ## Acceptance criteria

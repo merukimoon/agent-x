@@ -1,6 +1,6 @@
 # Gemini (Google)
 
-This adapter references `assistant-agents/canonical.md`. Use Gemini for quick syntheses and structured automation tasks with short instructions.
+This adapter references `agents/canonical.md`. Use Gemini for quick syntheses and structured automation tasks with short instructions.
 
 ## Recommended Use Cases
 - Generating concise changelog entries or summary tables.
