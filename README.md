@@ -248,7 +248,7 @@ print(result.output)
 ## Repository structure
 
 - `.github/` GitHub issue/PR templates and workflows
-- `domain/agents/` Domain/business agent specifications (no implementation code)
+- `domain/roles/` Domain/business agent specifications (no implementation code)
 - `docs/` User and contributor documentation
 - `prompts/` Versioned prompts used by agents
 - `schemas/` Schemas for structured inputs/outputs and contracts

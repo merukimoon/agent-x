@@ -8,20 +8,20 @@ This section summarizes the **Agent Contract** for consistent agent inputs/outpu
 
 ## Initial agent set
 
-The initial agent specifications live in `domain/agents/`. The index is [`domain/agents/README.md`](../domain/agents/README.md).
+The initial agent specifications live in `domain/roles/`. The index is [`domain/roles/README.md`](../domain/roles/README.md).
 
-- Coordinator: [`domain/agents/coordinator/README.md`](../domain/agents/coordinator/README.md)
-- Decision Maker: [`domain/agents/decision-maker/README.md`](../domain/agents/decision-maker/README.md)
-- CISO: [`domain/agents/ciso/README.md`](../domain/agents/ciso/README.md)
-- Tech Lead: [`domain/agents/tech-lead/README.md`](../domain/agents/tech-lead/README.md)
-- Architect: [`domain/agents/architect/README.md`](../domain/agents/architect/README.md)
-- DBA: [`domain/agents/dba/README.md`](../domain/agents/dba/README.md)
-- DevOps: [`domain/agents/devops/README.md`](../domain/agents/devops/README.md)
-- Data Scientist: [`domain/agents/data-scientist/README.md`](../domain/agents/data-scientist/README.md)
-- PR Reviewer: [`domain/agents/pr-reviewer/README.md`](../domain/agents/pr-reviewer/README.md)
-- QA: [`domain/agents/qa/README.md`](../domain/agents/qa/README.md)
-- Technical Writer: [`domain/agents/technical-writer/README.md`](../domain/agents/technical-writer/README.md)
-- Legal: [`domain/agents/legal/README.md`](../domain/agents/legal/README.md)
+- Coordinator: [`domain/roles/coordinator/README.md`](../domain/roles/coordinator/README.md)
+- Decision Maker: [`domain/roles/decision-maker/README.md`](../domain/roles/decision-maker/README.md)
+- CISO: [`domain/roles/ciso/README.md`](../domain/roles/ciso/README.md)
+- Tech Lead: [`domain/roles/tech-lead/README.md`](../domain/roles/tech-lead/README.md)
+- Architect: [`domain/roles/architect/README.md`](../domain/roles/architect/README.md)
+- DBA: [`domain/roles/dba/README.md`](../domain/roles/dba/README.md)
+- DevOps: [`domain/roles/devops/README.md`](../domain/roles/devops/README.md)
+- Data Scientist: [`domain/roles/data-scientist/README.md`](../domain/roles/data-scientist/README.md)
+- PR Reviewer: [`domain/roles/pr-reviewer/README.md`](../domain/roles/pr-reviewer/README.md)
+- QA: [`domain/roles/qa/README.md`](../domain/roles/qa/README.md)
+- Technical Writer: [`domain/roles/technical-writer/README.md`](../domain/roles/technical-writer/README.md)
+- Legal: [`domain/roles/legal/README.md`](../domain/roles/legal/README.md)
 
 ### Overview
 

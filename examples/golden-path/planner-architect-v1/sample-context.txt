@@ -13,5 +13,5 @@ Architecture Principles:
 Relevant Files:
 - docs/flow-contract.md: Defines flow boundaries and responsibilities
 - docs/agent-contract.md: Standard input/output envelope for all agents
-- domain/agents/planner/: Plan-only agent specification
-- domain/agents/architect/: Architecture decision agent specification
+- domain/roles/planner/: Plan-only agent specification
+- domain/roles/architect/: Architecture decision agent specification

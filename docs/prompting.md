@@ -33,7 +33,7 @@ Prompts live in `prompts/` and SHOULD be versioned so runs are reproducible.
 
 Recommended conventions:
 
-- Organize prompts by agent name (matching `domain/agents/<agent-name>/`).
+- Organize prompts by agent name (matching `domain/roles/<agent-name>/`).
 - Use explicit versions (e.g., `vX.Y`) and keep prior versions available unless removal is required for security/privacy.
 - Reference prompts by identifier + version from agent specifications (e.g., `planning@v0.2`).
 
