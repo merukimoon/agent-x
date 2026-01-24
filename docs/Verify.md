@@ -9,6 +9,8 @@ Exit codes are meaningful:
 - 1 = failure
 - 2 = paused (expected for gated flows)
 
+To automate this sequence, use `make verify-flows`.
+
 ### Command sequence
 
 Base flow verification:

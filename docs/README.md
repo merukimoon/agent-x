@@ -22,6 +22,7 @@ Start here if you’re new to the project.
 - Run artifacts contract check: `make validate-run RUN=<RUN>` (alias: `make verify-run RUN=<RUN>` or `npm run verify-run -- --run <RUN>`)
 - Orchestrator validation: `make orchestrator-validate GOAL="..." [MODE=planner|planner-architect]` (default mode is planner-architect; runs orchestrator then verify-run)
 - Gated flow demo: `make orchestrator-gated-demo GOAL="..." [CONTEXT="..."]` (pauses with exit code 2, writes override.json, resumes, validates)
+- Verify Flows: `make verify-flows` (feature-level end-to-end flow verification; gated pause/resume included)
 
 Windows note: if `npm run test` fails due to temp directory permissions, run `TMPDIR=/tmp npm run test`.
 
@@ -39,6 +40,10 @@ Windows note: if `npm run test` fails due to temp directory permissions, run `TM
 `make orchestrator-gated-demo GOAL="..." [CONTEXT="..."]`
 
 Definitions live in Make/verify.mk for verification targets and Make/execute.mk for execution flows.
+
+## Definition of Done
+
+See `docs/DoD.md` for the feature Definition of Done. A change is complete only after Verify, VerifyFest, Verify Flows, and documentation updates are done.
 
 ## Contributing docs
 
