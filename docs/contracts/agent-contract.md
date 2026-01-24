@@ -18,7 +18,7 @@ Agents MUST include the `contract_version` field in every response.
 ## Terms
 
 - **Agent**: A unit that produces outputs for a Task.
-- **Coordinator**: The orchestrator/runner that assigns Tasks and enforces Policy.
+- **Coordinator**: The **AgentX runtime** core that assigns Tasks and enforces Policy.
 - **Decision maker**: The entity accountable for decisions in a run. By default this is the Agent that emits the decision record, but the Coordinator MAY override this (e.g., “final approver” agent).
 - **Task**: A bounded unit of work.
 - **Run**: One attempt to execute a Task by a specific Agent under a specific Policy.

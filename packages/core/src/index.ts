@@ -27,6 +27,16 @@ export type {
     ValidationResult
 } from "../../../scripts/agentic/core.ts";
 
+export type {
+    StepResult,
+    DecisionAfterStep,
+    StepOverride,
+    ModelRef,
+    ArtifactRef,
+    CheckResult,
+    ExecutionStatus
+} from "./contracts/step.ts";
+
 // --- Constants ---
 export const PLAN_VERSION = Impl.PLAN_VERSION;
 export const FLOW_PR_COMPLETION = Impl.FLOW_PR_COMPLETION;
@@ -38,6 +48,29 @@ export const isAgentName = Impl.isAgentName;
 export const isStepStatus = Impl.isStepStatus;
 export const getCanonicalOutputs = Impl.getCanonicalOutputs;
 export const validateCanonicalOutputs = Impl.validateCanonicalOutputs;
+
+export {
+    getStepDir,
+    getStepResultPath,
+    getDecisionPath,
+    getStepsIndexPath,
+} from "./paths/steps.ts";
+
+export type {
+    StepsIndex,
+    StepsIndexEntry,
+} from "./paths/steps.ts";
+
+export type {
+    GatingPolicy,
+    Strictness,
+    GateOutcome,
+} from "./policy/gating.ts";
+
+export {
+    resolveStrictness,
+    evaluateGates,
+} from "./policy/gating.ts";
 
 // --- Internal/Legacy (Exposed but use with caution) ---
 export const RULES_DIR = Impl.RULES_DIR;

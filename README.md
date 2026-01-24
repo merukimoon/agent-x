@@ -34,8 +34,20 @@ These terms describe the intended shape of the project; adjust as the codebase e
 - **Squad**: A collection of agents coordinated to complete a task.
 - **Task**: A bounded unit of work with inputs, constraints, and expected outputs.
 
-- **Orchestrator/Runner**: The control layer that schedules tasks, routes messages, and manages state (not an agent).
+- **AgentX Runtime**: The conceptual platform execution engine that schedules tasks, routes messages, and manages state (formerly "Orchestrator").
 - **Prompt**: Versioned instructions/templates used by agents.
+
+## AgentX Platform
+
+**AgentX** is the conceptual execution platform that defines how agentic systems operate within the framework. While **Agentic Squad Framework** names the overall project and repository, **AgentX** describes the runtime and execution model.
+
+It encompasses:
+- **AgentX Runtime**: The deterministic engine that drives flows and typically serves as the "Coordinator".
+- **AgentX Verification Model**: The fail-closed safety system ensuring policy compliance (Exit 12).
+- **AgentX Gates**: Explicit checkpoints for **human-in-the-loop** approval and **policy gates**.
+- **AgentX Execution Semantics**: The rules encoding deterministic execution, atomic artifact generation, and explicit overrides.
+
+AgentX is the layer that makes the "Squad" behave reliably, ensuring no "ghost actions" occur outside the plan.
 
 ## Platform support
 
@@ -189,6 +201,37 @@ Execution flows
 * make orchestrator-validate GOAL="..." [MODE=planner|planner-architect]
 
 Definitions live in Make/verify.mk for verification targets and Make/execute.mk for execution flows.
+
+## How to resolve a gated run
+
+1) Detect a gated run  
+   - Check status: `make run-status RUN="<run-id>"`  
+   - If the output shows `State: BLOCKED`, note the blocked `step_id` (and agent).
+
+2) Inspect the step artifacts  
+   - `runs/<run-id>/steps/<step-id>/human_prompt.md` tells you what is needed.  
+   - `decision_after_step.json` is the base decision.  
+   - `effective_decision.json` is the applied decision (after any override).  
+   - If `required_inputs` is present, gather or produce those inputs.
+
+3) Create an override (only when action is `require_human` or `request_clarification`)  
+   - Path: `runs/<run-id>/steps/<step-id>/override.json`  
+   - Minimal StepOverride v1 example:
+   ```json
+   {
+     "schema_version": "step-override.v1",
+     "run_id": "<run-id>",
+     "step_id": "<step-id>",
+     "actor": { "type": "human", "id": "operator@example.com" },
+     "override_action": "continue",
+     "routing_override": { "next_agent": null, "next_model": null },
+     "acknowledged_risks": ["Reviewed human prompt and approved"]
+   }
+   ```
+
+4) Apply and re-check  
+   - Rerun the relevant flow or command so the override is applied.  
+   - Re-check status with `make run-status RUN="<run-id>"` to confirm the run is unblocked.
 
 ## Minimal usage example (pseudo-code)
 

@@ -58,3 +58,35 @@ Example:
 Then inspect it with:
 
 - `make run-tree RUN="<run-folder-name>"`
+
+## How to resolve a gated run
+
+1) Identify a blocked run  
+   - Run status: `make run-status RUN="<run-id>"`  
+   - If the output shows `State: BLOCKED`, note the `Blocked step` value.
+
+2) Inspect the step artifacts  
+   - `runs/<run-id>/steps/<step-id>/human_prompt.md` describes what is needed.  
+   - `decision_after_step.json` shows the base decision.  
+   - `effective_decision.json` shows the applied decision (after any override).  
+   - If the decision lists `required_inputs`, gather those inputs.
+
+3) Create an override (only when the base action is `require_human` or `request_clarification`)  
+   - Path: `runs/<run-id>/steps/<step-id>/override.json`  
+   - Create the file manually with a clear reason. Example:
+
+```json
+{
+  "schema_version": "step-override.v1",
+  "run_id": "<run-id>",
+  "step_id": "<step-id>",
+  "actor": { "type": "human", "id": "operator@example.com" },
+  "override_action": "continue",
+  "routing_override": { "next_agent": null, "next_model": null },
+  "acknowledged_risks": ["Reviewed human prompt and approved"]
+}
+```
+
+4) Apply and re-check  
+   - Rerun the relevant flow or command. The override is applied deterministically to future steps.  
+   - Re-check status: `make run-status RUN="<run-id>"` to confirm the run is unblocked.

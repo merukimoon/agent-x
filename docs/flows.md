@@ -1,4 +1,4 @@
-# Orchestration Flows (Canonical)
+# AgentX Orchestration Flows (Canonical)
 
 This document defines canonical, repeatable orchestration flows for the initial agent set:
 
@@ -17,7 +17,34 @@ This document defines canonical, repeatable orchestration flows for the initial 
 
 All agent-to-agent interaction MUST conform to the Agent Contract: [`docs/agent-contract.md`](agent-contract.md).
 
-## Orchestration rules and invariants
+## Human-in-the-loop gated runs
+
+Gated runs pause intentionally for human input. The `human_gate` step blocks execution until an override is provided.
+
+- Exit codes: `0` = success, `1` = error, `2` = paused (human input required).
+- Canonical gated flow: `make orchestrator-gated-validate GOAL="..." [CONTEXT="..."]`
+- Resume a paused run: `make orchestrator-gated-resume RUN="<run-id>" DRY=0`
+- Automated demo (pause → override → resume → validate): `make orchestrator-gated-demo GOAL="..." [CONTEXT="..."]`
+
+Lifecycle:
+1) Start: run `orchestrator-gated-validate` (or the demo). The flow scaffolds inputs and runs `human_gate`.
+2) Pause: flow exits with code 2 and prints the RUN_ID plus guidance to add an override.
+3) Inspect: read `runs/<run-id>/outputs/human_gate/notes.md` for the human prompt.
+4) Override: write `runs/<run-id>/outputs/human_gate/override.json` (schema `step-override.v1`) to approve or continue.
+5) Resume: run `make orchestrator-gated-resume RUN="<run-id>" DRY=0`.
+6) Validate: run `make validate-run RUN="<run-id>"` to confirm artifacts are consistent.
+
+Artifacts for the gated step:
+- `outputs/human_gate/result.json` (written on pause)
+- `outputs/human_gate/notes.md` (operator instructions / human prompt)
+- `outputs/human_gate/status.json` (blocked status metadata)
+- `outputs/human_gate/override.json` (written by the operator to resume; must match `step-override.v1`)
+
+Operator UX on pause:
+- Console output includes RUN_ID, the blocked step, where to inspect notes, where to place `override.json`, and how to resume.
+- Use `make run-status RUN="<run-id>"` to view current state; status is read-only.
+
+## AgentX Orchestration rules and invariants
 
 These rules apply to all flows in this document.
 
@@ -120,7 +147,7 @@ The final summary should capture: outcome, key decisions, artifacts produced, an
 
 ## Flow A: Documentation or PR completion
 
-This flow is the canonical Orchestration definition for documentation or PR completion. It supersedes the earlier minimal flow by making quality, security, and legal checks explicit gates. For a full example run, see `docs/run-examples/pr-completion/README.md`.
+This flow is the canonical **AgentX Orchestration** definition for documentation or PR completion. It supersedes the earlier minimal flow by making quality, security, and legal checks explicit gates. For a full example run, see `docs/run-examples/pr-completion/README.md`.
 
 Purpose: gate documentation and PR outcomes behind documentation review, QA gates, security review, legal compliance review, and explicit approval when tradeoffs exist.
 

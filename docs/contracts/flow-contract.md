@@ -7,7 +7,7 @@ A **Flow** is a bounded, managed sequence of agent interactions managed by the O
 ## Terminology
 
 - **Flow**: High-level routine (e.g., "Planning Flow", "Code Modification Flow").
-- **Orchestrator**: The runtime system (script/Make) that invokes agents, manages state, and enforces policy. It is **not** an agent.
+- **Orchestrator**: The **AgentX runtime** system (script/Make) that invokes agents, manages state, and enforces policy. It is **not** an agent.
 - **Agent**: A unit of intelligent behavior (e.g., Planner, Reviewer) that accepts inputs and produces outputs.
 
 ## Flow Types
@@ -44,7 +44,7 @@ Every flow must produce:
 
 ## Responsibilities
 
-### Orchestrator (Control Layer)
+### AgentX Orchestrator (Control Layer)
 - **Lifecycle**: Creates the run directory, initializes state, and eventually archives/cleans up.
 - **Sequencing**: Decides which agent runs next based on dependency graphs or linear pipelines.
 - **Policy Enforcement**: Interprets exit codes. Stops immediately on Exit 12 (Safety). Retries on Exit 10 (System).
