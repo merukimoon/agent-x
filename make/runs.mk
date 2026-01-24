@@ -39,3 +39,12 @@ run-status:
 	else \
 		npm run dev -- status; \
 	fi
+
+$(call register_target,verify-paused,RUNS,Check if a run is gated/paused (exit 0 if paused).,make verify-paused RUN=\"...\")
+.PHONY: verify-paused
+verify-paused:
+	@set -eu; \
+	if [ -z "${RUN}" ]; then echo "RUN is required. Example: make verify-paused RUN=\"...\""; exit 2; fi; \
+	INDEX="runs/${RUN}/steps/index.json"; \
+	if [ ! -f "$$INDEX" ]; then echo "No steps index at $$INDEX"; exit 1; fi; \
+	node -e "const fs=require('fs');const path=require('path');const idx=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));const blocked=Array.isArray(idx.steps)&&idx.steps.some(s=>['require_human','request_clarification','requires_human'].includes(s.decision_action));process.exit(blocked?0:1);" "$$INDEX"

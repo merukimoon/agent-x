@@ -23,6 +23,7 @@ import {
 } from "./status.ts";
 import { buildStatusView } from "./status_view.ts";
 import { renderStatusView } from "./status_render.ts";
+import { detectGate } from "./gate_check.ts";
 
 import {
   runAgent,
@@ -555,6 +556,15 @@ export function runFlow(runId, mode) {
     validatePlanDependenciesStrict(plan);
     resolvedFlowType = plan.flow_type || resolvedFlowType || "flow";
     planForSummary = plan;
+
+    const gate = detectGate(runDir);
+    if (gate) {
+      console.error(`Run ${runId} is gated at step ${gate.step_id}.`);
+      console.error(`Inspect: ${gate.human_prompt}`);
+      console.error(`Decisions: ${gate.decision_after} (base), ${gate.effective_decision} (effective)`);
+      console.error(`Add override (if allowed) at: ${gate.override_path}`);
+      fail("Run is gated; resolve human/clarification requirements and rerun.", { exitCode: 2 });
+    }
 
     const idToAgent = Object.fromEntries(plan.steps.map((s) => [s.id, s.agent]));
     plan.steps.forEach((step) => {

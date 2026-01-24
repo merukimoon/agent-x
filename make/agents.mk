@@ -37,3 +37,7 @@ flow:
 		DRY_FLAG="--dry-run"; \
 	fi; \
 	npm run dev -- flow --run "$$RUN" $$DRY_FLAG
+
+$(call register_target,resume-run,AGENTS,Alias for flow to resume a run.,make resume-run RUN=... DRY=1)
+.PHONY: resume-run
+resume-run: flow
