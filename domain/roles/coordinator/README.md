@@ -21,7 +21,7 @@ This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
 
 Agent specific required inputs (in addition to the contract input model):
 
-- `Context.available_agents`: list of available agent identities and where their specs live (for example, `agents/decision-maker/README.md`).
+- `Context.available_agents`: list of available agent identities and where their specs live (for example, `domain/roles/decision-maker/README.md`).
 - `Context.policy`: the run Policy that constrains delegation and tool access.
 - `Context.prior_messages`: the conversation or event history for the run, if any.
 

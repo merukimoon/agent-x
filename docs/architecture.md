@@ -20,7 +20,7 @@ The repository is currently in documentation scaffolding and does not yet includ
 
 This repository is structured so specifications and artifacts have obvious homes before any runtime code exists.
 
-- `agents/` Agent specifications (responsibilities, policies, checklists). No implementation code.
+- `domain/roles/` Agent specifications (responsibilities, policies, checklists). No implementation code.
 - `prompts/` Versioned prompts used by agents.
 - `schemas/` Schemas for structured inputs/outputs and contract validation (format TBD).
 - `runs/` Execution run outputs and produced artifacts (usually not committed).
@@ -30,7 +30,8 @@ Example layout:
 
 ```text
 .
-├── agents/
+├── domain/
+│   └── agents/
 │   └── README.md
 ├── prompts/
 │   └── README.md

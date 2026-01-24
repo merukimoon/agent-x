@@ -20,7 +20,7 @@ prompts/<agent-name>/<prompt-name>/vX.Y/README.md
 
 Where:
 
-- `<agent-name>` matches the agent spec folder name in `agents/`
+- `<agent-name>` matches the agent spec folder name in `domain/roles/`
 - `<prompt-name>` is a short identifier (e.g., `planning`, `review`, `execution`)
 - `vX.Y` is the prompt version (see “Versioning”)
 
@@ -40,6 +40,6 @@ When a prompt version is superseded, keep the old version available for reproduc
 ## Relationship between agents and prompts
 
 - Agents SHOULD reference prompts by an identifier and version (e.g., `planning@v0.2`).
-- Agent specs in `agents/` SHOULD document which prompts they use and why.
+- Agent specs in `domain/roles/` SHOULD document which prompts they use and why.
 - Prompt expectations SHOULD align with `docs/agent-contract.md` (inputs, outputs, constraints).
 

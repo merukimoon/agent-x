@@ -8,20 +8,20 @@ This section summarizes the **Agent Contract** for consistent agent inputs/outpu
 
 ## Initial agent set
 
-The initial agent specifications live in `agents/`. The index is [`agents/README.md`](../agents/README.md).
+The initial agent specifications live in `domain/roles/`. The index is [`domain/roles/README.md`](../domain/roles/README.md).
 
-- Coordinator: [`agents/coordinator/README.md`](../agents/coordinator/README.md)
-- Decision Maker: [`agents/decision-maker/README.md`](../agents/decision-maker/README.md)
-- CISO: [`agents/ciso/README.md`](../agents/ciso/README.md)
-- Tech Lead: [`agents/tech-lead/README.md`](../agents/tech-lead/README.md)
-- Architect: [`agents/architect/README.md`](../agents/architect/README.md)
-- DBA: [`agents/dba/README.md`](../agents/dba/README.md)
-- DevOps: [`agents/devops/README.md`](../agents/devops/README.md)
-- Data Scientist: [`agents/data-scientist/README.md`](../agents/data-scientist/README.md)
-- PR Reviewer: [`agents/pr-reviewer/README.md`](../agents/pr-reviewer/README.md)
-- QA: [`agents/qa/README.md`](../agents/qa/README.md)
-- Technical Writer: [`agents/technical-writer/README.md`](../agents/technical-writer/README.md)
-- Legal: [`agents/legal/README.md`](../agents/legal/README.md)
+- Coordinator: [`domain/roles/coordinator/README.md`](../domain/roles/coordinator/README.md)
+- Decision Maker: [`domain/roles/decision-maker/README.md`](../domain/roles/decision-maker/README.md)
+- CISO: [`domain/roles/ciso/README.md`](../domain/roles/ciso/README.md)
+- Tech Lead: [`domain/roles/tech-lead/README.md`](../domain/roles/tech-lead/README.md)
+- Architect: [`domain/roles/architect/README.md`](../domain/roles/architect/README.md)
+- DBA: [`domain/roles/dba/README.md`](../domain/roles/dba/README.md)
+- DevOps: [`domain/roles/devops/README.md`](../domain/roles/devops/README.md)
+- Data Scientist: [`domain/roles/data-scientist/README.md`](../domain/roles/data-scientist/README.md)
+- PR Reviewer: [`domain/roles/pr-reviewer/README.md`](../domain/roles/pr-reviewer/README.md)
+- QA: [`domain/roles/qa/README.md`](../domain/roles/qa/README.md)
+- Technical Writer: [`domain/roles/technical-writer/README.md`](../domain/roles/technical-writer/README.md)
+- Legal: [`domain/roles/legal/README.md`](../domain/roles/legal/README.md)
 
 ### Overview
 

@@ -1,14 +1,14 @@
 # Make/runs.mk
 # Run management targets
 
-$(call register_target,run-new,RUNS,Create a new run directory with timestamp.,make run-new NAME="docs-pr-audit")
+$(call register_target,run-new,RUNS,Create a new run directory with timestamp.,make run-new NAME=\"docs-pr-audit\")
 .PHONY: run-new
 run-new:
 	@set -eu; \
 	NAME="$${NAME:-}"; \
 	node --import tsx scripts/scaffold-run.ts
 
-$(call register_target,run-tree,RUNS,List files in a run directory.,make run-tree RUN=\"2026-01-17_0930-docs-pr-audit\")
+$(call register_target,run-tree,RUNS,List files in a run directory.,make run-tree RUN=\"<run-id>\")
 .PHONY: run-tree
 run-tree:
 	@set -eu; \
@@ -29,7 +29,7 @@ run-tree:
 		find "$$RUN_DIR" -print; \
 	fi
 
-$(call register_target,run-status,RUNS,Check status of a run/plan.,make run-status RUN=\"2026-01-18_1124-pr-docs\")
+$(call register_target,run-status,RUNS,Check status of a run/plan.,make run-status RUN=\"<run-id>\")
 .PHONY: run-status
 run-status:
 	@set -eu; \
@@ -40,7 +40,7 @@ run-status:
 		npm run dev -- status; \
 	fi
 
-$(call register_target,verify-paused,RUNS,Check if a run is gated/paused (exit 0 if paused).,make verify-paused RUN=\"...\")
+$(call register_target,verify-paused,RUNS,Check if a run is gated/paused (exit 0 if paused).,make verify-paused RUN=\"<run-id>\")
 .PHONY: verify-paused
 verify-paused:
 	@set -eu; \

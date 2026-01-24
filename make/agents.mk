@@ -1,7 +1,7 @@
 # Make/agents.mk
 # Agent Execution targets
 
-$(call register_target,agent,AGENTS,Run a single agent for a run.,make agent AGENT=coordinator RUN=... DRY=1)
+$(call register_target,agent,AGENTS,Run a single agent for a run.,make agent AGENT=coordinator RUN=<run-id> DRY=1)
 .PHONY: agent
 agent:
 	@set -eu; \
@@ -22,7 +22,7 @@ agent:
 	fi; \
 	npm run dev -- agent "$$AGENT" --run "$$RUN" $$DRY_FLAG
 
-$(call register_target,flow,AGENTS,Execute the full plan/flow for a run.,make flow RUN=... DRY=1)
+$(call register_target,flow,AGENTS,Execute the full plan/flow for a run.,make flow RUN=<run-id> DRY=1)
 .PHONY: flow
 flow:
 	@set -eu; \
@@ -38,6 +38,6 @@ flow:
 	fi; \
 	npm run dev -- flow --run "$$RUN" $$DRY_FLAG
 
-$(call register_target,resume-run,AGENTS,Alias for flow to resume a run.,make resume-run RUN=... DRY=1)
+$(call register_target,resume-run,AGENTS,Alias for flow to resume a run.,make resume-run RUN=<run-id> DRY=1)
 .PHONY: resume-run
 resume-run: flow
