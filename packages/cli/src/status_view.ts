@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { StepsIndex, StepsIndexEntry } from "../core/src/paths/steps.ts";
+import type { StepsIndex, StepsIndexEntry } from "../../core/src/index.ts";
 
 type DecisionFile = {
     decision: { action: string; reason: string };
@@ -87,7 +87,7 @@ function pickDecisionAction(runDir: string, stepId: string): { action: string; r
     return { action, reason, required_inputs, paths };
 }
 
-export function normalizeStatus(runDir: string): NormalizedStatus | null {
+export function buildStatusView(runDir: string): NormalizedStatus | null {
     const index = readStepsIndex(runDir);
     if (!index) return null;
     const steps = [...index.steps].sort((a, b) => a.step_index - b.step_index);

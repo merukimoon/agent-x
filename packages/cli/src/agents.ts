@@ -387,6 +387,7 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
       status: executionStatus,
       error: null,
     },
+    validation: initialStepResult.validation,
   };
   writeStepResult(runId, stepId, finalStepResult);
   const gatingPolicy = loadGatingPolicy();
@@ -533,6 +534,10 @@ function detectMissingInputs(runDir: string, inputs: StepResult["inputs"]) {
       missing.push(rel);
     }
   });
+  const forcedMissing = process.env.FORCE_MISSING_INPUTS;
+  if (forcedMissing) {
+    forcedMissing.split(",").map((s) => s.trim()).filter(Boolean).forEach((item) => missing.push(item));
+  }
   return missing;
 }
 

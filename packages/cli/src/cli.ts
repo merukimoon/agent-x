@@ -21,7 +21,8 @@ import {
   isAllowedStatusTransition,
   applyStatusTransition as applyStatusTransitionInternal,
 } from "./status.ts";
-import { normalizeStatus as normalizeStepsStatus, renderNormalizedStatus } from "./status_view.ts";
+import { buildStatusView } from "./status_view.ts";
+import { renderStatusView } from "./status_render.ts";
 
 import {
   runAgent,
@@ -909,6 +910,16 @@ export function handleStatusCommand(args) {
   const runDir = path.join(process.cwd(), "runs", runId);
   if (!fs.existsSync(runDir) || !fs.statSync(runDir).isDirectory()) {
     fail(`Run directory not found: ${runDir}`);
+  }
+
+  try {
+    const normalized = buildStatusView(runDir);
+    if (normalized) {
+      console.log(renderStatusView(normalized, null));
+      return;
+    }
+  } catch {
+    // fall back to legacy status below
   }
 
   const planPath = path.join(runDir, "plan.json");

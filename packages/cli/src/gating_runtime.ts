@@ -15,7 +15,8 @@ const DEFAULT_POLICY: GatingPolicy = {
 };
 
 export function loadGatingPolicy(): GatingPolicy {
-    const policyPath = path.join(process.cwd(), "config", "gating_policy.json");
+    const overrideEnv = process.env.GATING_POLICY_PATH;
+    const policyPath = overrideEnv ? path.resolve(overrideEnv) : path.join(process.cwd(), "config", "gating_policy.json");
     if (!fs.existsSync(policyPath)) return DEFAULT_POLICY;
     try {
         const raw = fs.readFileSync(policyPath, "utf8");
