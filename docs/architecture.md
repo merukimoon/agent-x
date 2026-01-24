@@ -1,6 +1,6 @@
 # Architecture (high-level)
 
-The repository is currently in documentation scaffolding and does not yet include an implemented runtime (**TODO**). This document describes the intended architecture so future implementation stays coherent.
+The repository is currently in documentation scaffolding and does not yet include an implemented **AgentX runtime** (**TODO**). This document describes the intended architecture so future implementation stays coherent.
 
 ## Goals
 
@@ -11,7 +11,7 @@ The repository is currently in documentation scaffolding and does not yet includ
 ## Proposed components (**TODO** confirm once code exists)
 
 - **Core types**: Agent, Squad, Task, Message, Result
-- **Orchestrator**: Runs tasks, routes messages, manages state
+- **AgentX Runtime**: The platform layer that runs tasks, routes messages, and manages state (the "Orchestrator").
 - **Tool interface**: A constrained way for agents to interact with the outside world
 - **Prompt management**: Storage, versioning, and composition of prompts
 - **Provider adapters**: Model/API adapters (if applicable) (**TODO**)
@@ -57,7 +57,10 @@ Orchestration MUST be explicit and inspectable:
 
 All agent interactions MUST follow [`docs/agent-contract.md`](agent-contract.md). Canonical workflows are defined in [`docs/flows.md`](flows.md).
 
-### Orchestration overview
+The **AgentX** platform handles the binding between abstract agents and the specific runtime execution.
+
+### AgentX Orchestration overview
+
 
 Orchestration integrates the full agent set and makes participation explicit:
 

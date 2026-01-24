@@ -184,20 +184,33 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
 
   const resultPath = path.join(outputsDir, "result.json");
   /** @type {AgentStatus} */
-  const status = "done";
+  let status: AgentStatus = "done";
+  const overrideForGate = readOverride(runId, stepId);
+  const gateOverrideMissing = agentName === "human_gate" && !overrideForGate;
+  if (agentName === "human_gate" && gateOverrideMissing) {
+    status = "blocked";
+  }
   /** @type {AgentResult} */
   const result = {
     agent: agentName,
     run_id: runId,
     status,
     created_at_utc: createdAtUtc,
-    summary,
+    summary: gateOverrideMissing ? "Awaiting human override for human_gate" : summary,
     mode,
   };
   writeJsonFile(resultPath, result);
 
   const notesPath = path.join(outputsDir, "notes.md");
-  const notes = buildNotes({
+  const gateNote = gateOverrideMissing
+    ? [
+      `Agent "${agentName}" is blocked until override.json is provided.`,
+      "",
+      `Create: outputs/${agentName}/override.json`,
+      `Inspect prompt: steps/${stepId}/human_prompt.md`,
+    ].join("\n")
+    : null;
+  const notes = gateNote ?? buildNotes({
     agentName,
     runId,
     createdAtUtc,
@@ -394,6 +407,9 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   const strictness = determineStrictness(gatingPolicy, { pipeline_id: pipelineId, agent_name: agentName, step_id: stepId });
   const gateOutcome = evaluateStepGates(finalStepResult, strictness);
   const missingInputs = detectMissingInputs(runDir, finalStepResult.inputs);
+  if (agentName === "human_gate" && gateOverrideMissing) {
+    missingInputs.push(path.join("outputs", agentName, "override.json"));
+  }
   const baseDecision = buildDecision({
     runId,
     stepId,

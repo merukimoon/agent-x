@@ -9,8 +9,8 @@ const { fail } = Legacy;
 
 /** @type {Record<StepStatus, Set<StepStatus>>} */
 const ALLOWED_TRANSITIONS = {
-  pending: new Set(["running", "skipped"]),
-  running: new Set(["done", "failed"]),
+  pending: new Set(["running", "skipped", "failed"]),
+  running: new Set(["done", "failed", "pending"]),
   done: new Set(),
   failed: new Set(["pending", "skipped"]),
   skipped: new Set(),

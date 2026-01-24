@@ -29,6 +29,11 @@ export function detectGate(runDir: string): GateInfo | null {
     if (!blocked) return null;
 
     const stepId = blocked.step_id;
+    const overrideOutputs = path.join(runDir, "outputs", blocked.agent_name ?? stepId, "override.json");
+    const overrideStep = path.join(runDir, "steps", stepId, "override.json");
+    if (fs.existsSync(overrideOutputs) || fs.existsSync(overrideStep)) {
+        return null;
+    }
     const stepDir = path.join(runDir, "steps", stepId);
     const humanPrompt = path.join(stepDir, "human_prompt.md");
     const decisionAfter = path.join(stepDir, "decision_after_step.json");

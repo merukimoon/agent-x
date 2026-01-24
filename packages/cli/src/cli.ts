@@ -24,6 +24,7 @@ import {
 import { buildStatusView } from "./status_view.ts";
 import { renderStatusView } from "./status_render.ts";
 import { detectGate } from "./gate_check.ts";
+import { readJson } from "./step_persistence.ts";
 
 import {
   runAgent,
@@ -603,19 +604,39 @@ export function runFlow(runId, mode) {
 
       try {
         runAgent(step.agent, runId, mode);
-        applyStatusTransition(
-          plan,
-          step.id,
-          "done",
-          planPathFinal,
-          (s) => {
-            s.last_error = null;
-          }
-        );
-        plan = loadPlan(planPathFinal, runId);
+        const effectiveDecisionPath = path.join(runDir, "steps", step.id, "effective_decision.json");
+        const effectiveDecision = readJson<{ decision?: { action?: string; reason?: string } }>(effectiveDecisionPath);
+        const gateActions = new Set(["require_human", "request_clarification", "requires_human"]);
+        if (effectiveDecision && gateActions.has(effectiveDecision.decision?.action ?? "")) {
+          applyStatusTransition(
+            plan,
+            step.id,
+            "pending",
+            planPathFinal,
+            (s) => {
+              s.last_error = effectiveDecision.decision?.reason ?? "gated";
+            }
+          );
+          fail("Run is gated; resolve human/clarification requirements and rerun.", { exitCode: 2 });
+        } else {
+          applyStatusTransition(
+            plan,
+            step.id,
+            "done",
+            planPathFinal,
+            (s) => {
+              s.last_error = null;
+            }
+          );
+          plan = loadPlan(planPathFinal, runId);
+        }
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         const truncated = reason.replace(/\s+/g, " ").slice(0, 200);
+        const gateExit = (error && typeof (error as any).exitCode === "number") ? (error as any).exitCode : null;
+        if (gateExit === 2) {
+          throw error;
+        }
         applyStatusTransition(
           plan,
           step.id,
@@ -645,11 +666,12 @@ export function runFlow(runId, mode) {
     writeFlowSummary(runDir, planForSummary, metaDone);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const exitCode = (error && typeof (error as any).exitCode === "number") ? (error as any).exitCode : 1;
     updateRunMetadata(runDir, {
       status: "failed",
       finished_at_utc: new Date().toISOString(),
       flow: resolvedFlowType || "flow",
-      exit_code: 1,
+      exit_code: exitCode,
       error: message,
     });
     const metaFailed = readRunJson(runDir);

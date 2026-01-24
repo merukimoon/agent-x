@@ -37,17 +37,23 @@ export function evaluateStepGates(stepResult: StepResult, strictness: Strictness
 }
 
 export function readOverride(runId: string, stepId: string): StepOverride | null {
-    const overridePath = path.join(getStepDir(runId, stepId), "override.json");
-    if (!fs.existsSync(overridePath) || !fs.statSync(overridePath).isFile()) return null;
-    try {
-        const raw = fs.readFileSync(overridePath, "utf8");
-        const parsed = JSON.parse(raw) as StepOverride;
-        if (parsed.schema_version !== "step-override.v1") return null;
-        if (parsed.run_id !== runId || parsed.step_id !== stepId) return null;
-        return parsed;
-    } catch {
-        return null;
+    const candidates = [
+        path.join(getStepDir(runId, stepId), "override.json"),
+        path.join(process.cwd(), "runs", runId, "outputs", stepId, "override.json"),
+    ];
+    for (const overridePath of candidates) {
+        if (!fs.existsSync(overridePath) || !fs.statSync(overridePath).isFile()) continue;
+        try {
+            const raw = fs.readFileSync(overridePath, "utf8");
+            const parsed = JSON.parse(raw) as StepOverride;
+            if (parsed.schema_version !== "step-override.v1") continue;
+            if (parsed.run_id !== runId || parsed.step_id !== stepId) continue;
+            return parsed;
+        } catch {
+            continue;
+        }
     }
+    return null;
 }
 
 export function applyOverride(params: {

@@ -1,4 +1,4 @@
-# Orchestration Flows (Canonical)
+# AgentX Orchestration Flows (Canonical)
 
 This document defines canonical, repeatable orchestration flows for the initial agent set:
 
@@ -17,7 +17,7 @@ This document defines canonical, repeatable orchestration flows for the initial 
 
 All agent-to-agent interaction MUST conform to the Agent Contract: [`docs/agent-contract.md`](agent-contract.md).
 
-## Orchestration rules and invariants
+## AgentX Orchestration rules and invariants
 
 These rules apply to all flows in this document.
 
@@ -120,7 +120,7 @@ The final summary should capture: outcome, key decisions, artifacts produced, an
 
 ## Flow A: Documentation or PR completion
 
-This flow is the canonical Orchestration definition for documentation or PR completion. It supersedes the earlier minimal flow by making quality, security, and legal checks explicit gates. For a full example run, see `docs/run-examples/pr-completion/README.md`.
+This flow is the canonical **AgentX Orchestration** definition for documentation or PR completion. It supersedes the earlier minimal flow by making quality, security, and legal checks explicit gates. For a full example run, see `docs/run-examples/pr-completion/README.md`.
 
 Purpose: gate documentation and PR outcomes behind documentation review, QA gates, security review, legal compliance review, and explicit approval when tradeoffs exist.
 

@@ -34,8 +34,20 @@ These terms describe the intended shape of the project; adjust as the codebase e
 - **Squad**: A collection of agents coordinated to complete a task.
 - **Task**: A bounded unit of work with inputs, constraints, and expected outputs.
 
-- **Orchestrator/Runner**: The control layer that schedules tasks, routes messages, and manages state (not an agent).
+- **AgentX Runtime**: The conceptual platform execution engine that schedules tasks, routes messages, and manages state (formerly "Orchestrator").
 - **Prompt**: Versioned instructions/templates used by agents.
+
+## AgentX Platform
+
+**AgentX** is the conceptual execution platform that defines how agentic systems operate within the framework. While **Agentic Squad Framework** names the overall project and repository, **AgentX** describes the runtime and execution model.
+
+It encompasses:
+- **AgentX Runtime**: The deterministic engine that drives flows and typically serves as the "Coordinator".
+- **AgentX Verification Model**: The fail-closed safety system ensuring policy compliance (Exit 12).
+- **AgentX Gates**: Explicit checkpoints for **human-in-the-loop** approval and **policy gates**.
+- **AgentX Execution Semantics**: The rules encoding deterministic execution, atomic artifact generation, and explicit overrides.
+
+AgentX is the layer that makes the "Squad" behave reliably, ensuring no "ghost actions" occur outside the plan.
 
 ## Platform support
 
