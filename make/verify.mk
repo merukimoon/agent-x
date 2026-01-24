@@ -22,6 +22,7 @@ verify:
 $(call register_target,validate-run,VERIFY,Validate run artifacts contract (requires RUN=<RUN>).,make validate-run RUN=<RUN>)
 $(call register_target,verify-run,VERIFY,Alias for validate-run.,make verify-run RUN=<RUN>)
 $(call register_target,verify-flows,VERIFY,Feature-level end-to-end flow verification (includes gated pause/resume).,make verify-flows)
+$(call register_target,verify-plan-e2e,VERIFY,Planner-focused end-to-end verification (forces planner LLM invocation).,make verify-plan-e2e GOAL=\"...\" CONTEXT=\"...\" [RUN=<run-id>])
 .PHONY: validate-run
 validate-run:
 	@set -eu; \
@@ -59,3 +60,9 @@ verify-flows:
 	$(MAKE) orchestrator-gated-resume RUN="$$RUN3" DRY=0; \
 	$(MAKE) validate-run RUN="$$RUN3"; \
 	echo "verify-flows complete. Runs: $$RUN1 $$RUN2 $$RUN3"
+
+.PHONY: verify-plan-e2e
+verify-plan-e2e:
+	@set -eu; \
+	if [ -z "${GOAL}" ] || [ -z "${CONTEXT}" ]; then echo "GOAL and CONTEXT are required. Usage: make verify-plan-e2e GOAL=\"...\" CONTEXT=\"...\" [RUN=<run-id>]"; exit 1; fi; \
+	$(MAKE) e2e-plan-flow GOAL="${GOAL}" CONTEXT="${CONTEXT}" RUN="${RUN}"

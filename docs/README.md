@@ -23,6 +23,7 @@ Start here if you’re new to the project.
 - Orchestrator validation: `make orchestrator-validate GOAL="..." [MODE=planner|planner-architect]` (default mode is planner-architect; runs orchestrator then verify-run)
 - Gated flow demo: `make orchestrator-gated-demo GOAL="..." [CONTEXT="..."]` (pauses with exit code 2, writes override.json, resumes, validates)
 - Verify Flows: `make verify-flows` (feature-level end-to-end flow verification; gated pause/resume included)
+- Planner end-to-end flow (forces LLM planner and full gates): `make e2e-plan-flow GOAL="..." CONTEXT="..."`
 
 Windows note: if `npm run test` fails due to temp directory permissions, run `TMPDIR=/tmp npm run test`.
 
