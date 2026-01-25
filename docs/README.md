@@ -2,6 +2,8 @@
 
 Start here if you’re new to the project.
 
+Package manager: pnpm (pinned via Corepack). Make targets are contributor convenience only; the supported surface is the CLI (`pnpm run dev ...`). See `docs/adr/ADR-003-package-manager-and-contracts.md` for the canonical decision.
+
 ## What to read
 
 - [`docs/concepts.md`](concepts.md) Terminology and mental model
@@ -20,6 +22,7 @@ Start here if you’re new to the project.
 - [`docs/architecture.md`](architecture.md) High-level structure (as implemented) (**TODO**)
 - [`docs/flows.md`](flows.md) Orchestration flows (canonical workflows)
 - [`docs/golden-path-v0.md`](golden-path-v0.md) Golden Path v0 (single end-to-end reference run)
+- [`docs/adr/ADR-003-package-manager-and-contracts.md`](adr/ADR-003-package-manager-and-contracts.md) pnpm adoption, Make scope (dev-only), contracts package canonicalization
 - [`docs/agents.md`](agents.md) Agent roles, responsibilities, and interfaces (**TODO**)
 - [`docs/prompting.md`](prompting.md) Writing and managing prompts
 - [`docs/examples.md`](examples.md) Usage examples (currently pseudo-code)
@@ -33,13 +36,13 @@ Start here if you’re new to the project.
 - Quick verification: `make verify-fast`
 - Full verification: `make verify`
 - Product wiring verification: `make verify-flow`
-- Run artifacts contract check: `make validate-run RUN=<RUN>` (alias: `make verify-run RUN=<RUN>` or `npm run verify-run -- --run <RUN>`)
+- Run artifacts contract check: `make validate-run RUN=<RUN>` (alias: `make verify-run RUN=<RUN>` or `pnpm run verify-run --run <RUN>`)
 - Orchestrator validation: `make orchestrator-validate GOAL="..." [MODE=planner|planner-architect]` (default mode is planner-architect; runs orchestrator then verify-run)
 - Gated flow demo: `make orchestrator-gated-demo GOAL="..." [CONTEXT="..."]` (pauses with exit code 2, writes override.json, resumes, validates)
 - Verify Flows: `make verify-flows` (feature-level end-to-end flow verification; gated pause/resume included)
 - Planner end-to-end flow (forces LLM planner and full gates): `make e2e-plan-flow GOAL="..." CONTEXT="..."`
 
-Windows note: if `npm run test` fails due to temp directory permissions, run `TMPDIR=/tmp npm run test`.
+Windows note: if `pnpm run test` fails due to temp directory permissions, run `TMPDIR=/tmp pnpm run test`.
 
 ## Make targets
 

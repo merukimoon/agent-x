@@ -5,7 +5,7 @@ This example demonstrates running the **Planner agent** in isolation using the c
 
 ## Prerequisites
 - **Node.js**: v18 or higher.
-- **Dependencies**: Run `npm install` in the repo root.
+- **Dependencies**: Run `pnpm install --frozen-lockfile` in the repo root.
 - **Environment**: A `.env` file in the repo root with a valid LLM configuration.
 
 ## Required Environment Variables
@@ -31,7 +31,7 @@ make planner \
   RUN="$RUN"
 
 # OR: manually edit runs/$RUN/inputs/request.md and context.md, then run CLI directly
-npm run dev -- planner --run "$RUN"
+pnpm run dev planner --run "$RUN"
 ```
 
 ## Output Artifacts

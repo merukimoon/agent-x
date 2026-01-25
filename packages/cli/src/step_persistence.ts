@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { DecisionAfterStep, ExecutionStatus, ModelRef, StepResult } from "../../core/src/contracts/step.ts";
+import type { DecisionAfterStep, ExecutionStatus, ModelRef, StepResult } from "../../contracts/src/index.ts";
 import { getDecisionPath, getStepDir, getStepResultPath, getStepsIndexPath } from "../../core/src/paths/steps.ts";
 
 export function ensureDir(dirPath: string) {

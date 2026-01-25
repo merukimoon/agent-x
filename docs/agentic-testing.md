@@ -7,7 +7,7 @@ Golden snapshots lock the current behavior of `scripts/agentic.js` so refactors 
 ## How to regenerate goldens
 
 ```
-npm run test:golden
+pnpm run test:golden
 ```
 
 This copies a minimal fixture into a temp folder, runs each CLI command, normalizes output (paths, temp dirs, ISO timestamps), and writes golden stdout/stderr/exit-code files under `tests/agentic/golden/` along with `manifest.json`.
@@ -23,15 +23,15 @@ Generation resolves paths from the repo root via `import.meta.url`, so it is ind
 ## How to add a new CLI snapshot
 
 1. Update `tests/agentic/generate-golden.js` to include the new command and any required plan mutation.
-2. Run `npm run test:golden` to regenerate snapshots.
-3. Run `npm test` to confirm snapshots match.
+2. Run `pnpm run test:golden` to regenerate snapshots.
+3. Run `pnpm run test` to confirm snapshots match.
 
 ## Running tests
 
 ```
-npm test
+pnpm run test
 ```
 
 Uses `node:test` to compare normalized CLI output against goldens. A fresh temp copy of the fixture is used per test for isolation.
 
-If goldens are missing, tests are skipped with a hint to run `npm run test:golden`. To auto-generate during `npm test`, set `AGENTIC_AUTOGEN_GOLDENS=1` (this will update files under `tests/agentic/golden/`).
+If goldens are missing, tests are skipped with a hint to run `pnpm run test:golden`. To auto-generate during `pnpm run test`, set `AGENTIC_AUTOGEN_GOLDENS=1` (this will update files under `tests/agentic/golden/`).

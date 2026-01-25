@@ -6,8 +6,8 @@ $(call register_target,verify-fast,VERIFY,Quick verification (typecheck + verify
 verify-fast:
 	@set -eu; \
 	echo "Running verify-fast (typecheck, verify-esm)..."; \
-	npm run typecheck; \
-	npm run verify:esm
+	pnpm run typecheck; \
+	pnpm run verify:esm
 
 $(call register_target,verify,VERIFY,Full verification (verify-fast + tests).,make verify)
 .PHONY: verify
@@ -17,7 +17,7 @@ verify:
 	echo "Running tests..."; \
 	TMPDIR_RESOLVED="$${TMPDIR:-/tmp}"; \
 	mkdir -p "$$TMPDIR_RESOLVED"; \
-	TMPDIR="$$TMPDIR_RESOLVED" npm run test; \
+	TMPDIR="$$TMPDIR_RESOLVED" pnpm run test; \
 
 $(call register_target,validate-run,VERIFY,Validate run artifacts contract (requires RUN=<run-id>).,make validate-run RUN=<run-id>)
 $(call register_target,verify-run,VERIFY,Alias for validate-run.,make verify-run RUN=<run-id>)
@@ -28,7 +28,7 @@ validate-run:
 	@set -eu; \
 	if [ -z "${RUN}" ]; then echo "RUN is required. Usage: make validate-run RUN=<run-id>"; exit 1; fi; \
 	echo "Validating run ${RUN}..."; \
-	npm run verify-run -- --run "${RUN}"
+	pnpm run verify-run --run "${RUN}"
 
 .PHONY: verify-run
 verify-run: validate-run

@@ -22,7 +22,7 @@ export type StepsIndexEntry = {
     agent_name: string;
     status: "ok" | "failed" | "blocked";
     decision_action: "continue" | "halt" | "require_human" | "request_clarification";
-    model?: import("../contracts/step.ts").ModelRef;
+    model?: import("../../../contracts/src/index.ts").ModelRef;
     duration_ms?: number;
 };
 

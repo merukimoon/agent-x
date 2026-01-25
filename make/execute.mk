@@ -42,10 +42,10 @@ orchestrator-validate:
 	if command -v sha256sum >/dev/null 2>&1; then HASH_CMD="sha256sum"; else HASH_CMD="shasum -a 256"; fi; \
 	HASH_BEFORE="$$( $$HASH_CMD "$$RUN_JSON" | awk '{print $$1}' )"; \
 	cat "$$RUN_JSON"; \
-	npm run dev -- status --run "$$RUN_ID"; \
+	pnpm run dev status --run "$$RUN_ID"; \
 	HASH_AFTER="$$( $$HASH_CMD "$$RUN_JSON" | awk '{print $$1}' )"; \
 	if [ "$$HASH_BEFORE" != "$$HASH_AFTER" ]; then echo "run.json changed after status"; exit 1; fi; \
-	npm run verify-run -- --run "$$RUN_ID"; \
+	pnpm run verify-run --run "$$RUN_ID"; \
 	echo "orchestrator-validate OK for $$RUN_ID"
 
 .PHONY: orchestrator-gated-validate
@@ -107,17 +107,17 @@ e2e-plan-flow:
 	printf "%s\n" "${CONTEXT}" >"$$RUN_DIR/inputs/context.md"; \
 	rm -f "$$RUN_DIR/plan.json" "$$RUN_DIR/outputs/planner/notes.md" "$$RUN_DIR/outputs/planner/result.json" "$$RUN_DIR/outputs/planner/status.json"; \
 	echo "Running planner for $$RUN_ID (forces LLM invocation)..."; \
-	npm run dev -- planner --run "$$RUN_ID"; \
+	pnpm run dev planner --run "$$RUN_ID"; \
 	if [ ! -f "$$RUN_DIR/outputs/planner/result.json" ]; then echo "planner result missing; planner did not run"; exit 1; fi; \
 	echo "Writing minimal plan and summary for $$RUN_ID..."; \
 	node -e 'const fs=require("fs");const path=require("path");const runDir=process.argv[1];const runId=process.argv[2];const now=new Date().toISOString();const plan={run_id:runId,created_at_utc:now,version:"0.1",flow_type:"planner-only",rationale:"planner e2e",signals:[],confidence:"low",steps:[{id:"planner",agent:"planner",depends_on:[],inputs:{request:"inputs/request.md",context:"inputs/context.md",prior_outputs:[]},outputs:{result:"outputs/planner/result.json",notes:"outputs/planner/notes.md",status:"outputs/planner/status.json"},status:"done",attempt:0,max_attempts:1,last_error:null,allow_skip:true}]};fs.mkdirSync(path.join(runDir,"summary"),{recursive:true});fs.writeFileSync(path.join(runDir,"plan.json"),JSON.stringify(plan,null,2));const summary="# Run summary\n\n- Run: "+runId+"\n- Flow: planner-only\n- Status: done\n- Created: "+now+"\n\n## Steps\n- planner (planner): done\n\n## Key artifacts\n- run.json\n- plan.json\n- planner: result=outputs/planner/result.json notes=outputs/planner/notes.md status=outputs/planner/status.json\n";fs.writeFileSync(path.join(runDir,"summary","final.md"),summary);const runPath=path.join(runDir,"run.json");let runJson={id:runId,run_id:runId,flow:"planner-only",status:"done",created_at_utc:now,started_at_utc:now,finished_at_utc:now,exit_code:0,error:null};if(fs.existsSync(runPath)){try{const current=JSON.parse(fs.readFileSync(runPath,"utf8"));runJson={...current,id:current.id||runId,run_id:current.run_id||runId,flow:"planner-only",status:"done",finished_at_utc:now,exit_code:0,error:null};}catch{}}fs.writeFileSync(runPath,JSON.stringify(runJson,null,2));' "$$RUN_DIR" "$$RUN_ID"; \
 	echo "Running verification gates..."; \
-	npm run typecheck; \
-	npm run verify:esm; \
-	TMPDIR_RESOLVED="$${TMPDIR:-/tmp}"; mkdir -p "$$TMPDIR_RESOLVED"; TMPDIR="$$TMPDIR_RESOLVED" npm run test; \
+	pnpm run typecheck; \
+	pnpm run verify:esm; \
+	TMPDIR_RESOLVED="$${TMPDIR:-/tmp}"; mkdir -p "$$TMPDIR_RESOLVED"; TMPDIR="$$TMPDIR_RESOLVED" pnpm run test; \
 	$(MAKE) verify-flow; \
 	$(MAKE) validate-run RUN="$$RUN_ID"; \
 	$(MAKE) orchestrator-validate GOAL="verify" CONTEXT="verify"; \
 	$(MAKE) validate-run RUN="$$RUN_ID"; \
-	npm run verify-run -- --run "$$RUN_ID"; \
+	pnpm run verify-run --run "$$RUN_ID"; \
 	echo "e2e-plan-flow OK. RUN=$$RUN_ID"

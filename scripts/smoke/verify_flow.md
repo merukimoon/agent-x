@@ -99,7 +99,7 @@ Two input files are written:
 Command executed:
 
 ```
-npm run dev -- planner --run <RUN>
+pnpm run dev planner --run <RUN>
 ```
 
 **What this validates**
@@ -134,7 +134,7 @@ The flow explicitly checks that planner outputs exist.
 Command executed:
 
 ```
-npm run dev -- status --run <RUN>
+pnpm run dev status --run <RUN>
 ```
 
 **What this validates**
@@ -154,7 +154,7 @@ npm run dev -- status --run <RUN>
 Command executed:
 
 ```
-npm run dev -- agent coordinator --run <RUN> --dry-run
+pnpm run dev agent coordinator --run <RUN> --dry-run
 ```
 
 **What this validates**
@@ -172,7 +172,7 @@ npm run dev -- agent coordinator --run <RUN> --dry-run
 Command executed:
 
 ```
-npm run dev -- flow --run <RUN> --dry-run
+pnpm run dev flow --run <RUN> --dry-run
 ```
 
 **What this validates**

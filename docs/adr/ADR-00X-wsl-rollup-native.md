@@ -12,7 +12,7 @@ Observed error:
 ## Decision
 Add `@rollup/rollup-linux-x64-gnu@4.55.1` to `devDependencies` to ensure the Linux Rollup binary is available when running under WSL/Linux.
 
-No changes are required to test code or npm scripts (they already use `vitest`).
+No changes are required to test code or package scripts (they already use `vitest`).
 
 ## Consequences
 ### Positive
