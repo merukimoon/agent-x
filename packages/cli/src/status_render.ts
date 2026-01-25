@@ -6,7 +6,13 @@ export function renderStatusView(view: NormalizedStatus, lockStatus: string | nu
     lines.push(`Steps: ${view.steps.length}`);
     if (lockStatus) lines.push(lockStatus);
     const blocked = view.current_state.is_blocked;
-    lines.push(`State: ${blocked ? "BLOCKED" : "OK"}`);
+    lines.push(`Overall: ${view.overall.toUpperCase()}`);
+    lines.push(`Artifacts: ${view.artifacts_valid ? "VALID" : "INVALID"}`);
+    lines.push(`Blocking: ${blocked ? "BLOCKED" : "UNBLOCKED"}`);
+    if (view.errors.length) {
+        lines.push("Errors:");
+        view.errors.forEach((e) => lines.push(`- ${e}`));
+    }
     if (blocked) {
         lines.push(`Blocked step: ${view.current_state.blocked_step_id ?? "-"}`);
         lines.push(`Reason: ${view.current_state.blocked_reason ?? "-"}`);

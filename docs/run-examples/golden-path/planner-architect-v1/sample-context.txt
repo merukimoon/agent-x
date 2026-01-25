@@ -1,5 +1,5 @@
 Repository Context:
-- Framework: Agentic Squad Framework (agent orchestration system)
+- Framework: AgenticX (agent orchestration system)
 - Current structure: Agents produce artifacts (plans, reviews, decisions)
 - Key constraint: Thinking-only flows must have no side effects
 - Existing components: Planner agent, Architect agent, Orchestrator layer

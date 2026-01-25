@@ -26,8 +26,8 @@ RUN="2026-01-23_1234-planner-only-v2"
 
 # 2) Use the Make convenience target (writes inputs and runs planner)
 make planner \
-  GOAL="$(cat examples/golden-path/planner-only-v1/sample-goal.txt)" \
-  CONTEXT="$(cat examples/golden-path/planner-only-v1/sample-context.txt)" \
+  GOAL="$(cat docs/run-examples/golden-path/planner-only-v1/sample-goal.txt)" \
+  CONTEXT="$(cat docs/run-examples/golden-path/planner-only-v1/sample-context.txt)" \
   RUN="$RUN"
 
 # OR: manually edit runs/$RUN/inputs/request.md and context.md, then run CLI directly

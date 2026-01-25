@@ -138,4 +138,4 @@ Engine should validate at minimum:
 ## Files (Expected)
 - `/docs/concepts/llm-coordinator-v1.md` (this document)
 - `/prompts/canonical/llm-coordinator-v1-planner.prompt.md` (canonical prompt + full JSON schema)
-- `/examples/golden-path/coordinator-planner-only.md` (one minimal example)
+- `/docs/run-examples/golden-path/coordinator-planner-only.md` (one minimal example)

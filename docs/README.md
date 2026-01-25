@@ -6,13 +6,27 @@ Start here if you’re new to the project.
 
 - [`docs/concepts.md`](concepts.md) Terminology and mental model
 - [`docs/agent-contract.md`](agent-contract.md) Agent Contract (canonical; stable interface for agents)
+- [`docs/contracts/agent_contract.md`](contracts/agent_contract.md) Canonical agent inputs/outputs contract
+- [`docs/contracts/agent_failure_protocol.md`](contracts/agent_failure_protocol.md) Agent failure protocol
+- [`docs/contracts/run_artifacts.md`](contracts/run_artifacts.md) Required run artifacts contract
+- [`docs/contracts/run_lifecycle.md`](contracts/run_lifecycle.md) Run lifecycle contract (states, artifacts, verification)
+- [`docs/contracts/rules_model.md`](contracts/rules_model.md) Soft rules vs hard constraints model
+- [`docs/contracts/verification_contract.md`](contracts/verification_contract.md) Verification pipeline and outcomes
+- [`docs/quickstart.md`](quickstart.md) How to run AgenticX v0 (DX quickstart)
+- [`docs/status.md`](status.md) Run status sources and CLI viewer
+- [`docs/agent_extensibility.md`](agent_extensibility.md) How to add a new agent
+- [`docs/release_hygiene.md`](release_hygiene.md) Release hygiene and trust pack
+- [`docs/first_success.md`](first_success.md) Canonical first-success path for new users
 - [`docs/architecture.md`](architecture.md) High-level structure (as implemented) (**TODO**)
 - [`docs/flows.md`](flows.md) Orchestration flows (canonical workflows)
+- [`docs/golden-path-v0.md`](golden-path-v0.md) Golden Path v0 (single end-to-end reference run)
 - [`docs/agents.md`](agents.md) Agent roles, responsibilities, and interfaces (**TODO**)
 - [`docs/prompting.md`](prompting.md) Writing and managing prompts
 - [`docs/examples.md`](examples.md) Usage examples (currently pseudo-code)
+- [`docs/run-examples/README.md`](run-examples/README.md) Canonical runnable examples
 - [`docs/versioning.md`](versioning.md) Versioning and compatibility policy (**TODO**)
 - [`docs/roadmap.md`](roadmap.md) Near-term project direction (**TODO**)
+- [`docs/project-status/README.md`](project-status/README.md) Canonical project status, backlog, and decisions
 
 ## Verification commands (canonical)
 

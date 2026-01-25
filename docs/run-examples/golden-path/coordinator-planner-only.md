@@ -16,14 +16,14 @@ We want to add a new concept doc and canonical prompt for LLM Coordinator v1, wi
     - "list_repo_tree"
     - "suggest_commit"
 - context:
-  - repo uses /docs, /prompts/canonical, /examples/golden-path
+  - repo uses /docs, /prompts/canonical, /docs/run-examples/golden-path
 
 ## Expected Planner Output (shape)
 - needs_clarification: false
 - plan steps:
   1) create_file /docs/concepts/llm-coordinator-v1.md
   2) create_file /prompts/canonical/llm-coordinator-v1-planner.prompt.md
-  3) create_file /examples/golden-path/coordinator-planner-only.md
+  3) create_file /docs/run-examples/golden-path/coordinator-planner-only.md
   4) suggest_commit with message and file list
 
 ## Reference Planner Output (JSON)
@@ -33,7 +33,7 @@ We want to add a new concept doc and canonical prompt for LLM Coordinator v1, wi
   "assumptions": [
     {
       "id": "A1",
-      "text": "The repository uses /docs, /prompts/canonical, and /examples/golden-path as the canonical locations for documentation and prompts.",
+      "text": "The repository uses /docs, /prompts/canonical, and /docs/run-examples/golden-path as the canonical locations for documentation and prompts.",
       "confidence": "high"
     }
   ],
@@ -81,18 +81,18 @@ We want to add a new concept doc and canonical prompt for LLM Coordinator v1, wi
       "title": "Update golden path example to include a reference JSON planner output",
       "action_type": "update_file",
       "inputs": {
-        "path": "examples/golden-path/coordinator-planner-only.md",
+        "path": "docs/run-examples/golden-path/coordinator-planner-only.md",
         "instruction": "Add a new section titled 'Reference Planner Output (JSON)' containing a single valid JSON example with 2-3 steps, explicit verification per step, and needs_clarification=false."
       },
       "expected_output": "The golden path doc includes a concrete JSON example suitable for deterministic engine validation.",
       "verification": [
         {
-          "method": "Read examples/golden-path/coordinator-planner-only.md and confirm the new section exists and the JSON parses.",
+          "method": "Read docs/run-examples/golden-path/coordinator-planner-only.md and confirm the new section exists and the JSON parses.",
           "success_criteria": "The doc contains a 'Reference Planner Output (JSON)' section with a JSON block that is valid JSON."
         }
       ],
       "risk": "low",
-      "rollback": "Revert the changes to examples/golden-path/coordinator-planner-only.md."
+      "rollback": "Revert the changes to docs/run-examples/golden-path/coordinator-planner-only.md."
     }
   ]
 }

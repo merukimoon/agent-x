@@ -33,7 +33,6 @@ import {
   getCanonicalOutputs,
   validateCanonicalOutputs,
 } from "./agents.ts";
-
 import type {
   AgentName,
   AgentStatus,
@@ -317,14 +316,17 @@ function validatePlanDependenciesStrict(plan) {
 export function verifyRun(runDir) {
   /** @type {string[]} */
   const errors = [];
+  const rel = (p) => path.relative(runDir, p).split(path.sep).join("/");
 
   const runPath = path.join(runDir, "run.json");
   const planPath = path.join(runDir, "plan.json");
   const summaryPath = path.join(runDir, "summary", "final.md");
+  const requestPath = path.join(runDir, "inputs", "request.md");
+  const contextPath = path.join(runDir, "inputs", "context.md");
 
   const requireFile = (p, code) => {
     if (!fs.existsSync(p) || !fs.statSync(p).isFile()) {
-      errors.push(`${code} ${p}`);
+      errors.push(`${code} ${rel(p)}`);
       return false;
     }
     return true;
@@ -333,6 +335,8 @@ export function verifyRun(runDir) {
   const runOk = requireFile(runPath, "MISSING_FILE");
   const planOk = requireFile(planPath, "MISSING_FILE");
   const summaryOk = requireFile(summaryPath, "MISSING_FILE");
+  const requestOk = requireFile(requestPath, "MISSING_FILE");
+  const contextOk = requireFile(contextPath, "MISSING_FILE");
 
   /** @type {any} */
   let runJson = null;
@@ -371,6 +375,8 @@ export function verifyRun(runDir) {
 
   /** @type {{ steps: any[] } | null} */
   let plan = null;
+  const stepsIndexPath = path.join(runDir, "steps", "index.json");
+
   if (planOk) {
     try {
       plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
@@ -382,6 +388,9 @@ export function verifyRun(runDir) {
   if (plan && Array.isArray(plan.steps)) {
     const ids = plan.steps.map((s) => s.id).filter(Boolean);
     const uniqueIds = new Set(ids);
+    if (plan.steps.length > 0) {
+      requireFile(stepsIndexPath, "MISSING_FILE");
+    }
     if (uniqueIds.size !== ids.length) {
       errors.push("INVALID_PLAN duplicate step ids");
     }
@@ -430,10 +439,10 @@ export function verifyRun(runDir) {
         errors.push(`MISSING_DIR outputs/${step.agent}`);
         return;
       }
-      ["notes.md", "result.json", "status.json"].forEach((fname) => {
+      ["notes.md", "result.json"].forEach((fname) => {
         const p = path.join(stepDir, fname);
         if (!fs.existsSync(p) || !fs.statSync(p).isFile()) {
-          errors.push(`MISSING_ARTIFACT ${path.relative(runDir, p)}`);
+          errors.push(`MISSING_ARTIFACT ${rel(p)}`);
         }
       });
       const statusPath = path.join(stepDir, "status.json");
@@ -451,15 +460,19 @@ export function verifyRun(runDir) {
             errors.push(`STATUS_MISMATCH ${step.id} plan=${step.status} artifact=${st}`);
           }
         } catch {
-          errors.push(`INVALID_JSON ${statusPath}`);
+          errors.push(`INVALID_JSON ${rel(statusPath)}`);
         }
       }
-      if (step.status === "failed") {
-        const stderrPath = path.join(stepDir, "stderr.txt");
-        if (!fs.existsSync(stderrPath) || !fs.statSync(stderrPath).isFile()) {
-          errors.push(`MISSING_ARTIFACT ${path.relative(runDir, stderrPath)}`);
+
+      const stepFolder = path.join(runDir, "steps", step.id);
+      ["decision_after_step.json", "effective_decision.json", "step_result.json"].forEach(
+        (fname) => {
+          const p = path.join(stepFolder, fname);
+          if (!fs.existsSync(p) || !fs.statSync(p).isFile()) {
+            errors.push(`MISSING_STEP_ARTIFACT ${rel(p)}`);
+          }
         }
-      }
+      );
     });
   }
 
