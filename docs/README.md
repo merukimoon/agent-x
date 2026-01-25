@@ -13,6 +13,7 @@ Start here if you’re new to the project.
 - [`docs/examples.md`](examples.md) Usage examples (currently pseudo-code)
 - [`docs/versioning.md`](versioning.md) Versioning and compatibility policy (**TODO**)
 - [`docs/roadmap.md`](roadmap.md) Near-term project direction (**TODO**)
+- [`docs/project-status/README.md`](project-status/README.md) Canonical project status, backlog, and decisions
 
 ## Verification commands (canonical)
 
