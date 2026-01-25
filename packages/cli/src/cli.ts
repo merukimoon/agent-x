@@ -316,6 +316,7 @@ function validatePlanDependenciesStrict(plan) {
 export function verifyRun(runDir) {
   /** @type {string[]} */
   const errors = [];
+  const rel = (p) => path.relative(runDir, p).split(path.sep).join("/");
 
   const runPath = path.join(runDir, "run.json");
   const planPath = path.join(runDir, "plan.json");
@@ -325,7 +326,7 @@ export function verifyRun(runDir) {
 
   const requireFile = (p, code) => {
     if (!fs.existsSync(p) || !fs.statSync(p).isFile()) {
-      errors.push(`${code} ${p}`);
+      errors.push(`${code} ${rel(p)}`);
       return false;
     }
     return true;
@@ -441,7 +442,7 @@ export function verifyRun(runDir) {
       ["notes.md", "result.json"].forEach((fname) => {
         const p = path.join(stepDir, fname);
         if (!fs.existsSync(p) || !fs.statSync(p).isFile()) {
-          errors.push(`MISSING_ARTIFACT ${path.relative(runDir, p)}`);
+          errors.push(`MISSING_ARTIFACT ${rel(p)}`);
         }
       });
       const statusPath = path.join(stepDir, "status.json");
@@ -459,7 +460,7 @@ export function verifyRun(runDir) {
             errors.push(`STATUS_MISMATCH ${step.id} plan=${step.status} artifact=${st}`);
           }
         } catch {
-          errors.push(`INVALID_JSON ${statusPath}`);
+          errors.push(`INVALID_JSON ${rel(statusPath)}`);
         }
       }
 
@@ -468,7 +469,7 @@ export function verifyRun(runDir) {
         (fname) => {
           const p = path.join(stepFolder, fname);
           if (!fs.existsSync(p) || !fs.statSync(p).isFile()) {
-            errors.push(`MISSING_STEP_ARTIFACT ${path.relative(runDir, p)}`);
+            errors.push(`MISSING_STEP_ARTIFACT ${rel(p)}`);
           }
         }
       );
