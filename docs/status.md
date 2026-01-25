@@ -12,7 +12,7 @@
 - `finished_success`: `status=done` and `exit_code=0` in `run.json`.
 - `finished_failure`: `status=failed` or non-zero `exit_code`.
 - `in_progress`: status `running`/`pending`.
-- `invalid`: missing or unreadable core files (e.g., `run.json`).
+- `invalid`: missing or unreadable core files (e.g., `run.json`, `steps/index.json`).
 - `incomplete`: none of the above and artifacts are partial.
 
 ## Per-Step States
@@ -23,7 +23,11 @@
 - Show status for a run:  
   `npm run dev -- status --run <RUN_ID>`
 - If `--run` is omitted, the latest run directory is used.
-- Command exits non-zero only when the run directory is missing/unreadable.
+- Output includes:
+  - `Overall`: lifecycle state
+  - `Artifacts`: `VALID` or `INVALID` based on core files
+  - `Blocking`: `BLOCKED` or `UNBLOCKED`
+- Command exits non-zero only when the run directory is missing/unreadable or status cannot be derived.
 
 ## Non-Goals
 - No mutation of artifacts.

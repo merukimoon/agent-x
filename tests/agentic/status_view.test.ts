@@ -42,9 +42,11 @@ describe("status view", () => {
 
     const view = buildStatusView(runDir);
     expect(view?.overall).toBe("finished_success");
+    expect(view?.artifacts_valid).toBe(true);
     const rendered = renderStatusView(view!, null);
     expect(rendered).toContain("Overall: FINISHED_SUCCESS");
-    expect(rendered).toContain("State: OK");
+    expect(rendered).toContain("Artifacts: VALID");
+    expect(rendered).toContain("Blocking: UNBLOCKED");
   });
 
   it("renders finished_failure and blocked state", () => {
@@ -72,9 +74,10 @@ describe("status view", () => {
 
     const view = buildStatusView(runDir);
     expect(view?.overall).toBe("finished_failure");
+    expect(view?.artifacts_valid).toBe(true);
     const rendered = renderStatusView(view!, null);
     expect(rendered).toContain("Overall: FINISHED_FAILURE");
-    expect(rendered).toContain("State: BLOCKED");
+    expect(rendered).toContain("Blocking: BLOCKED");
   });
 
   it("renders invalid when run.json is missing", () => {
@@ -83,8 +86,10 @@ describe("status view", () => {
     const runDir = scaffoldRun(tmp, runId);
     const view = buildStatusView(runDir);
     expect(view?.overall).toBe("invalid");
+    expect(view?.artifacts_valid).toBe(false);
     const rendered = renderStatusView(view!, null);
     expect(rendered).toContain("Overall: INVALID");
+    expect(rendered).toContain("Artifacts: INVALID");
     expect(rendered).toContain("Errors:");
   });
 });
