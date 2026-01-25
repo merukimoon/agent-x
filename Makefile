@@ -1,21 +1,21 @@
 .ONESHELL:
 
 # agenticX Makefile
-# See Make/help.mk for the help system.
+# See make/help.mk for the help system.
 # Run `make help` to see available targets.
 
 # Define default target
 .DEFAULT_GOAL := help
 
 # Include the Help registry first to ensure macros are available
-include Make/help.mk
+include make/help.mk
 
 # Include Topic modules
-include Make/dev.mk
-include Make/runs.mk
-include Make/agents.mk
-include Make/verify.mk
-include Make/planner.mk
-include Make/execute.mk
+include make/dev.mk
+include make/runs.mk
+include make/agents.mk
+include make/verify.mk
+include make/planner.mk
+include make/execute.mk
 
 # (Any root-only extras can go here, but prefer modules)
