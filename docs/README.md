@@ -8,6 +8,7 @@ Start here if you’re new to the project.
 - [`docs/agent-contract.md`](agent-contract.md) Agent Contract (canonical; stable interface for agents)
 - [`docs/architecture.md`](architecture.md) High-level structure (as implemented) (**TODO**)
 - [`docs/flows.md`](flows.md) Orchestration flows (canonical workflows)
+- [`docs/golden-path-v0.md`](golden-path-v0.md) Golden Path v0 (single end-to-end reference run)
 - [`docs/agents.md`](agents.md) Agent roles, responsibilities, and interfaces (**TODO**)
 - [`docs/prompting.md`](prompting.md) Writing and managing prompts
 - [`docs/examples.md`](examples.md) Usage examples (currently pseudo-code)
