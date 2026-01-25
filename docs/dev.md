@@ -10,10 +10,13 @@ Do not reuse `node_modules` between Windows and WSL/Linux. If you installed depe
 - Run a fresh install per environment:
   - In WSL/Linux: remove `node_modules` and reinstall
     - `rm -rf node_modules`
-    - `npm ci` (preferred) or `npm install`
+    - `pnpm install --frozen-lockfile`
 - We pin the Linux Rollup native package to prevent missing-binary issues:
   - `@rollup/rollup-linux-x64-gnu@4.55.1` is included in `devDependencies`.
 
+#### Automatic version bumps
+On pull requests, the CI pipeline bumps `package.json`'s patch version via Corepack/pnpm before the version-check step, so contributors do not need to update the version manually.
+
 #### Verification
 - `node -p "process.platform"` should print `linux` in WSL
-- `npm test` should pass
+- `pnpm run test` should pass

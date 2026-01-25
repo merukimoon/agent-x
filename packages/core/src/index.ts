@@ -35,7 +35,7 @@ export type {
     ArtifactRef,
     CheckResult,
     ExecutionStatus
-} from "./contracts/step.ts";
+} from "../../contracts/src/index.ts";
 
 // --- Constants ---
 export const PLAN_VERSION = Impl.PLAN_VERSION;

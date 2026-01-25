@@ -15,8 +15,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, "..", "..");
 
-function npmCmd() {
-  return process.platform === "win32" ? "npm.cmd" : "npm";
+function pnpmCmd() {
+  return process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 }
 
 function fail(message: string): never {
@@ -24,8 +24,8 @@ function fail(message: string): never {
   process.exit(1);
 }
 
-function runNpm(args: string[], runId: string, agentName?: string) {
-  const cmd = npmCmd();
+function runPnpm(args: string[], runId: string, agentName?: string) {
+  const cmd = pnpmCmd();
   const printable = `${cmd} ${args.join(" ")}`;
   console.log(`$ ${printable}`);
 
@@ -99,10 +99,10 @@ function parseArgs(argv: string[]) {
 function main() {
   const { runId, step } = parseArgs(process.argv.slice(2));
 
-  const status = () => runNpm(["run", "dev", "--", "status", "--run", runId], runId);
-  const planner = () => runNpm(["run", "dev", "--", "planner", "--run", runId], runId, "planner");
+  const status = () => runPnpm(["run", "dev", "status", "--run", runId], runId);
+  const planner = () => runPnpm(["run", "dev", "planner", "--run", runId], runId, "planner");
   const agent = (name: Exclude<StepName, "status" | "planner" | "all">) =>
-    runNpm(["run", "dev", "--", "agent", name, "--run", runId, "--dry-run"], runId, name);
+    runPnpm(["run", "dev", "agent", name, "--run", runId, "--dry-run"], runId, name);
 
   if (step === "status") return status();
   if (step === "planner") return planner();
@@ -115,7 +115,7 @@ function main() {
   status();
   agent("ciso");
   agent("coordinator");
-  runNpm(["run", "dev", "--", "flow", "--run", runId, "--dry-run"], runId);
+  runPnpm(["run", "dev", "flow", "--run", runId, "--dry-run"], runId);
   status();
 }
 

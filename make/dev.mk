@@ -5,7 +5,7 @@ $(call register_target,typecheck,DEV,Run TypeScript type checking (via tsc).,mak
 .PHONY: typecheck
 typecheck:
 	@echo "Running typecheck..."
-	npm run typecheck
+	$(PNPM) run typecheck
 
 # Alias
 .PHONY: check
@@ -17,15 +17,15 @@ test:
 	@echo "Running tests..."
 	@set -eu; \
 	if [ -n "${TEST_TMPDIR}" ]; then \
-		TMPDIR="${TEST_TMPDIR}" MAKEFLAGS= npm run test; \
+		TMPDIR="${TEST_TMPDIR}" MAKEFLAGS= $(PNPM) run test; \
 	else \
-		MAKEFLAGS= npm run test; \
+		MAKEFLAGS= $(PNPM) run test; \
 	fi
 
 $(call register_target,verify-esm,DEV,Verify ESM compatibility (no require calls).,make verify-esm)
 .PHONY: verify-esm
 verify-esm:
-	npm run verify:esm
+	$(PNPM) run verify:esm
 
 $(call register_target,clean-runs,DEV,Remove old run folders under runs/ (opt-in).,make clean-runs CLEAN_RUNS=1 [RUNS_KEEP=5])
 .PHONY: clean-runs

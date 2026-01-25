@@ -1,4 +1,4 @@
-import type { CheckResult, StepResult } from "../contracts/step.ts";
+import type { CheckResult, StepResult } from "../../../contracts/src/index.ts";
 
 export type Strictness = "soft" | "hard";
 

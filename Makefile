@@ -4,6 +4,13 @@
 # See make/help.mk for the help system.
 # Run `make help` to see available targets.
 
+# Cross-platform Node package runners (bash-friendly, Git Bash on Windows)
+ifeq ($(OS),Windows_NT)
+PNPM ?= pnpm.cmd
+else
+PNPM ?= pnpm
+endif
+
 # Define default target
 .DEFAULT_GOAL := help
 

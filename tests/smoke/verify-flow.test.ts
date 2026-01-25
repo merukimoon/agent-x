@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { describe, expect, it } from "vitest";
 import { normalizeOutput, runCli } from "../agentic/_utils.js";
-import { resolveRunRequest, spawnNpmSync } from "../../scripts/smoke/verify-flow.ts";
+import { resolveRunRequest, spawnPnpmSync } from "../../scripts/smoke/verify-flow.ts";
 import { selectArtifactPath } from "../../packages/cli/src/cli.ts";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -56,9 +56,9 @@ describe("status artifact selection", () => {
   });
 });
 
-describe("spawnNpmSync", () => {
-  it("runs npm -v successfully", () => {
-    const res = spawnNpmSync(["-v"], { cwd: REPO_ROOT, stdio: "pipe" });
+describe("spawnPnpmSync", () => {
+  it("runs pnpm -v successfully", () => {
+    const res = spawnPnpmSync(["-v"], { cwd: REPO_ROOT, stdio: "pipe" });
     if (res.error) {
       const err = res.error as { code?: string };
       expect(err.code ?? "").not.toBe("EINVAL");

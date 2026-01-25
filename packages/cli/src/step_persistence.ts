@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { DecisionAfterStep, ExecutionStatus, ModelRef, StepResult } from "../../core/src/contracts/step.ts";
+import type { DecisionAfterStep, ExecutionStatus, ModelRef, SkipReason, StepResult } from "../../contracts/src/index.ts";
 import { getDecisionPath, getStepDir, getStepResultPath, getStepsIndexPath } from "../../core/src/paths/steps.ts";
 
 export function ensureDir(dirPath: string) {
@@ -101,4 +101,129 @@ export function updateStepsIndex(params: {
         steps: nextSteps,
     };
     writeJsonAtomic(indexPath, nextIndex);
+}
+
+export function writeSkippedStepArtifacts(params: {
+    runId: string;
+    stepId: string;
+    stepIndex: number;
+    agentName: string;
+    reason: SkipReason;
+    outputsDir: string;
+    mode: string;
+}) {
+    const { runId, stepId, stepIndex, agentName, reason, outputsDir, mode } = params;
+    const nowIso = new Date().toISOString();
+    ensureDir(outputsDir);
+    const summaryRef = path.join("outputs", agentName, "notes.md");
+    const resultPath = path.join(outputsDir, "result.json");
+    const notesPath = path.join(outputsDir, "notes.md");
+    const statusPath = path.join(outputsDir, "status.json");
+
+    writeJsonAtomic(resultPath, {
+        agent: agentName,
+        run_id: runId,
+        status: "skipped",
+        created_at_utc: nowIso,
+        finished_at_utc: nowIso,
+        summary: reason.message,
+        mode,
+        reason,
+    });
+    const notesBody = [`# ${agentName}`, "", `Status: skipped (${reason.code})`, `Reason: ${reason.message}`].join("\n");
+    fs.writeFileSync(notesPath, `${notesBody}\n`, "utf8");
+    writeJsonAtomic(statusPath, {
+        agent: agentName,
+        run_id: runId,
+        status: "skipped",
+        mode,
+        finished_at_utc: nowIso,
+        reason,
+    });
+
+    const stepResult: StepResult = {
+        schema_version: "step-result.v1",
+        run_id: runId,
+        step_id: stepId,
+        step_index: stepIndex,
+        agent_name: agentName,
+        model: {
+            provider: "unknown",
+            name: "unknown",
+            mode,
+            temperature: null,
+        },
+        timestamps: {
+            started_at: nowIso,
+            finished_at: nowIso,
+            duration_ms: 0,
+        },
+        inputs: {
+            context_ref: "inputs/context.md",
+            request_ref: "inputs/request.md",
+            artifacts_in: [],
+        },
+        outputs: {
+            artifacts_out: [path.join("outputs", agentName, "result.json"), path.join("outputs", agentName, "notes.md")],
+            summary_ref: summaryRef,
+        },
+        validation: {
+            hard_checks: [],
+            soft_checks: [],
+        },
+        execution: {
+            status: "skipped",
+            error: null,
+            reason,
+        },
+        signals: {
+            matched_keywords: [],
+            confidence: null,
+        },
+        notes: {
+            warnings: [],
+        },
+    };
+
+    writeStepResult(runId, stepId, stepResult);
+    const decision: DecisionAfterStep = {
+        schema_version: "decision-after-step.v1",
+        run_id: runId,
+        step_id: stepId,
+        decided_at: nowIso,
+        decision: {
+            action: "continue",
+            reason: `skipped:${reason.code}`,
+        },
+        routing: {
+            next_agent: null,
+            next_model: null,
+        },
+        requirements: {
+            required_inputs: [],
+            human_prompt_ref: null,
+        },
+        constraints: {
+            immutable_context: true,
+            engine_smartness: "none",
+        },
+        audit: {
+            policy_ids: ["gating-policy.v1"],
+            rule_ids: [],
+        },
+    };
+    writeDecision(runId, stepId, decision);
+    writeEffectiveDecision(runId, stepId, decision);
+    updateStepsIndex({
+        runId,
+        entry: {
+            step_id: stepId,
+            step_index: stepIndex,
+            agent_name: agentName,
+            status: "skipped",
+            decision_action: decision.decision.action,
+            model: stepResult.model,
+            duration_ms: stepResult.timestamps.duration_ms,
+        },
+    });
 }

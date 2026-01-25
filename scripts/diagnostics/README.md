@@ -2,7 +2,7 @@
 
 This folder holds one-off diagnostic helpers that are safe to run locally.
 
-- `test-spawn.ts`: prints platform info and attempts to spawn `npm -v`.
+- `test-spawn.ts`: prints platform info and attempts to spawn `pnpm -v`.
 
 Run with:
 

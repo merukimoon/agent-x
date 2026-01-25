@@ -2,9 +2,9 @@ import fs from "fs";
 import path from "path";
 import process from "process";
 import { Core, Legacy } from "./imports.ts";
-import type { AgentName, AgentStatus } from "./imports.ts";
-import type { DecisionAfterStep, ExecutionStatus, ModelRef, StepResult, StepOverride } from "../../core/src/contracts/step.ts";
-import { writeDecision, writeEffectiveDecision, writeStepResult, updateStepsIndex } from "./step_persistence.ts";
+import type { AgentName, AgentStatus, ExecutionMode, Plan, PlanStep } from "./imports.ts";
+import type { DecisionAfterStep, ExecutionStatus, ModelRef, SkipReason, SkipReasonCode, StepResult, StepOverride } from "../../contracts/src/index.ts";
+import { writeDecision, writeEffectiveDecision, writeSkippedStepArtifacts, writeStepResult, updateStepsIndex } from "./step_persistence.ts";
 import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy, readOverride } from "./gating_runtime.ts";
 
 // Deconstruct from Legacy where helpful for cleaner code, or use Legacy.*
@@ -39,6 +39,66 @@ export const {
   getCanonicalOutputs,
   validateCanonicalOutputs
 } = Core;
+
+const ALLOWED_SKIP_REASON_CODES: SkipReasonCode[] = ["dry_run", "not_applicable", "precondition_unmet", "policy_disabled"];
+
+function normalizeStatusLocal(raw: string | undefined | null) {
+  const r = (raw || "").toLowerCase().trim();
+  if (r === "skipped") return "skipped";
+  if (r === "failed") return "failed";
+  if (r === "done" || r === "success" || r === "ok") return "done";
+  if (r === "running" || r === "in_progress") return "running";
+  if (r === "pending") return "pending";
+  return "pending";
+}
+
+function buildSkipReason(code: SkipReasonCode, message: string): SkipReason {
+  const safeMessage = message && message.trim().length > 0 ? message.trim() : `Skipped (${code})`;
+  return {
+    code: ALLOWED_SKIP_REASON_CODES.includes(code) ? code : "policy_disabled",
+    message: safeMessage,
+    at_utc: new Date().toISOString(),
+  };
+}
+
+function deriveSkipReason(params: { step: PlanStep; mode: ExecutionMode }): SkipReason {
+  const { step, mode } = params;
+  const message = step.last_error || "Skipped by policy";
+  const code: SkipReasonCode = mode === "dry-run" ? "dry_run" : "not_applicable";
+  return buildSkipReason(code, message);
+}
+
+export function ensureSkippedArtifactsForPlan(runId: string, plan: Plan, mode: ExecutionMode) {
+  plan.steps.forEach((step, idx) => {
+    if (normalizeStatusLocal(step.status) !== "skipped") return;
+    const outputsDir = path.join(process.cwd(), "runs", runId, "outputs", step.agent);
+    let reason = deriveSkipReason({ step, mode });
+    const statusPath = path.join(outputsDir, "status.json");
+    if (fs.existsSync(statusPath)) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(statusPath, "utf8"));
+        if (parsed?.reason?.code && parsed?.reason?.message && ALLOWED_SKIP_REASON_CODES.includes(parsed.reason.code)) {
+          const derived = buildSkipReason(parsed.reason.code, parsed.reason.message);
+          reason = {
+            ...derived,
+            at_utc: parsed.reason.at_utc || derived.at_utc,
+          };
+        }
+      } catch {
+        // ignore and use derived reason
+      }
+    }
+    writeSkippedStepArtifacts({
+      runId,
+      stepId: step.id,
+      stepIndex: idx,
+      agentName: step.agent,
+      reason,
+      outputsDir,
+      mode,
+    });
+  });
+}
 
 export function normalizeDepends(depList: string[], agentToId: Record<string, string>) {
   return depList.map((dep) => {
@@ -266,7 +326,6 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
 
       let statusForStep = "pending";
       let lastError: string | null = null;
-      const nowIso = new Date().toISOString();
       if (
         Array.isArray(stepDef.enabled_if_keywords) &&
         stepDef.enabled_if_keywords.length > 0
@@ -277,29 +336,6 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
         if (!enabled) {
           statusForStep = "skipped";
           lastError = "Skipped: no security signals";
-          const outputsDirSkipped = path.join(runDir, "outputs", stepDef.agent);
-          fs.mkdirSync(outputsDirSkipped, { recursive: true });
-          writeJsonFile(path.join(outputsDirSkipped, "result.json"), {
-            agent: stepDef.agent,
-            run_id: runId,
-            status: "skipped",
-            created_at_utc: nowIso,
-            summary: lastError,
-            mode,
-          });
-          writeFileAtomic(
-            path.join(outputsDirSkipped, "notes.md"),
-            `# ${stepDef.agent}\n\nSkipped: no security signals.\n`
-          );
-          writeJsonFile(path.join(outputsDirSkipped, "status.json"), {
-            agent: stepDef.agent,
-            run_id: runId,
-            status: "skipped",
-            created_at_utc: nowIso,
-            finished_at_utc: nowIso,
-            mode,
-            reason: "no security signals",
-          });
         }
       }
 
@@ -509,6 +545,7 @@ function buildDecision(params: {
 function mapAgentStatusToExecutionStatus(status: AgentStatus): ExecutionStatus {
   if (status === "failed") return "failed";
   if (status === "blocked" || status === "in_progress") return "blocked";
+  if (status === "skipped") return "skipped";
   return "ok";
 }
 

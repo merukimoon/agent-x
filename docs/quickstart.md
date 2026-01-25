@@ -5,8 +5,10 @@
 
 ## Prerequisites
 - Node.js v18+ installed.
-- Dependencies installed: `npm ci` in repo root.
-- Optional: `.env` configured if using LLM-backed planner; Golden Path v0 uses built-in flows.
+- Dependencies installed: `pnpm install --frozen-lockfile` in repo root.
+
+- Optional: `.env` configured if using LLM-backed planner; Golden Path v0 uses 
+built-in flows.
 
 ## Quick Start (Commands)
 ```bash
@@ -14,6 +16,8 @@
 make verify
 make verify-plan-e2e GOAL="Sample verification" CONTEXT="Local quickstart"
 ```
+
+Make targets are provided for contributor convenience; the supported interfaces remain the CLI commands (`pnpm run dev ...`) and verifiers (`pnpm run verify-run ...`).
 
 ## What Happens During a Run
 - `make verify` runs typecheck, ESM checks, and tests.

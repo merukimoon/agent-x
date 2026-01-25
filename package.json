@@ -1,20 +1,21 @@
 {
   "name": "agenticx",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@9.12.3",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --config vitest.config.js",
     "test:watch": "vitest --config vitest.config.js",
     "test:golden": "node --import tsx tests/agentic/generate-golden.ts",
     "verify:esm": "node --import tsx scripts/verify-esm.ts",
-    "verify-run": "npm run dev -- verify-run",
+    "verify-run": "pnpm run dev verify-run",
     "dev": "node --import tsx scripts/agentic.ts",
     "run-new": "node --import tsx scripts/scaffold-run.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/scripts/agentic.js",
-    "doctor:native": "npm ls rollup @rollup/rollup-linux-x64-gnu @rollup/rollup-win32-x64-msvc"
+    "doctor:native": "pnpm ls rollup @rollup/rollup-linux-x64-gnu @rollup/rollup-win32-x64-msvc"
   },
   "devDependencies": {
     "@rollup/rollup-linux-x64-gnu": "^4.55.1",

@@ -13,7 +13,15 @@ export type CheckResult = {
     message: string;
 };
 
-export type ExecutionStatus = "ok" | "failed" | "blocked";
+export type SkipReasonCode = "dry_run" | "not_applicable" | "precondition_unmet" | "policy_disabled";
+
+export type SkipReason = {
+    code: SkipReasonCode;
+    message: string;
+    at_utc: string;
+};
+
+export type ExecutionStatus = "ok" | "failed" | "blocked" | "skipped";
 
 export interface StepResult {
     schema_version: "step-result.v1";
@@ -43,6 +51,7 @@ export interface StepResult {
     execution: {
         status: ExecutionStatus;
         error: Record<string, unknown> | null;
+        reason?: SkipReason;
     };
     signals: {
         matched_keywords: string[];

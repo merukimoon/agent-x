@@ -17,7 +17,7 @@ This is a **thinking-only flow** — no code is generated or modified.
 
 ## Prerequisites
 - **Node.js**: v18 or higher.
-- **Dependencies**: Run `npm install` in the repo root.
+- **Dependencies**: Run `pnpm install --frozen-lockfile` in the repo root.
 - **Environment**: A `.env` file in the repo root with valid LLM configuration.
 - **Make**: Git Bash or WSL on Windows (see README for platform notes).
 
@@ -62,7 +62,7 @@ The Architect reviews the plan and produces architectural decisions:
 RUN_ID="<timestamp-from-step-1>"
 
 # Run architect with the plan as additional context
-npm run dev -- agent architect --run "$RUN_ID"
+pnpm run dev agent architect --run "$RUN_ID"
 ```
 
 This produces additional artifacts in the same run directory:
@@ -78,7 +78,7 @@ ls -la runs/$RUN_ID/
 
 ## One-command E2E run
 
-The existing orchestrator target still expects the legacy `--goal/--context` planner interface and should be updated before relying on it. For now, prefer the manual steps above so the planner reads from `runs/<RUN>/inputs/` via `npm run dev -- planner --run "$RUN"`.
+The existing orchestrator target still expects the legacy `--goal/--context` planner interface and should be updated before relying on it. For now, prefer the manual steps above so the planner reads from `runs/<RUN>/inputs/` via `pnpm run dev planner --run "$RUN"`.
 
 ## Check Status
 

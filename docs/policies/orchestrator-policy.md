@@ -19,7 +19,7 @@ The orchestrator enforces the following contract based on the Planner's exit cod
 
 ## Usage
 
-The orchestrator wrappers still expect the legacy planner interface that accepted `--goal/--context`. The current CLI reads from `runs/<RUN>/inputs/` via `npm run dev -- planner --run "<RUN>"`. Until the orchestrator is updated, prefer running the planner manually with run inputs (see README and Golden Path docs) and treat the orchestrator targets as legacy.
+The orchestrator wrappers still expect the legacy planner interface that accepted `--goal/--context`. The current CLI reads from `runs/<RUN>/inputs/` via `pnpm run dev planner --run "<RUN>"`. Until the orchestrator is updated, prefer running the planner manually with run inputs (see README and Golden Path docs) and treat the orchestrator targets as legacy.
 
 ## Logs and Artifacts
 

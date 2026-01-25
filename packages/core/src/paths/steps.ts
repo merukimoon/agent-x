@@ -20,9 +20,9 @@ export type StepsIndexEntry = {
     step_id: string;
     step_index: number;
     agent_name: string;
-    status: "ok" | "failed" | "blocked";
+    status: "ok" | "failed" | "blocked" | "skipped";
     decision_action: "continue" | "halt" | "require_human" | "request_clarification";
-    model?: import("../contracts/step.ts").ModelRef;
+    model?: import("../../../contracts/src/index.ts").ModelRef;
     duration_ms?: number;
 };
 

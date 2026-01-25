@@ -35,9 +35,9 @@ run-status:
 	@set -eu; \
 	RUN="$${RUN:-}"; \
 	if [ -n "$$RUN" ]; then \
-		npm run dev -- status --run "$$RUN"; \
+		$(PNPM) run dev status --run "$$RUN"; \
 	else \
-		npm run dev -- status; \
+		$(PNPM) run dev status; \
 	fi
 
 $(call register_target,verify-paused,RUNS,Check if a run is gated/paused (exit 0 if paused).,make verify-paused RUN=\"<run-id>\")

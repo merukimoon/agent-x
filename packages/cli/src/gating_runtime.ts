@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { DecisionAfterStep, StepOverride, StepResult } from "../../core/src/contracts/step.ts";
+import type { DecisionAfterStep, StepOverride, StepResult } from "../../contracts/src/index.ts";
 import type { GateOutcome, GatingPolicy, Strictness } from "../../core/src/policy/gating.ts";
 import { evaluateGates, resolveStrictness } from "../../core/src/policy/gating.ts";
 import { getDecisionPath, getStepDir } from "../../core/src/paths/steps.ts";

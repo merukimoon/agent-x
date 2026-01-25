@@ -16,7 +16,7 @@ function comspec() {
   return process.env.ComSpec || "C:\\Windows\\System32\\cmd.exe";
 }
 
-export function spawnNpmSync(
+export function spawnPnpmSync(
   args: string[],
   opts?: { cwd?: string; env?: NodeJS.ProcessEnv; stdio?: "pipe" | "inherit" }
 ) {
@@ -29,13 +29,13 @@ export function spawnNpmSync(
   };
 
   if (process.platform === "win32") {
-    const cmdline = ["npm", ...args]
+    const cmdline = ["pnpm", ...args]
       .map((part) => (/\s/.test(part) ? `"${part}"` : part))
       .join(" ");
     return spawnSync(comspec(), ["/d", "/s", "/c", cmdline], spawnOpts as any);
   }
 
-  return spawnSync("npm", args, spawnOpts as any);
+  return spawnSync("pnpm", args, spawnOpts as any);
 }
 
 export function resolveRunRequest(argv: string[], env: NodeJS.ProcessEnv) {
@@ -114,9 +114,9 @@ function runPlannerOrFail(runId: string, runDir: string) {
   writeJson(statusPath, { status: "running", started_at: startedAt, agent: "planner", run_id: runId });
 
   try {
-    const args = ["run", "dev", "--", "planner", "--run", runId];
-    const res = spawnNpmSync(args, { stdio: "pipe" });
-    const attempted = `npm ${args.join(" ")}`;
+    const args = ["run", "dev", "planner", "--run", runId];
+    const res = spawnPnpmSync(args, { stdio: "pipe" });
+    const attempted = `pnpm ${args.join(" ")}`;
     if (res.stdout) {
       process.stdout.write(res.stdout);
     }
@@ -227,7 +227,7 @@ function runPlannerOrFail(runId: string, runDir: string) {
       [
         "# Planner failure",
         "",
-        `- command: npm run dev -- planner --run ${runId}`,
+        `- command: pnpm run dev planner --run ${runId}`,
         `- cwd: ${repoRoot}`,
         `- error: ${message}`,
         stack ? `- stack:\n\n${stack}` : "- stack: <none>",
@@ -359,18 +359,18 @@ function main() {
   ensureInputsPresent(runDir);
 
   runPlannerOrFail(runId, runDir);
-  const statusArgs = ["run", "dev", "--", "status", "--run", runId];
-  const agentArgs = ["run", "dev", "--", "agent", "coordinator", "--run", runId, "--dry-run"];
-  const flowArgs = ["run", "dev", "--", "flow", "--run", runId, "--dry-run"];
+  const statusArgs = ["run", "dev", "status", "--run", runId];
+  const agentArgs = ["run", "dev", "agent", "coordinator", "--run", runId, "--dry-run"];
+  const flowArgs = ["run", "dev", "flow", "--run", runId, "--dry-run"];
   const steps: Array<{ name: string; args: string[] }> = [
     { name: "status", args: statusArgs },
     { name: "coordinator", args: agentArgs },
     { name: "flow", args: flowArgs },
   ];
   for (const step of steps) {
-    const res: SpawnSyncReturns<string> = spawnNpmSync(step.args, { stdio: "inherit" });
+    const res: SpawnSyncReturns<string> = spawnPnpmSync(step.args, { stdio: "inherit" });
     if (res.status !== 0) {
-      fail(`Command failed: npm ${step.args.join(" ")}`);
+      fail(`Command failed: pnpm ${step.args.join(" ")}`);
     }
   }
 
