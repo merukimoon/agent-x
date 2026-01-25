@@ -62,3 +62,6 @@
 - Does not define agent reasoning methods or model selection.
 - Does not mandate new schemas beyond observed `result.json` shape.
 - Does not cover external integrations or future agent types not present today.
+
+## Failure Protocol
+- See `docs/contracts/agent_failure_protocol.md` for the canonical failure rules and required artifacts on failure.

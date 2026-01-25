@@ -59,6 +59,7 @@
 - `make orchestrator-validate` produces a run that satisfies the “finished run (success)” set for planner + architect flows and asserts `run.json` immutability when reading status.
 - Missing required artifacts → treat as invalid run (fail verification). Partial step artifacts without terminal status → treat as incomplete (fail finished-run checks).
 - Finished criteria reference: see `docs/contracts/run_lifecycle.md` (Run Finished Criteria) for the authoritative terminal state checklist.
+- Failure artifacts reference: see `docs/contracts/agent_failure_protocol.md` for required outputs when a step fails.
 
 ## 8) Golden Path Alignment
 - Golden Path v0 uses `make verify-flow` followed by `make validate-run`; the produced run meets the “finished run (success)” requirements: inputs, plan.json, steps index, per-agent outputs, summary, and `run.json` with `status=done`.
