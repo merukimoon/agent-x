@@ -6,6 +6,7 @@ Start here if you’re new to the project.
 
 - [`docs/concepts.md`](concepts.md) Terminology and mental model
 - [`docs/agent-contract.md`](agent-contract.md) Agent Contract (canonical; stable interface for agents)
+- [`docs/contracts/run_lifecycle.md`](contracts/run_lifecycle.md) Run lifecycle contract (states, artifacts, verification)
 - [`docs/architecture.md`](architecture.md) High-level structure (as implemented) (**TODO**)
 - [`docs/flows.md`](flows.md) Orchestration flows (canonical workflows)
 - [`docs/golden-path-v0.md`](golden-path-v0.md) Golden Path v0 (single end-to-end reference run)
