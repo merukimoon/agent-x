@@ -27,6 +27,7 @@
 - Fail criteria: non-zero exit code; missing or inconsistent artifacts; contract violations emitted by validators or tests.
 - Exit code semantics (observed): `0` = success; `>0` = failure; `2` may be used by flows for gated/blocked states but verification commands report failure when exit is non-zero.
 - Verdict visibility: stdout/stderr from make targets and underlying scripts; exit code to CI/local shell; run directories remain for inspection.
+- Enforced hard constraints (current): presence of inputs/request.md and inputs/context.md (R1); finished runs require plan.json, summary/final.md, per-step outputs and steps artifacts, and valid run.json status/exit_code (R2/R3/R4/R5/R8 from rules_model).
 
 ## 5) Agent vs Verification Boundary
 - Agent obligations: produce required outputs (`result.json`, `notes.md`, optional `status.json`), respect agent contract and failure protocol, avoid falsifying run state.
