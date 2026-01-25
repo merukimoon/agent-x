@@ -14,6 +14,7 @@ Start here if you’re new to the project.
 - [`docs/contracts/verification_contract.md`](contracts/verification_contract.md) Verification pipeline and outcomes
 - [`docs/quickstart.md`](quickstart.md) How to run AgenticX v0 (DX quickstart)
 - [`docs/status.md`](status.md) Run status sources and CLI viewer
+- [`docs/agent_extensibility.md`](agent_extensibility.md) How to add a new agent
 - [`docs/architecture.md`](architecture.md) High-level structure (as implemented) (**TODO**)
 - [`docs/flows.md`](flows.md) Orchestration flows (canonical workflows)
 - [`docs/golden-path-v0.md`](golden-path-v0.md) Golden Path v0 (single end-to-end reference run)
