@@ -9,6 +9,8 @@ type DecisionFile = {
 
 export type NormalizedStatus = {
     run_id: string;
+    overall: "in_progress" | "finished_success" | "finished_failure" | "invalid" | "incomplete";
+    errors: string[];
     steps: Array<{
         step_index: number;
         step_id: string;
@@ -27,6 +29,16 @@ export type NormalizedStatus = {
         paths: string[];
     };
 };
+
+function normalize(raw: string | undefined): string {
+    const r = (raw || "").toLowerCase().trim();
+    if (["done", "success", "ok", "completed"].includes(r)) return "done";
+    if (["failed", "error", "failure"].includes(r)) return "failed";
+    if (["running", "in_progress", "active"].includes(r)) return "running";
+    if (["skipped"].includes(r)) return "skipped";
+    if (["blocked", "pending"].includes(r)) return "pending";
+    return r || "unknown";
+}
 
 export function readStepsIndex(runDir: string): StepsIndex | null {
     const indexPath = path.join(runDir, "steps", "index.json");
@@ -88,9 +100,19 @@ function pickDecisionAction(runDir: string, stepId: string): { action: string; r
 }
 
 export function buildStatusView(runDir: string): NormalizedStatus | null {
+    const runJsonPath = path.join(runDir, "run.json");
+    /** @type {{ status?: string; exit_code?: number; run_id?: string; id?: string } | null} */
+    let runJson: any = null;
+    if (fs.existsSync(runJsonPath) && fs.statSync(runJsonPath).isFile()) {
+        try {
+            runJson = JSON.parse(fs.readFileSync(runJsonPath, "utf8"));
+        } catch {
+            // ignore, handled via errors list
+        }
+    }
+
     const index = readStepsIndex(runDir);
-    if (!index) return null;
-    const steps = [...index.steps].sort((a, b) => a.step_index - b.step_index);
+    const stepsFromIndex = index ? [...index.steps].sort((a, b) => a.step_index - b.step_index) : [];
 
     let is_blocked = false;
     let blocked_reason: string | null = null;
@@ -99,7 +121,7 @@ export function buildStatusView(runDir: string): NormalizedStatus | null {
     let required_inputs: string[] = [];
     let paths: string[] = [];
 
-    steps.forEach((entry: StepsIndexEntry) => {
+    stepsFromIndex.forEach((entry: StepsIndexEntry) => {
         if (is_blocked) return;
         const decisionInfo = pickDecisionAction(runDir, entry.step_id);
         if (entry.status === "blocked" || decisionInfo.action === "require_human" || decisionInfo.action === "request_clarification") {
@@ -120,9 +142,28 @@ export function buildStatusView(runDir: string): NormalizedStatus | null {
         }
     });
 
+    const errors: string[] = [];
+    if (!runJson) errors.push("MISSING run.json");
+    const runId = runJson?.run_id || runJson?.id || index?.run_id || path.basename(runDir);
+    const statusNorm = normalize(runJson?.status);
+    const exitCode = typeof runJson?.exit_code === "number" ? runJson.exit_code : null;
+
+    let overall: NormalizedStatus["overall"] = "incomplete";
+    if (errors.length > 0) {
+        overall = "invalid";
+    } else if (statusNorm === "done" && exitCode === 0) {
+        overall = "finished_success";
+    } else if (statusNorm === "failed" || (exitCode !== null && exitCode > 0)) {
+        overall = "finished_failure";
+    } else if (statusNorm === "running" || statusNorm === "pending") {
+        overall = "in_progress";
+    }
+
     return {
-        run_id: index.run_id,
-        steps: steps.map((s) => ({
+        run_id: runId,
+        overall,
+        errors,
+        steps: stepsFromIndex.map((s) => ({
             step_index: s.step_index,
             step_id: s.step_id,
             agent_name: s.agent_name,

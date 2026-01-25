@@ -33,7 +33,6 @@ import {
   getCanonicalOutputs,
   validateCanonicalOutputs,
 } from "./agents.ts";
-
 import type {
   AgentName,
   AgentStatus,
