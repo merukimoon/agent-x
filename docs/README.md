@@ -6,6 +6,7 @@ Start here if you’re new to the project.
 
 - [`docs/concepts.md`](concepts.md) Terminology and mental model
 - [`docs/agent-contract.md`](agent-contract.md) Agent Contract (canonical; stable interface for agents)
+- [`docs/contracts/agent_contract.md`](contracts/agent_contract.md) Canonical agent inputs/outputs contract
 - [`docs/contracts/run_artifacts.md`](contracts/run_artifacts.md) Required run artifacts contract
 - [`docs/contracts/run_lifecycle.md`](contracts/run_lifecycle.md) Run lifecycle contract (states, artifacts, verification)
 - [`docs/architecture.md`](architecture.md) High-level structure (as implemented) (**TODO**)
