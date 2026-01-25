@@ -43,8 +43,8 @@ RUN_ID="2026-01-23_1234-planner-architect-v1"
 **Step 2: Run the Planner into that run**
 ```bash
 make planner \
-  GOAL="$(cat examples/golden-path/planner-architect-v1/sample-goal.txt)" \
-  CONTEXT="$(cat examples/golden-path/planner-architect-v1/sample-context.txt)" \
+  GOAL="$(cat docs/run-examples/golden-path/planner-architect-v1/sample-goal.txt)" \
+  CONTEXT="$(cat docs/run-examples/golden-path/planner-architect-v1/sample-context.txt)" \
   RUN="$RUN_ID"
 ```
 

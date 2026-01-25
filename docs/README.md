@@ -12,6 +12,7 @@ Start here if you’re new to the project.
 - [`docs/agents.md`](agents.md) Agent roles, responsibilities, and interfaces (**TODO**)
 - [`docs/prompting.md`](prompting.md) Writing and managing prompts
 - [`docs/examples.md`](examples.md) Usage examples (currently pseudo-code)
+- [`docs/run-examples/README.md`](run-examples/README.md) Canonical runnable examples
 - [`docs/versioning.md`](versioning.md) Versioning and compatibility policy (**TODO**)
 - [`docs/roadmap.md`](roadmap.md) Near-term project direction (**TODO**)
 - [`docs/project-status/README.md`](project-status/README.md) Canonical project status, backlog, and decisions

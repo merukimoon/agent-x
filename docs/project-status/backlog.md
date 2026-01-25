@@ -21,8 +21,8 @@ Backlog v0 (2026-01-25). Keep entries short; update next actions when state shif
 - **PS-002 — Golden Path v0**
   - Outcome: Runnable happy path that shows planner to execution flow.
   - Owner: Maintainers
-  - Next action: Capture the path in docs and align with `../../examples/golden-path/planner-only-v1/README.md`.
-  - Links: [planner-only example](../../examples/golden-path/planner-only-v1/README.md)
+  - Next action: Capture the path in docs and align with `../run-examples/golden-path/planner-only-v1/README.md`.
+  - Links: [planner-only example](../run-examples/golden-path/planner-only-v1/README.md)
 
 ## Blocked
 - None.

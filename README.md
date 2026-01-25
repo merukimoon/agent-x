@@ -154,7 +154,7 @@ See strictly defined docs:
 ### Golden Path Example
 
 For a complete, runnable example of a single-agent run using the Planner, see:
-[Golden Path: Planner-Only v2](examples/golden-path/planner-only-v1/README.md)
+[Golden Path: Planner-Only v2](docs/run-examples/golden-path/planner-only-v1/README.md)
 
 
 ## Reliability notes (Step 3)
@@ -265,6 +265,7 @@ print(result.output)
 - Agent roles and interfaces: [`docs/agents.md`](docs/agents.md)
 - Prompting guidance: [`docs/prompting.md`](docs/prompting.md)
 - Examples: [`docs/examples.md`](docs/examples.md)
+- Run examples (canonical): [`docs/run-examples/README.md`](docs/run-examples/README.md)
 - Versioning policy: [`docs/versioning.md`](docs/versioning.md)
 - Roadmap: [`docs/roadmap.md`](docs/roadmap.md)
 

@@ -51,7 +51,7 @@ Agent specific required outputs (in addition to the contract output envelope):
 
 ## Usage & Implementation
 
-- **Golden Path**: [Running the Planner agent](../../examples/golden-path/planner-only-v1/README.md)
+- **Golden Path**: [Running the Planner agent](../../docs/run-examples/golden-path/planner-only-v1/README.md)
 - **Orchestration Policy**: [Retry and Safety wrappers](../../docs/orchestrator-policy.md)
 
 ## Example tasks
