@@ -14,3 +14,9 @@
 ## Outputs and status
 * Run folders hold inputs, outputs per agent, summary/final.md, and run.json. `run.json` is the state source of truth and records started/finished timestamps, flow, status, exit_code, and error.
 * Status command `handleStatusCommand` reads `plan.json` when present to render step rows; it does not mutate plan or run state.
+
+### Skipped steps (policy-bound)
+
+* `status: skipped` is terminal but only valid when policy allows the agent to skip (currently the CISO step in dry-run verification flows).
+* Skipped steps must still write the canonical artifacts: `outputs/<agent>/{result.json,notes.md,status.json}` and `steps/<step_id>/{step_result.json,decision_after_step.json,effective_decision.json,steps/index.json}`.
+* `status.json` and `step_result.json` must include a `reason` object with `code` (`dry_run` | `not_applicable` | `precondition_unmet` | `policy_disabled`), `message`, and `at_utc`. Missing reasons invalidate the run.

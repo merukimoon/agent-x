@@ -32,6 +32,7 @@ import {
   checkDependenciesSatisfied,
   getCanonicalOutputs,
   validateCanonicalOutputs,
+  ensureSkippedArtifactsForPlan,
 } from "./agents.ts";
 import type {
   AgentName,
@@ -42,6 +43,21 @@ import type {
   PlanStep,
   Plan,
 } from "./imports.ts"; // We can't use named 'type' import from default export effectively?
+import type { SkipReasonCode } from "../../contracts/src/index.ts";
+
+const ALLOWED_SKIP_REASON_CODES: SkipReasonCode[] = ["dry_run", "not_applicable", "precondition_unmet", "policy_disabled"];
+const SKIP_POLICY: Record<string, { codes: Set<SkipReasonCode>; requireMode?: string }> = {
+  ciso: { codes: new Set<SkipReasonCode>(["dry_run", "not_applicable", "policy_disabled"]), requireMode: "dry-run" },
+};
+
+function isSkipPolicyAllowed(step: PlanStep, reasonCode: SkipReasonCode, mode: string | undefined) {
+  if (!step.allow_skip) return false;
+  const policy = SKIP_POLICY[step.agent];
+  if (!policy) return false;
+  if (!policy.codes.has(reasonCode)) return false;
+  if (reasonCode === "dry_run" && policy.requireMode && mode && policy.requireMode !== mode) return false;
+  return true;
+}
 // Core is a namespace object.
 // We should import types from the source or via Core.<Type> in JSDoc.
 // For typescript 'import type' it needs to resolve to a type definition.
@@ -446,6 +462,9 @@ export function verifyRun(runDir) {
         }
       });
       const statusPath = path.join(stepDir, "status.json");
+      /** @type {SkipReasonCode | null} */
+      let skipReasonCode: SkipReasonCode | null = null;
+      let skipMode: string | undefined;
       if (fs.existsSync(statusPath)) {
         try {
           const statusJson = JSON.parse(fs.readFileSync(statusPath, "utf8"));
@@ -458,6 +477,26 @@ export function verifyRun(runDir) {
           const planStatusNorm = normalizeStatus(step.status);
           if (planStatusNorm && st && planStatusNorm !== st) {
             errors.push(`STATUS_MISMATCH ${step.id} plan=${step.status} artifact=${st}`);
+          }
+          if (st === "skipped") {
+            if (!statusJson.reason || typeof statusJson.reason !== "object") {
+              errors.push(`MISSING_SKIP_REASON ${rel(statusPath)}`);
+            } else {
+              const code = statusJson.reason.code;
+              const message = statusJson.reason.message;
+              if (!ALLOWED_SKIP_REASON_CODES.includes(code)) {
+                errors.push(`INVALID_SKIP_CODE ${step.id} code=${String(code)}`);
+              } else {
+                skipReasonCode = code;
+              }
+              if (!message || String(message).trim().length === 0) {
+                errors.push(`INVALID_SKIP_REASON ${step.id}`);
+              }
+            }
+            skipMode = statusJson.mode;
+            if (skipReasonCode === "dry_run" && skipMode !== "dry-run") {
+              errors.push(`SKIP_MODE_MISMATCH ${step.id} expected dry-run`);
+            }
           }
         } catch {
           errors.push(`INVALID_JSON ${rel(statusPath)}`);
@@ -473,6 +512,31 @@ export function verifyRun(runDir) {
           }
         }
       );
+      const stepResultPath = path.join(stepFolder, "step_result.json");
+      if (fs.existsSync(stepResultPath)) {
+        try {
+          const sr = JSON.parse(fs.readFileSync(stepResultPath, "utf8"));
+          const execStatus = normalizeStatus(sr?.execution?.status);
+          if (normalizeStatus(step.status) === "skipped" && execStatus !== "skipped") {
+            errors.push(`STATUS_MISMATCH ${step.id} step_result=${execStatus} plan=${step.status}`);
+          }
+          if (execStatus === "skipped") {
+            const reason = sr?.execution?.reason;
+            if (!reason || !ALLOWED_SKIP_REASON_CODES.includes(reason.code)) {
+              errors.push(`MISSING_SKIP_REASON steps/${step.id}/step_result.json`);
+            }
+          }
+        } catch {
+          errors.push(`INVALID_JSON ${rel(stepResultPath)}`);
+        }
+      }
+      if (normalizeStatus(step.status) === "skipped") {
+        if (!skipReasonCode) {
+          errors.push(`MISSING_SKIP_REASON ${step.id}`);
+        } else if (!isSkipPolicyAllowed(step, skipReasonCode, skipMode)) {
+          errors.push(`SKIP_FORBIDDEN ${step.id} code=${skipReasonCode}`);
+        }
+      }
     });
   }
 
@@ -570,6 +634,7 @@ export function runFlow(runId, mode) {
     validatePlanDependenciesStrict(plan);
     resolvedFlowType = plan.flow_type || resolvedFlowType || "flow";
     planForSummary = plan;
+    ensureSkippedArtifactsForPlan(runId, plan, mode);
 
     const gate = detectGate(runDir);
     if (gate) {
@@ -811,7 +876,12 @@ export function handleSkipCommand(args) {
       `Skip allowed only when status is pending or failed (current ${target.status}).`
     );
   }
-  applyStatusTransition(plan, target.id, "skipped", planPath);
+  const skipMessage = "Skipped via CLI skip command";
+  applyStatusTransition(plan, target.id, "skipped", planPath, (s) => {
+    s.last_error = skipMessage;
+  });
+  const refreshedPlan = loadPlan(planPath, parsed.runId);
+  ensureSkippedArtifactsForPlan(parsed.runId, refreshedPlan, "dry-run");
   console.log(`Step ${target.id} marked skipped.`);
 }
 
