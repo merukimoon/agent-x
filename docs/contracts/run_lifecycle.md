@@ -56,3 +56,21 @@
 - Does not define future states beyond those observed (no predictive scheduling or multi-run rollups).
 - Does not cover external persistence or production pipeline behaviors.
 - Does not prescribe new agents or flows beyond current commands.
+
+## Run Finished Criteria
+- Canonical finished rule:
+  - `run.json` present with `status` in `{done, failed}` and `exit_code` set.
+  - `started_at_utc` and `finished_at_utc` present.
+  - `summary/final.md` present.
+  - `plan.json` present.
+  - `steps/index.json` present if any steps ran.
+  - For each executed step: `outputs/<agent>/result.json` and `notes.md` exist; `status.json` when emitted.
+- Success criteria:
+  - `run.json.status=done`, `exit_code=0`, `error=null`, required artifacts present.
+- Failure criteria:
+  - `run.json.status=failed` and `exit_code>0`; `error` populated. Partial outputs may exist; absence of finished artifacts keeps the run failed, not invalid.
+- Not-finished criteria:
+  - Missing `finished_at_utc` or `exit_code` or `status` not in `{done, failed}`.
+  - Required finished artifacts missing (plan, summary, outputs for executed steps, steps index when steps exist).
+- Partial completion:
+  - Partial is not a terminal state. Runs without terminal status or missing finished artifacts are treated as not finished and should be resumed or re-run.
