@@ -9,6 +9,7 @@ Start here if you’re new to the project.
 - [`docs/contracts/agent_contract.md`](contracts/agent_contract.md) Canonical agent inputs/outputs contract
 - [`docs/contracts/run_artifacts.md`](contracts/run_artifacts.md) Required run artifacts contract
 - [`docs/contracts/run_lifecycle.md`](contracts/run_lifecycle.md) Run lifecycle contract (states, artifacts, verification)
+- [`docs/contracts/rules_model.md`](contracts/rules_model.md) Soft rules vs hard constraints model
 - [`docs/architecture.md`](architecture.md) High-level structure (as implemented) (**TODO**)
 - [`docs/flows.md`](flows.md) Orchestration flows (canonical workflows)
 - [`docs/golden-path-v0.md`](golden-path-v0.md) Golden Path v0 (single end-to-end reference run)
