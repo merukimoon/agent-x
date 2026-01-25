@@ -20,7 +20,7 @@ agent:
 	if [ "$$DRY" != "0" ]; then \
 		DRY_FLAG="--dry-run"; \
 	fi; \
-	pnpm run dev agent "$$AGENT" --run "$$RUN" $$DRY_FLAG
+	$(PNPM) run dev agent "$$AGENT" --run "$$RUN" $$DRY_FLAG
 
 $(call register_target,flow,AGENTS,Execute the full plan/flow for a run.,make flow RUN=<run-id> DRY=1)
 .PHONY: flow
@@ -36,7 +36,7 @@ flow:
 	if [ "$$DRY" != "0" ]; then \
 		DRY_FLAG="--dry-run"; \
 	fi; \
-	pnpm run dev flow --run "$$RUN" $$DRY_FLAG
+	$(PNPM) run dev flow --run "$$RUN" $$DRY_FLAG
 
 $(call register_target,resume-run,AGENTS,Alias for flow to resume a run.,make resume-run RUN=<run-id> DRY=1)
 .PHONY: resume-run

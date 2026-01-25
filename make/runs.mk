@@ -35,9 +35,9 @@ run-status:
 	@set -eu; \
 	RUN="$${RUN:-}"; \
 	if [ -n "$$RUN" ]; then \
-		pnpm run dev status --run "$$RUN"; \
+		$(PNPM) run dev status --run "$$RUN"; \
 	else \
-		pnpm run dev status; \
+		$(PNPM) run dev status; \
 	fi
 
 $(call register_target,verify-paused,RUNS,Check if a run is gated/paused (exit 0 if paused).,make verify-paused RUN=\"<run-id>\")

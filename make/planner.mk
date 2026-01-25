@@ -25,7 +25,7 @@ planner:
 	mkdir -p "$$RUN_DIR/inputs"; \
 	printf "%s\n" "$$GOAL" > "$$RUN_DIR/inputs/request.md"; \
 	printf "%s\n" "$$CONTEXT" > "$$RUN_DIR/inputs/context.md"; \
-	pnpm run dev planner --run "$$RUN"
+	$(PNPM) run dev planner --run "$$RUN"
 
 $(call register_target,planner-demo,PLANNER,Run the Planner with a canned demo goal.,make planner-demo RUN=\"<run-id>\")
 .PHONY: planner-demo

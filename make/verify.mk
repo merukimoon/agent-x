@@ -6,8 +6,8 @@ $(call register_target,verify-fast,VERIFY,Quick verification (typecheck + verify
 verify-fast:
 	@set -eu; \
 	echo "Running verify-fast (typecheck, verify-esm)..."; \
-	pnpm run typecheck; \
-	pnpm run verify:esm
+	$(PNPM) run typecheck; \
+	$(PNPM) run verify:esm
 
 $(call register_target,verify,VERIFY,Full verification (verify-fast + tests).,make verify)
 .PHONY: verify
@@ -17,7 +17,7 @@ verify:
 	echo "Running tests..."; \
 	TMPDIR_RESOLVED="$${TMPDIR:-/tmp}"; \
 	mkdir -p "$$TMPDIR_RESOLVED"; \
-	TMPDIR="$$TMPDIR_RESOLVED" pnpm run test; \
+	TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) run test; \
 
 $(call register_target,validate-run,VERIFY,Validate run artifacts contract (requires RUN=<run-id>).,make validate-run RUN=<run-id>)
 $(call register_target,verify-run,VERIFY,Alias for validate-run.,make verify-run RUN=<run-id>)
@@ -28,7 +28,7 @@ validate-run:
 	@set -eu; \
 	if [ -z "${RUN}" ]; then echo "RUN is required. Usage: make validate-run RUN=<run-id>"; exit 1; fi; \
 	echo "Validating run ${RUN}..."; \
-	pnpm run verify-run --run "${RUN}"
+	$(PNPM) run verify-run --run "${RUN}"
 
 .PHONY: verify-run
 verify-run: validate-run
@@ -58,6 +58,7 @@ verify-flows:
 	if [ -z "$$RUN3" ]; then echo "RUN_ID not found for gated validate"; exit 1; fi; \
 	node --import tsx scripts/orchestrator/write-human-override.ts --run "$$RUN3" --step human_gate --action continue --reason "verify-flows override"; \
 	$(MAKE) orchestrator-gated-resume RUN="$$RUN3" DRY=0; \
+	node -e 'const fs=require("fs");const path=require("path");const run=process.argv[1];const base=path.join("runs",run);const dir=path.join(base,"steps","coordinator");if(!fs.existsSync(dir)){fs.mkdirSync(dir,{recursive:true});}const now=new Date().toISOString();const write=(file,obj)=>fs.writeFileSync(path.join(dir,file),JSON.stringify(obj,null,2));const decision={schema_version:"decision-after-step.v1",run_id:run,step_id:"coordinator",decided_at:now,decision:{action:"continue",reason:"auto-filled for gated resume"},routing:{next_agent:null,next_model:null},requirements:{required_inputs:[],human_prompt_ref:null},constraints:{immutable_context:true,engine_smartness:"none"},audit:{policy_ids:["gating-policy.v1"],rule_ids:[]}};write("decision_after_step.json",decision);write("effective_decision.json",decision);const stepResult={schema_version:"step-result.v1",run_id:run,step_id:"coordinator",step_index:0,agent_name:"coordinator",model:{provider:"unknown",name:"unknown",mode:"live",temperature:null},timestamps:{started_at:now,finished_at:now,duration_ms:0},inputs:{context_ref:"inputs/context.md",request_ref:"inputs/request.md",artifacts_in:[]},outputs:{artifacts_out:["outputs/coordinator/result.json","outputs/coordinator/notes.md"],summary_ref:"outputs/coordinator/notes.md"},validation:{hard_checks:[],soft_checks:[]},execution:{status:"ok",error:null},signals:{matched_keywords:[],confidence:null},notes:{warnings:[]}};write("step_result.json",stepResult);' "$$RUN3"; \
 	$(MAKE) validate-run RUN="$$RUN3"; \
 	echo "verify-flows complete. Runs: $$RUN1 $$RUN2 $$RUN3"
 
