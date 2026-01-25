@@ -1,6 +1,6 @@
 .ONESHELL:
 
-# agentsquad-framework Makefile
+# agenticX Makefile
 # See Make/help.mk for the help system.
 # Run `make help` to see available targets.
 

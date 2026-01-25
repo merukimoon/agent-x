@@ -1,6 +1,6 @@
-# Agentic Squad Framework
+# AgenticX (Agentic Squad Framework)
 
-Framework for building and running small “squads” of cooperating agents to complete engineering tasks.
+AgenticX is the framework for building and running small “squads” of cooperating agents to complete engineering tasks.
 
 This is not a library. This is a framework that defines how agentic systems are structured, governed, and executed.
 

@@ -20,7 +20,7 @@ endef
 help:
 	@:
 	$(info =================================================================)
-	$(info  agentsquad-framework Makefile)
+	$(info  agenticX Makefile)
 	$(info =================================================================)
 	$(foreach topic,$(sort $(HELP_TOPICS)), \
 		$(info ) \

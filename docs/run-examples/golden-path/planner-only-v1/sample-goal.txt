@@ -1,1 +1,1 @@
-Analyze the "agentsquad-framework" repository to identify 3 strategic improvements for the "planner" module to increase its robustness. Focus on validation logic and error handling.
+Analyze the "agenticX" repository to identify 3 strategic improvements for the "planner" module to increase its robustness. Focus on validation logic and error handling.
