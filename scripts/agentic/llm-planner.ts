@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import { fail } from "./errors.ts";
 import { writeJsonFile } from "./fs.ts";
+import { resolveLlmTarget } from "./llm_config.ts";
 
 /**
  * @typedef {Object} PlannerAssumption
@@ -210,24 +211,20 @@ Capabilities: ${CAPABILITIES.join(", ")}
 Constraints: No execution, Plan only.
 `;
 
-    // Retrieve API Key
-    const apiKey = process.env.LLM_API_KEY || process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-        throw new Error("LLM_API_KEY or OPENAI_API_KEY environment variable is required.");
-    }
+    const target = resolveLlmTarget("planner");
+    const endpoint = target.endpoint;
+    const model = target.model;
+    const authHeader = target.authHeader || "Authorization";
+    const authPrefix = target.authPrefix || "Bearer ";
 
-    // Call LLM (assuming OpenAI-compatible for now as a default standby)
-    const endpoint = process.env.LLM_ENDPOINT || "https://api.openai.com/v1/chat/completions";
-    const model = process.env.LLM_MODEL || "gpt-4-turbo-preview"; // Default to a strong model
-
-    console.error(`Connecting to LLM: ${model} at ${endpoint}...`);
+    console.error(`Connecting to LLM: provider=${target.provider} model=${model} endpoint=${endpoint}...`);
 
     try {
         const response = await fetch(endpoint, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`
+                [authHeader]: `${authPrefix}${target.apiKey}`
             },
             body: JSON.stringify({
                 model: model,
@@ -247,7 +244,7 @@ Constraints: No execution, Plan only.
 
         const data = await response.json();
         const content = data.choices[0].message.content;
-        return content;
+        return { rawText: content, target };
     } catch (err) {
         throw new Error(`LLM interaction failed: ${err.message}`);
     }

@@ -44,6 +44,13 @@ Package manager: pnpm (pinned via Corepack). Make targets are contributor conven
 
 Windows note: if `pnpm run test` fails due to temp directory permissions, run `TMPDIR=/tmp pnpm run test`.
 
+## LLM configuration
+
+- Canonical model selection lives in `config/llm_models.json` with defaults, per-agent overrides, and provider definitions (endpoint, auth env var, header name, and prefix).
+- Agents in `agents` must match the current AgentName set; providers must be defined under `providers`; defaults must reference a valid provider.
+- Planner uses the resolved provider, model, and endpoint; compatibility env overrides exist for `LLM_API_KEY`, `LLM_ENDPOINT`, and `LLM_MODEL` and take precedence over config.
+- OpenAI-compatible providers are supported by adding a new provider entry with the correct endpoint, auth_env, auth_header, and auth_prefix.
+
 ## Make targets
 
 ### Run validation

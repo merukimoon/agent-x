@@ -238,6 +238,23 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   const createdAtUtc = new Date().toISOString();
   const summary = `${mode === "dry-run" ? "Dry run" : "Run"
     } completed for ${agentName} on run ${runId}.`;
+  let targetInfo: any = null;
+  if (agentName === "planner") {
+    const targetPath = path.join(runDir, "planner_llm_target.json");
+    if (fs.existsSync(targetPath)) {
+      try {
+        targetInfo = JSON.parse(fs.readFileSync(targetPath, "utf8"));
+      } catch {
+        targetInfo = null;
+      }
+    }
+    if (targetInfo?.model) {
+      modelRef.name = targetInfo.model;
+    }
+    if (targetInfo?.provider) {
+      modelRef.provider = targetInfo.provider;
+    }
+  }
 
   const outputsDir = path.join(runDir, "outputs", agentName);
   fs.mkdirSync(outputsDir, { recursive: true });
@@ -258,6 +275,8 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     created_at_utc: createdAtUtc,
     summary: gateOverrideMissing ? "Awaiting human override for human_gate" : summary,
     mode,
+    provider: targetInfo?.provider ?? undefined,
+    model: targetInfo?.model ?? undefined,
   };
   writeJsonFile(resultPath, result);
 

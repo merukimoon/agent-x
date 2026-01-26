@@ -110,6 +110,7 @@ function runPlannerOrFail(runId: string, runDir: string) {
   const stderrPath = path.join(outputsDir, "stderr.txt");
   const resultPath = path.join(outputsDir, "result.json");
   const notesPath = path.join(outputsDir, "notes.md");
+  const targetPath = path.join(runDir, "planner_llm_target.json");
   const startedAt = new Date().toISOString();
   writeJson(statusPath, { status: "running", started_at: startedAt, agent: "planner", run_id: runId });
 
@@ -139,6 +140,14 @@ function runPlannerOrFail(runId: string, runDir: string) {
         "Planner failed";
       const stackPart = res.error?.stack ? `\n${res.error.stack}` : "";
       fs.writeFileSync(stderrPath, (tail || stderrText || message) + stackPart, "utf8");
+      const targetInfo = (() => {
+        if (!fs.existsSync(targetPath)) return null;
+        try {
+          return JSON.parse(fs.readFileSync(targetPath, "utf8"));
+        } catch {
+          return null;
+        }
+      })();
       writeJson(statusPath, {
         status: "failed",
         finished_at: finishedAt,
@@ -149,6 +158,9 @@ function runPlannerOrFail(runId: string, runDir: string) {
         error_stack: res.error?.stack ?? null,
         command: attempted,
         cwd: repoRoot,
+        provider: targetInfo?.provider ?? null,
+        model: targetInfo?.model ?? null,
+        endpoint: targetInfo?.endpoint ?? null,
       });
       writeJson(resultPath, {
         agent: "planner",
@@ -162,6 +174,9 @@ function runPlannerOrFail(runId: string, runDir: string) {
         error_stack: res.error?.stack ?? null,
         command: attempted,
         cwd: repoRoot,
+        provider: targetInfo?.provider ?? null,
+        model: targetInfo?.model ?? null,
+        endpoint: targetInfo?.endpoint ?? null,
       });
       fs.writeFileSync(
         notesPath,
@@ -180,6 +195,14 @@ function runPlannerOrFail(runId: string, runDir: string) {
       console.error(`Planner failed. Inspect ${stderrPath} and ${statusPath}.`);
       process.exit(exitCode);
     }
+    const targetInfo = (() => {
+      if (!fs.existsSync(targetPath)) return null;
+      try {
+        return JSON.parse(fs.readFileSync(targetPath, "utf8"));
+      } catch {
+        return null;
+      }
+    })();
     const finishedAt = new Date().toISOString();
     writeJson(statusPath, {
       status: "ok",
@@ -187,6 +210,20 @@ function runPlannerOrFail(runId: string, runDir: string) {
       exitCode: 0,
       agent: "planner",
       run_id: runId,
+      provider: targetInfo?.provider ?? null,
+      model: targetInfo?.model ?? null,
+      endpoint: targetInfo?.endpoint ?? null,
+    });
+    writeJson(resultPath, {
+      agent: "planner",
+      run_id: runId,
+      status: "done",
+      created_at_utc: startedAt,
+      summary: `Planner succeeded (command: ${attempted})`,
+      mode: "live",
+      provider: targetInfo?.provider ?? null,
+      model: targetInfo?.model ?? null,
+      endpoint: targetInfo?.endpoint ?? null,
     });
     const notes = [
       "# Planner succeeded",
@@ -195,7 +232,10 @@ function runPlannerOrFail(runId: string, runDir: string) {
       `- cwd: ${repoRoot}`,
       `- started: ${startedAt}`,
       `- finished: ${finishedAt}`,
-    ].join("\n");
+      targetInfo?.provider ? `- provider: ${targetInfo.provider}` : undefined,
+      targetInfo?.model ? `- model: ${targetInfo.model}` : undefined,
+      targetInfo?.endpoint ? `- endpoint: ${targetInfo.endpoint}` : undefined,
+    ].filter(Boolean).join("\n");
     fs.writeFileSync(notesPath, notes, "utf8");
   } catch (err) {
     const finishedAt = new Date().toISOString();

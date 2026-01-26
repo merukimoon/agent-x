@@ -1258,7 +1258,13 @@ export async function handlePlannerCommand(args) {
     console.log("Connecting to LLM...");
     let rawText;
     try {
-      rawText = await generatePlanFromLLM(promptPath, goal, contextStr);
+      const { rawText: llmText, target } = await generatePlanFromLLM(promptPath, goal, contextStr);
+      rawText = llmText;
+      try {
+        writeJsonFile(path.join(runDir, "planner_llm_target.json"), target);
+      } catch {
+        // best effort
+      }
     } catch (netErr) {
       console.error("Network error:", netErr);
       writeJsonFile(path.join(runDir, "planner_validation_error.json"), {

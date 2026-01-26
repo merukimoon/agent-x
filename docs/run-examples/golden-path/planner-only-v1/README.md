@@ -6,14 +6,7 @@ This example demonstrates running the **Planner agent** in isolation using the c
 ## Prerequisites
 - **Node.js**: v18 or higher.
 - **Dependencies**: Run `pnpm install --frozen-lockfile` in the repo root.
-- **Environment**: A `.env` file in the repo root with a valid LLM configuration.
-
-## Required Environment Variables
-Ensure your `.env` contains the keys required by your configured provider. See `.env.example`.
-Commonly:
-- `LLM_PROVIDER` (e.g., `vertex`, `openai`, `anthropic`)
-- `LLM_MODEL` (e.g., `gemini-1.5-pro-001`)
-- `GOOGLE_CLOUD_PROJECT` (for Vertex) or `API_KEY` (for others)
+- **LLM configuration**: `config/llm_models.json` defines defaults and per-agent model selection. The planner uses the `planner` entry or the defaults block. Auth resolves from the provider `auth_env` unless `LLM_API_KEY` is set. `LLM_ENDPOINT` and `LLM_MODEL` override the resolved endpoint and model for compatibility.
 
 ## Running the Planner
 From the repository root:
