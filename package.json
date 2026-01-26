@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@9.12.3",
+  "bin": {
+    "agentic": "./bin/agentic.js"
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --config vitest.config.js",
