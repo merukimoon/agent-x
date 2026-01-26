@@ -1,7 +1,7 @@
 import path from "path";
 import process from "process";
 
-export type AgentName = "coordinator" | "decision-maker" | "pr-reviewer" | "ciso" | "planner" | "architect" | "human_gate";
+export type AgentName = "coordinator" | "decision-maker" | "pr-reviewer" | "ciso" | "planner" | "architect" | "human_gate" | "technical-writer";
 export type AgentStatus = "blocked" | "in_progress" | "done" | "failed" | "skipped";
 export type ExecutionMode = "dry-run" | "live";
 export type StepStatus = "pending" | "running" | "done" | "failed" | "skipped";
@@ -90,6 +90,7 @@ export const VALID_AGENTS = new Set([
   "planner",
   "architect",
   "human_gate",
+  "technical-writer",
 ]) as Set<AgentName>;
 
 export const USAGE = [

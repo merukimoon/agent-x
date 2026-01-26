@@ -10,6 +10,7 @@ import {
 } from "./core.ts";
 import { fail } from "./errors.ts";
 import { writeJsonFile } from "./fs.ts";
+import { loadRolesRegistry } from "./roles_registry.ts";
 // import { getCanonicalOutputs } from "./agents.ts"; // Moved to core
 
 /**
@@ -36,6 +37,14 @@ export function gatherPlanSchemaErrors(candidate, expectedRunId) {
   const plan = /** @type {Partial<import("./core.ts").Plan>} */ (candidate);
   /** @type {string[]} */
   const errors = [];
+  let registry;
+  try {
+    registry = loadRolesRegistry();
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    errors.push(`roles registry error: ${reason}`);
+    return { plan: /** @type {import("./core.ts").Plan} */ (plan), schemaErrors: errors };
+  }
 
   if (!candidate || typeof candidate !== "object") {
     errors.push("plan.json is invalid: expected an object.");
@@ -107,6 +116,10 @@ export function gatherPlanSchemaErrors(candidate, expectedRunId) {
         `plan.json step ${step.id ?? index} has invalid agent: ${String(
           step.agent
         )}.`
+      );
+    } else if (!registry.byId.has(step.agent)) {
+      errors.push(
+        `plan.json step ${step.id ?? index} references agent ${step.agent} which is not executable per registry`
       );
     }
     if (!Array.isArray(step.depends_on)) {

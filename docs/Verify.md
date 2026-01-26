@@ -32,3 +32,4 @@ Gated flow resume and validation:
 Notes:
 - Verify Flows may include intentional non-zero exits (code 2) for gated runs; treat these as expected pauses, not failures.
 - A feature is complete when Verify, VerifyFest, and Verify Flows all pass (with expected pauses on gated scenarios).
+- Unit tests are mandatory for new or changed code; the verification sequence runs tests and fails on any test failure.

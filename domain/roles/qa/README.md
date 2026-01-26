@@ -79,6 +79,7 @@ The QA agent also writes the canonical step artifact set for its step id.
 1. verify flow writes QA outputs or skip artifacts according to the plan and finishes with a valid run artifact set when the QA step exists.
 2. validate run reports success when QA output artifacts and QA step artifacts exist and parse as valid JSON where applicable.
 3. Status commands are read only and must not change run.json.
+4. New or changed code includes unit tests, and verification runs the test suite and fails on test failures.
 
 ## Definition of Done
 

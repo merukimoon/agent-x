@@ -79,6 +79,7 @@ The Tech Lead also writes the canonical step artifact set for its step id.
 1. verify flow writes Tech Lead outputs according to the plan and finishes with a valid run artifact set when the Tech Lead step exists.
 2. validate run reports success when Tech Lead output artifacts and Tech Lead step artifacts exist and parse as valid JSON where applicable.
 3. Status commands are read only and must not change run.json.
+4. New or changed code includes unit tests, and verification runs the test suite and fails on test failures.
 
 ## Definition of Done
 
