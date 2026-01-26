@@ -22,6 +22,11 @@ It does not execute tests or modify plan.json.
 4. Modify run.json.
 5. Change flow type or step ordering.
 
+## Blocking Behavior
+
+1. Blocking: Yes when the QA step exists in plan.json.
+2. Missing required inputs, missing outputs, or invalid QA step artifacts cause verify-run and downstream validation to fail.
+
 ## Inputs
 
 The QA agent reads exactly these required inputs.

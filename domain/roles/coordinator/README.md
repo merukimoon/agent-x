@@ -23,6 +23,11 @@ It does not execute user work.
 4. Alter existing step statuses beyond writing a fresh plan when absent.
 5. Bypass gating or dependency validation.
 
+## Blocking Behavior
+
+1. Blocking: Yes when the Coordinator step exists in plan.json.
+2. Missing required inputs, missing outputs, or invalid Coordinator step artifacts cause verify-run and downstream validation to fail.
+
 ## Inputs
 
 The Coordinator reads exactly these required inputs.

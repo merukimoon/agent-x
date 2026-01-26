@@ -22,6 +22,11 @@ It does not execute user work or modify plan.json.
 4. Modify run.json.
 5. Change flow type or step ordering.
 
+## Blocking Behavior
+
+1. Blocking: Yes when the CISO step exists in plan.json.
+2. Missing required inputs, missing outputs, or invalid CISO step artifacts cause verify-run and downstream validation to fail, including when a skip status lacks the required artifacts.
+
 ## Inputs
 
 The CISO reads exactly these required inputs.

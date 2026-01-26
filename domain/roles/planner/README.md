@@ -21,6 +21,11 @@ It does not generate an execution plan.
 4. Modify run.json.
 5. Decide flow type or step ordering.
 
+## Blocking Behavior
+
+1. Blocking: Yes when the Planner step exists in plan.json.
+2. Missing required inputs, missing outputs, or invalid Planner step artifacts cause verify-run and downstream validation to fail.
+
 ## Inputs
 
 The Planner reads exactly these required inputs.
