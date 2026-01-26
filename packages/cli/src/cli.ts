@@ -50,6 +50,96 @@ const SKIP_POLICY: Record<string, { codes: Set<SkipReasonCode>; requireMode?: st
   ciso: { codes: new Set<SkipReasonCode>(["dry_run", "not_applicable", "policy_disabled"]), requireMode: "dry-run" },
 };
 
+type ExecutionScope =
+  | { kind: "full" }
+  | { kind: "single"; stepId: string }
+  | { kind: "from"; stepId: string }
+  | { kind: "until"; stepId: string };
+
+function normalizeStepMap(plan: Plan) {
+  const byId = new Map<string, PlanStep>();
+  plan.steps.forEach((s) => byId.set(s.id, s));
+  return byId;
+}
+
+export function computeExecutionSteps(plan: Plan, scope: ExecutionScope): PlanStep[] {
+  const byId = normalizeStepMap(plan);
+  const ensureStep = (id: string) => {
+    const step = byId.get(id);
+    if (!step) {
+      fail(`Step not found in plan: ${id}`, { exitCode: 1 });
+    }
+    return step!;
+  };
+
+  const isDone = (step: PlanStep) => step.status === "done" || step.status === "skipped";
+
+  if (scope.kind === "single") {
+    const target = ensureStep(scope.stepId);
+    target.depends_on.forEach((depId) => {
+      const dep = ensureStep(depId);
+      if (!isDone(dep)) {
+        fail(
+          `Cannot run step ${target.id} because dependency ${dep.id} is not done or skipped.`
+        );
+      }
+    });
+    return [target];
+  }
+
+  if (scope.kind === "until") {
+    const list: PlanStep[] = [];
+    let found = false;
+    for (const step of plan.steps) {
+      list.push(step);
+      if (step.id === scope.stepId) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      fail(`Step not found in plan: ${scope.stepId}`, { exitCode: 1 });
+    }
+    return list;
+  }
+
+  if (scope.kind === "from") {
+    const target = ensureStep(scope.stepId);
+    const include = new Set<string>();
+
+    const addAncestors = (id: string) => {
+      const step = ensureStep(id);
+      include.add(step.id);
+      step.depends_on.forEach((dep) => addAncestors(dep));
+    };
+    addAncestors(target.id);
+
+    const reverse = new Map<string, Set<string>>();
+    plan.steps.forEach((s) => {
+      s.depends_on.forEach((dep) => {
+        const set = reverse.get(dep) ?? new Set<string>();
+        set.add(s.id);
+        reverse.set(dep, set);
+      });
+    });
+    const addDesc = (id: string) => {
+      const set = reverse.get(id);
+      if (!set) return;
+      set.forEach((child) => {
+        if (!include.has(child)) {
+          include.add(child);
+          addDesc(child);
+        }
+      });
+    };
+    addDesc(target.id);
+
+    return plan.steps.filter((s) => include.has(s.id));
+  }
+
+  return plan.steps;
+}
+
 function isSkipPolicyAllowed(step: PlanStep, reasonCode: SkipReasonCode, mode: string | undefined) {
   if (!step.allow_skip) return false;
   const policy = SKIP_POLICY[step.agent];
@@ -100,6 +190,9 @@ export function parseRunArgs(args) {
   let runId = null;
   let dryRun = false;
   let contextPath = null;
+  let stepId: string | null = null;
+  let fromStepId: string | null = null;
+  let untilStepId: string | null = null;
   const remainder = [];
 
   for (let i = 0; i < args.length; i += 1) {
@@ -126,8 +219,51 @@ export function parseRunArgs(args) {
       i += 1;
       continue;
     }
+    if (arg === "--step") {
+      const value = args[i + 1];
+      if (!value || value.startsWith("--")) {
+        fail("Value required for --step <STEP_ID>.", { showUsage: true });
+      }
+      stepId = value;
+      i += 1;
+      continue;
+    }
+    if (arg.startsWith("--step=")) {
+      stepId = arg.slice("--step=".length);
+      continue;
+    }
+    if (arg === "--from") {
+      const value = args[i + 1];
+      if (!value || value.startsWith("--")) {
+        fail("Value required for --from <STEP_ID>.", { showUsage: true });
+      }
+      fromStepId = value;
+      i += 1;
+      continue;
+    }
+    if (arg.startsWith("--from=")) {
+      fromStepId = arg.slice("--from=".length);
+      continue;
+    }
+    if (arg === "--until") {
+      const value = args[i + 1];
+      if (!value || value.startsWith("--")) {
+        fail("Value required for --until <STEP_ID>.", { showUsage: true });
+      }
+      untilStepId = value;
+      i += 1;
+      continue;
+    }
+    if (arg.startsWith("--until=")) {
+      untilStepId = arg.slice("--until=".length);
+      continue;
+    }
     if (arg === "--dry-run") {
       dryRun = true;
+      continue;
+    }
+    if (arg === "--no-dry-run") {
+      dryRun = false;
       continue;
     }
     remainder.push(arg);
@@ -137,7 +273,7 @@ export function parseRunArgs(args) {
     fail("RUN_ID is required via --run <RUN_ID>.", { showUsage: true });
   }
 
-  return { runId, dryRun, contextPath, remainder };
+  return { runId, dryRun, contextPath, stepId, fromStepId, untilStepId, remainder };
 }
 
 /**
@@ -323,7 +459,7 @@ function validatePlanDependenciesStrict(plan) {
   plan.steps.forEach((step) => {
     step.depends_on.forEach((dep) => {
       if (!ids.has(dep)) {
-        fail(`Invalid dependency "${dep}" on step ${step.id}; no such step id in plan.`);
+        fail(`Invalid dependency "${dep}" on step ${step.id}; no such step id in plan.`, { exitCode: 1 });
       }
     });
   });
@@ -450,6 +586,10 @@ export function verifyRun(runDir) {
     // artifacts per step
     const sortedSteps = [...plan.steps].sort((a, b) => String(a.id).localeCompare(String(b.id)));
     sortedSteps.forEach((step) => {
+      const normalizedStatus = normalizeStatus(step.status);
+      if (normalizedStatus === "pending" || normalizedStatus === "running") {
+        return;
+      }
       const stepDir = path.join(runDir, "outputs", step.agent);
       if (!fs.existsSync(stepDir) || !fs.statSync(stepDir).isDirectory()) {
         errors.push(`MISSING_DIR outputs/${step.agent}`);
@@ -564,11 +704,12 @@ export function verifyRun(runDir) {
  * Execute steps defined in plan.json in order.
  * @param {RunId} runId
  * @param {ExecutionMode} mode
+ * @param {ExecutionScope} [scope]
  */
-export function runFlow(runId, mode) {
+export function runFlow(runId, mode, scope: ExecutionScope = { kind: "full" }) {
   const runDir = path.join(process.cwd(), "runs", runId);
   if (!fs.existsSync(runDir) || !fs.statSync(runDir).isDirectory()) {
-    fail(`Run directory not found: ${runDir}`, { exitCode: 11 });
+    fail(`Run directory not found: ${runDir}`, { exitCode: 1 });
   }
 
   const startedAt = new Date().toISOString();
@@ -592,7 +733,7 @@ export function runFlow(runId, mode) {
   ).filter((msg) => msg.startsWith("Missing input"));
   if (missingInputs.length > 0) {
     missingInputs.forEach((msg) => console.error(`ERROR: ${msg}`));
-    fail("Missing required inputs.", { exitCode: 11 });
+    fail("Missing required inputs.", { exitCode: 1 });
   }
 
   const lockPath = createFlowLock(runDir, runId, mode);
@@ -610,19 +751,19 @@ export function runFlow(runId, mode) {
     let validation = runValidationChecks(runId, runDir, planPath);
     if (validation.planLoadError) {
       console.error(`ERROR: ${validation.planLoadError}`);
-      fail("Validation failed.", { exitCode: 10 });
+      fail("Validation failed.", { exitCode: 2 });
     }
     if (validation.schemaErrors.length > 0) {
       validation.schemaErrors.forEach((err) => console.error(`ERROR: ${err}`));
-      fail("Validation failed.", { exitCode: 12 });
+      fail("Validation failed.", { exitCode: 2 });
     }
     if (validation.missingPaths.length > 0) {
       validation.missingPaths.forEach((err) => console.error(`ERROR: ${err}`));
-      fail("Validation failed.", { exitCode: 11 });
+      fail("Validation failed.", { exitCode: 2 });
     }
     const planMaybe = validation.plan;
     if (!planMaybe) {
-      fail("Unable to load plan.", { exitCode: 10 });
+      fail("Unable to load plan.", { exitCode: 2 });
     }
 
     const planPathFinal = planPath;
@@ -646,7 +787,8 @@ export function runFlow(runId, mode) {
     }
 
     const idToAgent = Object.fromEntries(plan.steps.map((s) => [s.id, s.agent]));
-    plan.steps.forEach((step) => {
+    const stepsToRun = computeExecutionSteps(plan, scope);
+    stepsToRun.forEach((step) => {
       if (step.status === "failed") {
         fail(
           `Cannot continue: step ${step.id} is already failed. Update plan.json before rerunning flow.`
@@ -772,7 +914,20 @@ export function handleFlowCommand(args) {
     fail(`Unknown arguments: ${parsed.remainder.join(" ")}`, { showUsage: true });
   }
   const mode = parsed.dryRun ? "dry-run" : "live";
-  runFlow(parsed.runId, mode);
+  const scopes = [parsed.stepId, parsed.fromStepId, parsed.untilStepId].filter(Boolean);
+  if (scopes.length > 1) {
+    fail("Use only one of --step, --from, or --until.", { showUsage: true });
+  }
+  /** @type {ExecutionScope} */
+  let scope: ExecutionScope = { kind: "full" };
+  if (parsed.stepId) {
+    scope = { kind: "single", stepId: parsed.stepId };
+  } else if (parsed.fromStepId) {
+    scope = { kind: "from", stepId: parsed.fromStepId };
+  } else if (parsed.untilStepId) {
+    scope = { kind: "until", stepId: parsed.untilStepId };
+  }
+  runFlow(parsed.runId, mode, scope);
 }
 
 /**
@@ -793,15 +948,15 @@ export function handleValidateCommand(args) {
   const result = runValidationChecks(parsed.runId, runDir, planPath);
   if (result.planLoadError) {
     console.error(`ERROR: ${result.planLoadError}`);
-    process.exit(10);
+    process.exit(2);
   }
   if (result.schemaErrors.length > 0) {
     result.schemaErrors.forEach((err) => console.error(`ERROR: ${err}`));
-    process.exit(12);
+    process.exit(2);
   }
   if (result.missingPaths.length > 0) {
     result.missingPaths.forEach((err) => console.error(`ERROR: ${err}`));
-    process.exit(11);
+    process.exit(2);
   }
   console.log("OK");
 }
@@ -909,7 +1064,7 @@ export function handleVerifyRunCommand(args) {
     return;
   }
   result.errors.forEach((e) => console.error(e));
-  process.exit(1);
+  process.exit(2);
 }
 
 /**
@@ -1258,7 +1413,13 @@ export async function handlePlannerCommand(args) {
     console.log("Connecting to LLM...");
     let rawText;
     try {
-      rawText = await generatePlanFromLLM(promptPath, goal, contextStr);
+      const { rawText: llmText, target } = await generatePlanFromLLM(promptPath, goal, contextStr);
+      rawText = llmText;
+      try {
+        writeJsonFile(path.join(runDir, "planner_llm_target.json"), target);
+      } catch {
+        // best effort
+      }
     } catch (netErr) {
       console.error("Network error:", netErr);
       writeJsonFile(path.join(runDir, "planner_validation_error.json"), {

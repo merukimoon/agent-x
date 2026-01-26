@@ -1,70 +1,92 @@
-# Coordinator (agent specification)
+# Coordinator
+
+This document defines the Coordinator role as implemented today.
 
 ## Purpose
 
-The Coordinator routes work across agents within a run. It turns a Task into a set of clear sub tasks, assigns ownership, tracks open questions, and aggregates results into a coherent outcome.
+The Coordinator constructs plan.json for a run and writes the Coordinator step artifacts.
+It classifies the flow, expands rule pack steps, and materializes dependencies for the execution engine.
+It does not execute user work.
 
-The Coordinator does not make final product decisions. When tradeoffs exist or agent outputs conflict, it escalates to the Decision Maker with a structured decision request.
+## Owns
 
-Terminology note: terms used in this spec follow the canonical glossary at [`/docs/reference/terminology-glossary.md`](/docs/reference/terminology-glossary.md).
+1. plan.json for the run when it is missing.
+2. The Coordinator step artifacts for a run.
+3. The Coordinator output artifacts for a run.
+4. A deterministic decision record for the Coordinator step.
 
-## When it runs (trigger conditions)
+## Cannot
 
-- A new Task enters the system and needs decomposition and routing.
-- A run has partial outputs that must be reconciled into a single response.
-- An agent returns `blocked` and requires clarification, permissions, or escalation.
-- A policy change or constraint requires re planning.
+1. Execute repository changes.
+2. Call external services.
+3. Modify run.json.
+4. Alter existing step statuses beyond writing a fresh plan when absent.
+5. Bypass gating or dependency validation.
+
+## Blocking Behavior
+
+1. Blocking: Yes when the Coordinator step exists in plan.json.
+2. Missing required inputs, missing outputs, or invalid Coordinator step artifacts cause verify-run and downstream validation to fail.
 
 ## Inputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The Coordinator reads exactly these required inputs.
 
-Agent specific required inputs (in addition to the contract input model):
+1. `runs/<RUN_ID>/inputs/request.md`
+2. `runs/<RUN_ID>/inputs/context.md`
+3. Prior outputs referenced by step dependencies when present.
 
-- `Context.available_agents`: list of available agent identities and where their specs live (for example, `domain/roles/decision-maker/README.md`).
-- `Context.policy`: the run Policy that constrains delegation and tool access.
-- `Context.prior_messages`: the conversation or event history for the run, if any.
+If any required input file is missing, Coordinator does not run.
 
 ## Outputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The Coordinator writes the canonical outputs directory for the Coordinator agent.
 
-Agent specific required outputs (in addition to the contract output envelope):
+1. `runs/<RUN_ID>/outputs/coordinator/result.json`
+2. `runs/<RUN_ID>/outputs/coordinator/notes.md`
+3. `runs/<RUN_ID>/outputs/coordinator/status.json`
 
-- `decisions[]`: at least one decision that records the routing and assignment strategy when the task is non trivial.
-- `next_steps[]`: actionable assignments, each with an owner and clear acceptance criteria when possible.
+The Coordinator also writes the canonical step artifact set for its step id.
 
-Agent specific optional artifacts:
+1. `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`
+2. `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`
+3. `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`
+4. `runs/<RUN_ID>/steps/index.json`
 
-- `artifacts[]` of kind `data`: a run plan summary (conceptual) describing phases, owners, and checkpoints.
+## Invariants
 
-## Responsibilities
+1. plan.json lists Planner and Coordinator steps with status done and allow skip true.
+2. plan.json maps rule pack steps to agents with depends_on resolved to step ids, not agent names.
+3. plan.json outputs paths for each step match the canonical outputs folder for that agent.
+4. Coordinator does not overwrite an existing plan.json unless it is missing.
 
-- Validate that the Task is well formed and that the Policy is understood.
-- Break down the Task into sub tasks that can be owned and reviewed.
-- Select the right agents for each sub task based on their specs.
-- Aggregate outputs into a single coherent response that is consistent with the Agent Contract.
-- Track open questions and ensure they are surfaced as `next_steps`.
-- Detect conflicts between agent outputs and escalate appropriately.
+## Run Artifacts
 
-## Out of scope
+1. Produces plan.json when absent and writes `runs/<RUN_ID>/outputs/coordinator/result.json`, `runs/<RUN_ID>/outputs/coordinator/notes.md`, and `runs/<RUN_ID>/outputs/coordinator/status.json`.
+2. Produces `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`, `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`, `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`, and updates `runs/<RUN_ID>/steps/index.json`.
+3. Reads `runs/<RUN_ID>/inputs/request.md`, `runs/<RUN_ID>/inputs/context.md`, and any prior outputs referenced in depends_on once resolved.
 
-- Making final decisions on tradeoffs, scope, or user visible product choices.
-- Producing large implementation artifacts as the primary deliverable.
-- Overriding the run Policy or changing tool boundaries.
-- Treating unverified information as fact.
+### Observability
 
-## Interfaces
+1. `runs/<RUN_ID>/outputs/coordinator/notes.md` records the excerpts of request and context used by the Coordinator.
+2. `runs/<RUN_ID>/outputs/coordinator/status.json` and `runs/<RUN_ID>/steps/index.json` show the Coordinator step status, model reference, and duration.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` holds the step decision and result records used by verify-run and status commands; plan.json shows the resolved steps and dependencies.
 
-The Coordinator depends on other agents conceptually as follows:
+## Failure Modes
 
-- Calls the Decision Maker for final choices and conflict resolution.
-- Calls the CISO for security and compliance review when outputs change documentation or policies.
-- Calls executor style agents for implementation work once they exist (not defined yet).
-- Calls reviewer style agents for quality review once they exist (not defined yet).
+1. Missing run directory or missing input files causes an immediate CLI error and no Coordinator artifacts are created.
+2. Dependency resolution errors halt plan creation and emit errors to stderr.
+3. File system write failures can leave incomplete artifacts and cause validation to fail for the run.
 
-## Example tasks
+## Verification Expectations
 
-- Take a feature request and route it into a plan, a decision request, and a review pass.
-- Aggregate documentation updates from multiple agents into a single consistent set of changes.
-- When an agent is blocked by missing requirements, produce a clarification request and delegate.
+1. verify flow writes plan.json via Coordinator when absent and finishes with a valid run artifact set.
+2. validate run reports success when Coordinator output artifacts, Coordinator step artifacts, and plan.json exist and parse as valid JSON where applicable.
+3. Status commands are read only and must not change run.json.
+
+## Definition of Done
+
+1. plan.json exists and reflects the Coordinator outputs with resolved depends_on and canonical output paths for each step.
+2. `runs/<RUN_ID>/outputs/coordinator/result.json`, `notes.md`, and `status.json` exist and parse as valid JSON where applicable.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` contains step_result.json, decision_after_step.json, effective_decision.json, and steps/index.json records the Coordinator step with a non pending status consistent with the artifacts.
+4. verify-run or validate-run on the run completes without errors attributable to the Coordinator step.

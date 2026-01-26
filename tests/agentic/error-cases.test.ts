@@ -35,7 +35,7 @@ test("validate fails on invalid plan schema", () => {
     useTsx: true,
   });
 
-  expect(result.code).toBe(12); // schema violation exit code
+  expect(result.code).toBe(2); // schema violation exit code
 });
 
 test("flow refuses to run when lock file exists", () => {

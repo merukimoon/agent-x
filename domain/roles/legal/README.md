@@ -1,79 +1,88 @@
-# Legal and license compliance (agent specification)
+# Legal
+
+This document defines the Legal role as implemented today.
 
 ## Purpose
 
-The Legal agent focuses on license compatibility and legal risk assessment for repository artifacts. It identifies licensing constraints, usage requirements, and compatibility issues.
+The Legal agent produces the Legal step artifacts and output artifacts for a run.
+It reviews inputs and prior outputs for license and notice concerns.
+It does not execute user work or modify plan.json.
 
-This agent is explicitly separate from security concerns handled by the CISO. It does not provide security review and does not approve risk acceptance.
+## Owns
 
-## When it runs (trigger conditions)
+1. The Legal step artifacts for a run.
+2. The Legal output artifacts for a run.
+3. A deterministic decision record for the Legal step.
 
-- A change modifies licensing terms, notices, or distribution expectations.
-- A change introduces new dependencies or third party assets (**TODO** when applicable).
-- The Coordinator requests a license and legal compliance review.
+## Cannot
+
+1. Execute repository changes.
+2. Call external services.
+3. Write or modify plan.json.
+4. Modify run.json.
+5. Change flow type or step ordering.
+
+## Blocking Behavior
+
+1. Blocking: Yes when the Legal step exists in plan.json.
+2. Missing required inputs, missing outputs, or invalid Legal step artifacts cause verify-run and downstream validation to fail.
+
+## Run Artifacts
+
+1. Produces `runs/<RUN_ID>/outputs/legal/result.json`, `runs/<RUN_ID>/outputs/legal/notes.md`, and `runs/<RUN_ID>/outputs/legal/status.json`.
+2. Produces `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`, `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`, `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`, and updates `runs/<RUN_ID>/steps/index.json`.
+3. Reads `runs/<RUN_ID>/inputs/request.md`, `runs/<RUN_ID>/inputs/context.md`, and prior outputs listed in depends_on for the Legal step in plan.json.
+
+### Observability
+
+1. `runs/<RUN_ID>/outputs/legal/notes.md` records the excerpts of request and context used by Legal.
+2. `runs/<RUN_ID>/outputs/legal/status.json` and `runs/<RUN_ID>/steps/index.json` show the Legal step status, model reference, and duration.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` holds the step decision and result records used by verify-run and status commands.
 
 ## Inputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The Legal agent reads exactly these required inputs.
 
-Agent specific required inputs (in addition to the contract input model):
+1. `runs/<RUN_ID>/inputs/request.md`
+2. `runs/<RUN_ID>/inputs/context.md`
+3. Prior outputs listed in the plan step depends_on chain.
 
-- Repository license information and any related notices (for example, `LICENSE`).
-- Any known dependency licensing information, if available (**TODO** when dependencies exist).
-- The scope of distribution or usage expectations, if specified (**TODO**).
+If any required input file or prior output referenced by the step is missing, Legal does not run.
 
 ## Outputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The Legal agent writes the canonical outputs directory for the Legal agent.
 
-Agent specific required outputs (in addition to the contract output envelope):
+1. `runs/<RUN_ID>/outputs/legal/result.json`
+2. `runs/<RUN_ID>/outputs/legal/notes.md`
+3. `runs/<RUN_ID>/outputs/legal/status.json`
 
-- `artifacts[]` of kind `data`: a LicenseComplianceReport.
-- `decisions[]`: classification of blocking versus non blocking legal issues with rationale.
-- `next_steps[]`: remediation actions and required notices, delegated to the Coordinator and Decision Maker.
+The Legal agent also writes the canonical step artifact set for its step id.
 
-Conceptual shape:
+1. `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`
+2. `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`
+3. `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`
+4. `runs/<RUN_ID>/steps/index.json`
 
-```text
-LicenseComplianceReport {
-  scope: { artifacts: [string], notes?: string }
-  overall_status: "pass" | "warning" | "block"
-  findings: [ {
-    id: string,
-    category: "license" | "notice" | "distribution" | "other",
-    status: "warning" | "block",
-    description: string,
-    recommendation: string
-  } ]
-}
-```
+## Invariants
 
-Blocking guidance:
+1. Outputs paths in plan.json for the Legal step match the canonical Legal outputs folder.
+2. Legal does not change step statuses other than writing its own step artifacts.
 
-- Block when licensing terms are incompatible with intended distribution or when required notices are missing for included third party assets.
-- Warning when information is incomplete or when best practice documentation is missing but risk is low.
+## Failure Modes
 
-## Responsibilities
+1. Missing run directory, inputs, or required prior outputs causes an immediate CLI error and no Legal artifacts are created.
+2. File system write failures can leave incomplete artifacts and cause validation to fail for the run.
 
-- Identify license compatibility issues and missing notices.
-- Highlight legal risk areas and required follow ups.
-- Provide actionable recommendations that can be implemented.
+## Verification Expectations
 
-## Out of scope
+1. verify flow writes Legal outputs according to the plan and finishes with a valid run artifact set when the Legal step exists.
+2. validate run reports success when Legal output artifacts and Legal step artifacts exist and parse as valid JSON where applicable.
+3. Status commands are read only and must not change run.json.
 
-- Providing legal advice as a substitute for qualified counsel.
-- Performing security review or threat analysis.
-- Making final decisions to accept legal risk.
+## Definition of Done
 
-## Interfaces
-
-- Works with the Coordinator to route remediation tasks and track required notices.
-- Escalates blocking issues to the Decision Maker and to a human maintainer when needed.
-- Coordinates with the Technical Writer when documentation requires license or notice updates.
-
-## Example tasks
-
-- Review repository licensing documents for completeness and clarity.
-- Assess a proposed addition of third party documentation assets for notice requirements.
-- Identify license compatibility risks for a planned distribution model.
+1. `runs/<RUN_ID>/outputs/legal/result.json`, `notes.md`, and `status.json` exist and parse as valid JSON where applicable.
+2. `runs/<RUN_ID>/steps/<STEP_ID>/` contains step_result.json, decision_after_step.json, effective_decision.json, and steps/index.json records the Legal step with a non pending status consistent with the artifacts.
+3. verify-run or validate-run on the run completes without errors attributable to the Legal step.
 

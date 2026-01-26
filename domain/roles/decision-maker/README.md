@@ -1,63 +1,88 @@
-# Decision Maker (agent specification)
+# Decision Maker
+
+This document defines the Decision Maker role as implemented today.
 
 ## Purpose
 
-The Decision Maker resolves tradeoffs and conflicts. It makes final calls when there are multiple viable paths, when risk must be accepted, or when agent outputs disagree.
+The Decision Maker agent produces the Decision Maker step artifacts and output artifacts for a run.
+It reviews inputs and prior outputs to resolve escalated tradeoffs and records guidance.
+It does not execute user work or modify plan.json.
 
-The Decision Maker focuses on clarity and accountability. It decides, records rationale, and delegates execution back to the Coordinator or other agents.
+## Owns
 
-## When it runs (trigger conditions)
+1. The Decision Maker step artifacts for a run.
+2. The Decision Maker output artifacts for a run.
+3. A deterministic decision record for the Decision Maker step.
 
-- The Coordinator escalates a decision request.
-- Two or more agents provide conflicting recommendations.
-- A change would introduce a breaking contract, a policy exception, or a meaningful risk.
-- A scope question requires prioritization.
+## Cannot
+
+1. Execute repository changes.
+2. Call external services.
+3. Write or modify plan.json.
+4. Modify run.json.
+5. Change flow type or step ordering.
+
+## Blocking Behavior
+
+1. Blocking: Yes when the Decision Maker step exists in plan.json.
+2. Missing required inputs, missing outputs, or invalid Decision Maker step artifacts cause verify-run and downstream validation to fail.
+
+## Run Artifacts
+
+1. Produces `runs/<RUN_ID>/outputs/decision-maker/result.json`, `runs/<RUN_ID>/outputs/decision-maker/notes.md`, and `runs/<RUN_ID>/outputs/decision-maker/status.json`.
+2. Produces `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`, `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`, `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`, and updates `runs/<RUN_ID>/steps/index.json`.
+3. Reads `runs/<RUN_ID>/inputs/request.md`, `runs/<RUN_ID>/inputs/context.md`, and prior outputs listed in depends_on for the Decision Maker step in plan.json.
+
+### Observability
+
+1. `runs/<RUN_ID>/outputs/decision-maker/notes.md` records the excerpts of request and context used by the Decision Maker.
+2. `runs/<RUN_ID>/outputs/decision-maker/status.json` and `runs/<RUN_ID>/steps/index.json` show the Decision Maker step status, model reference, and duration.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` holds the step decision and result records used by verify-run and status commands.
 
 ## Inputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The Decision Maker agent reads exactly these required inputs.
 
-Agent specific required inputs (in addition to the contract input model):
+1. `runs/<RUN_ID>/inputs/request.md`
+2. `runs/<RUN_ID>/inputs/context.md`
+3. Prior outputs listed in the plan step depends_on chain.
 
-- A decision request that includes options, tradeoffs, and constraints (from the Coordinator).
-- Any relevant review inputs, including security and compliance findings from the CISO when available.
-- The acceptance criteria that the decision should satisfy.
+If any required input file or prior output referenced by the step is missing, Decision Maker does not run.
 
 ## Outputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The Decision Maker agent writes the canonical outputs directory for the Decision Maker agent.
 
-Agent specific required outputs (in addition to the contract output envelope):
+1. `runs/<RUN_ID>/outputs/decision-maker/result.json`
+2. `runs/<RUN_ID>/outputs/decision-maker/notes.md`
+3. `runs/<RUN_ID>/outputs/decision-maker/status.json`
 
-- `decisions[]`: at least one decision with a clear title and rationale.
-- `next_steps[]`: delegation back to the Coordinator or other agents, with the chosen direction and constraints.
+The Decision Maker agent also writes the canonical step artifact set for its step id.
 
-Agent specific optional artifacts:
+1. `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`
+2. `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`
+3. `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`
+4. `runs/<RUN_ID>/steps/index.json`
 
-- `artifacts[]` of kind `data`: a decision record that captures alternatives considered and why they were rejected.
+## Invariants
 
-## Responsibilities
+1. Outputs paths in plan.json for the Decision Maker step match the canonical Decision Maker outputs folder.
+2. Decision Maker does not change step statuses other than writing its own step artifacts.
 
-- Choose a direction when multiple valid options exist.
-- Resolve conflicts between agent outputs with a clear decision record.
-- Ensure decisions are consistent with the Agent Contract and run Policy.
-- Make risk acceptance explicit, including conditions and follow ups, when needed.
+## Failure Modes
 
-## Out of scope
+1. Missing run directory, inputs, or required prior outputs causes an immediate CLI error and no Decision Maker artifacts are created.
+2. File system write failures can leave incomplete artifacts and cause validation to fail for the run.
 
-- Large implementation work or detailed drafting as the primary deliverable.
-- Silent changes of scope without recording the decision.
-- Overriding policy without explicit escalation and justification.
+## Verification Expectations
 
-## Interfaces
+1. verify flow writes Decision Maker outputs according to the plan and finishes with a valid run artifact set when the Decision Maker step exists.
+2. validate run reports success when Decision Maker output artifacts and Decision Maker step artifacts exist and parse as valid JSON where applicable.
+3. Status commands are read only and must not change run.json.
 
-- Receives decision requests from the Coordinator.
-- Requests security and compliance input from the CISO when the decision affects safety or policy.
-- Delegates execution to the Coordinator and other agents.
+## Definition of Done
 
-## Example tasks
-
-- Choose between two repository layouts when both satisfy constraints but optimize different priorities.
-- Approve or reject a proposed contract change and set the migration approach.
-- Resolve a conflict between documentation guidance and a schema proposal.
+1. `runs/<RUN_ID>/outputs/decision-maker/result.json`, `notes.md`, and `status.json` exist and parse as valid JSON where applicable.
+2. `runs/<RUN_ID>/steps/<STEP_ID>/` contains step_result.json, decision_after_step.json, effective_decision.json, and steps/index.json records the Decision Maker step with a non pending status consistent with the artifacts.
+3. verify-run or validate-run on the run completes without errors attributable to the Decision Maker step.
 

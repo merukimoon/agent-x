@@ -7,7 +7,7 @@ export class CLIError extends Error {
   constructor(message: string, options: { exitCode?: number; showUsage?: boolean } = {}) {
     super(message);
     this.name = "CLIError";
-    this.exitCode = options?.exitCode ?? 2;
+    this.exitCode = options?.exitCode ?? 1;
     this.showUsage = options?.showUsage ?? false;
   }
 }

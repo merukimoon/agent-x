@@ -1,78 +1,88 @@
-# DBA (agent specification)
+# DBA
+
+This document defines the DBA role as implemented today.
 
 ## Purpose
 
-The DBA focuses on data layer design, performance, reliability, and migration safety. It reviews schema changes, indexing strategies, query patterns, and operational risks for the database layer.
+The DBA agent produces the DBA step artifacts and output artifacts for a run.
+It reviews inputs and prior outputs for data layer safety and performance and records guidance.
+It does not execute user work or modify plan.json.
 
-The DBA does not redesign the entire system. It provides data layer recommendations and flags risks and rollback requirements for others to implement.
+## Owns
 
-## When it runs (trigger conditions)
+1. The DBA step artifacts for a run.
+2. The DBA output artifacts for a run.
+3. A deterministic decision record for the DBA step.
 
-- A Task proposes database schema, index, or migration changes.
-- A Task introduces new query patterns or data access paths that may impact performance.
-- The Coordinator requests a data layer review for an architecture or implementation plan.
+## Cannot
+
+1. Execute repository changes.
+2. Call external services.
+3. Write or modify plan.json.
+4. Modify run.json.
+5. Change flow type or step ordering.
+
+## Blocking Behavior
+
+1. Blocking: Yes when the DBA step exists in plan.json.
+2. Missing required inputs, missing outputs, or invalid DBA step artifacts cause verify-run and downstream validation to fail.
+
+## Run Artifacts
+
+1. Produces `runs/<RUN_ID>/outputs/dba/result.json`, `runs/<RUN_ID>/outputs/dba/notes.md`, and `runs/<RUN_ID>/outputs/dba/status.json`.
+2. Produces `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`, `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`, `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`, and updates `runs/<RUN_ID>/steps/index.json`.
+3. Reads `runs/<RUN_ID>/inputs/request.md`, `runs/<RUN_ID>/inputs/context.md`, and prior outputs listed in depends_on for the DBA step in plan.json.
+
+### Observability
+
+1. `runs/<RUN_ID>/outputs/dba/notes.md` records the excerpts of request and context used by the DBA.
+2. `runs/<RUN_ID>/outputs/dba/status.json` and `runs/<RUN_ID>/steps/index.json` show the DBA step status, model reference, and duration.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` holds the step decision and result records used by verify-run and status commands.
 
 ## Inputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The DBA agent reads exactly these required inputs.
 
-Agent specific required inputs (in addition to the contract input model):
+1. `runs/<RUN_ID>/inputs/request.md`
+2. `runs/<RUN_ID>/inputs/context.md`
+3. Prior outputs listed in the plan step depends_on chain.
 
-- Proposed data model changes or requirements.
-- Known query patterns and access paths, if available.
-- Operational constraints: availability expectations, rollback requirements, and maintenance windows if relevant (**TODO**).
+If any required input file or prior output referenced by the step is missing, DBA does not run.
 
 ## Outputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The DBA agent writes the canonical outputs directory for the DBA agent.
 
-Agent specific required outputs (in addition to the contract output envelope):
+1. `runs/<RUN_ID>/outputs/dba/result.json`
+2. `runs/<RUN_ID>/outputs/dba/notes.md`
+3. `runs/<RUN_ID>/outputs/dba/status.json`
 
-- `decisions[]`: at least one decision describing the recommended data layer approach.
-- `next_steps[]`: concrete implementation and verification steps, typically delegated to the Coordinator.
+The DBA agent also writes the canonical step artifact set for its step id.
 
-Agent specific artifacts (recommended):
+1. `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`
+2. `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`
+3. `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`
+4. `runs/<RUN_ID>/steps/index.json`
 
-- `artifacts[]` of kind `data`: a database review report including schema and index recommendations, migration and rollback guidance.
+## Invariants
 
-Conceptual shape:
+1. Outputs paths in plan.json for the DBA step match the canonical DBA outputs folder.
+2. DBA does not change step statuses other than writing its own step artifacts.
 
-```text
-DatabaseReview {
-  assumptions: [string]
-  schema_changes: [string]
-  index_changes: [string]
-  query_notes: [string]
-  migration_plan: [string]
-  rollback_plan: [string]
-  risks: [ { id, description, mitigation } ]
-  verification: [string]
-}
-```
+## Failure Modes
 
-## Responsibilities
+1. Missing run directory, inputs, or required prior outputs causes an immediate CLI error and no DBA artifacts are created.
+2. File system write failures can leave incomplete artifacts and cause validation to fail for the run.
 
-- Review proposed schema and index changes for correctness and maintainability.
-- Identify performance risks and propose mitigation (indexes, query changes, batching).
-- Provide migration guidance with rollback considerations.
-- Identify data integrity and consistency concerns.
+## Verification Expectations
 
-## Out of scope
+1. verify flow writes DBA outputs according to the plan and finishes with a valid run artifact set when the DBA step exists.
+2. validate run reports success when DBA output artifacts and DBA step artifacts exist and parse as valid JSON where applicable.
+3. Status commands are read only and must not change run.json.
 
-- Owning system level architecture decisions.
-- Writing application code or implementing migrations as the primary output.
-- Making product decisions about features or scope.
+## Definition of Done
 
-## Interfaces
-
-- Coordinates with the Architect on data model boundaries and compatibility.
-- Coordinates with the Tech Lead on sequencing and risk management.
-- Provides operational constraints to DevOps for deployment and monitoring plans.
-- Escalates tradeoffs to the Decision Maker when needed.
-
-## Example tasks
-
-- Review a schema evolution proposal and recommend an index strategy and rollback plan.
-- Identify risks in a migration plan that affects availability or data integrity.
-- Review a set of query patterns for performance risk and propose verification steps.
+1. `runs/<RUN_ID>/outputs/dba/result.json`, `notes.md`, and `status.json` exist and parse as valid JSON where applicable.
+2. `runs/<RUN_ID>/steps/<STEP_ID>/` contains step_result.json, decision_after_step.json, effective_decision.json, and steps/index.json records the DBA step with a non pending status consistent with the artifacts.
+3. verify-run or validate-run on the run completes without errors attributable to the DBA step.
 

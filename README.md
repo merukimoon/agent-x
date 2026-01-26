@@ -50,6 +50,8 @@ It encompasses:
 
 AgentX is the layer that makes the "Squad" behave reliably, ensuring no "ghost actions" occur outside the plan.
 
+CLI contract: see `docs/cli-contract.md` for the stable `agentic` command surface.
+
 ## Platform support
 
 The framework is developed on Windows (using WSL or Git Bash) and Linux.

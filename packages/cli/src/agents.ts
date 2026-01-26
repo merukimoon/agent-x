@@ -2,10 +2,12 @@ import fs from "fs";
 import path from "path";
 import process from "process";
 import { Core, Legacy } from "./imports.ts";
-import type { AgentName, AgentStatus, ExecutionMode, Plan, PlanStep } from "./imports.ts";
+import type { AgentName, AgentStatus, ExecutionMode, Plan, PlanStep, AgentResult } from "./imports.ts";
 import type { DecisionAfterStep, ExecutionStatus, ModelRef, SkipReason, SkipReasonCode, StepResult, StepOverride } from "../../contracts/src/index.ts";
 import { writeDecision, writeEffectiveDecision, writeSkippedStepArtifacts, writeStepResult, updateStepsIndex } from "./step_persistence.ts";
 import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy, readOverride } from "./gating_runtime.ts";
+import { requireExecutableRole } from "../../../scripts/agentic/roles_registry.ts";
+import { runTechnicalWriter } from "../../../scripts/agentic/runners.ts";
 
 // Deconstruct from Legacy where helpful for cleaner code, or use Legacy.*
 const {
@@ -183,10 +185,11 @@ export function ensureDependencies(step, runDir, idToAgent) {
 export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   const runDir = path.join(process.cwd(), "runs", runId);
   ensureRunAndInputs(runDir);
+  const registryEntry = requireExecutableRole(agentName);
   const { stepId, stepIndex, priorOutputs, pipelineId } = resolveStepMeta(runDir, agentName);
   const startedAt = new Date();
   const modelRef: ModelRef = {
-    provider: "unknown",
+    provider: registryEntry.runner,
     name: "unknown",
     mode,
     temperature: null,
@@ -238,6 +241,24 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   const createdAtUtc = new Date().toISOString();
   const summary = `${mode === "dry-run" ? "Dry run" : "Run"
     } completed for ${agentName} on run ${runId}.`;
+  let resultSummary = summary;
+  let targetInfo: any = null;
+  if (agentName === "planner") {
+    const targetPath = path.join(runDir, "planner_llm_target.json");
+    if (fs.existsSync(targetPath)) {
+      try {
+        targetInfo = JSON.parse(fs.readFileSync(targetPath, "utf8"));
+      } catch {
+        targetInfo = null;
+      }
+    }
+    if (targetInfo?.model) {
+      modelRef.name = targetInfo.model;
+    }
+    if (targetInfo?.provider) {
+      modelRef.provider = targetInfo.provider;
+    }
+  }
 
   const outputsDir = path.join(runDir, "outputs", agentName);
   fs.mkdirSync(outputsDir, { recursive: true });
@@ -251,15 +272,33 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     status = "blocked";
   }
   /** @type {AgentResult} */
-  const result = {
+  const result: AgentResult & { provider?: string; model?: string } = {
     agent: agentName,
     run_id: runId,
     status,
     created_at_utc: createdAtUtc,
     summary: gateOverrideMissing ? "Awaiting human override for human_gate" : summary,
     mode,
+    provider: targetInfo?.provider ?? undefined,
+    model: targetInfo?.model ?? undefined,
   };
-  writeJsonFile(resultPath, result);
+  let outputsWritten = false;
+  if (agentName === "technical-writer") {
+    const runnerOutput = runTechnicalWriter({
+      runId,
+      outputsDir,
+      requestPath,
+      contextPath,
+      mode,
+    });
+    status = runnerOutput.status as AgentStatus;
+    resultSummary = runnerOutput.summary;
+    result.status = status;
+    result.summary = resultSummary;
+    outputsWritten = true;
+  } else {
+    writeJsonFile(resultPath, result);
+  }
 
   const notesPath = path.join(outputsDir, "notes.md");
   const gateNote = gateOverrideMissing
@@ -280,16 +319,20 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     requestExcerpt,
     contextExcerpt,
   });
-  writeFileAtomic(notesPath, notes);
+  if (!outputsWritten) {
+    writeFileAtomic(notesPath, notes);
+  }
   const statusPath = path.join(outputsDir, "status.json");
-  writeJsonFile(statusPath, {
-    agent: agentName,
-    run_id: runId,
-    status,
-    created_at_utc: createdAtUtc,
-    mode,
-    finished_at_utc: createdAtUtc,
-  });
+  if (!outputsWritten) {
+    writeJsonFile(statusPath, {
+      agent: agentName,
+      run_id: runId,
+      status,
+      created_at_utc: createdAtUtc,
+      mode,
+      finished_at_utc: createdAtUtc,
+    });
+  }
 
   if (agentName === "coordinator") {
     const planPath = path.join(runDir, "plan.json");

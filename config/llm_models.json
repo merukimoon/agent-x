@@ -1,0 +1,20 @@
+{
+  "defaults": {
+    "provider": "openai",
+    "model": "gpt-4o"
+  },
+  "agents": {
+    "planner": {
+      "provider": "openai",
+      "model": "gpt-4o"
+    }
+  },
+  "providers": {
+    "openai": {
+      "endpoint": "https://api.openai.com/v1/chat/completions",
+      "auth_env": "OPENAI_API_KEY",
+      "auth_header": "Authorization",
+      "auth_prefix": "Bearer "
+    }
+  }
+}

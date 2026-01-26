@@ -1,76 +1,88 @@
-# DevOps (agent specification)
+# DevOps
+
+This document defines the DevOps role as implemented today.
 
 ## Purpose
 
-The DevOps agent focuses on build and deploy practices, observability, reliability, scaling, and cost optimization. It translates system requirements into operational constraints and an execution plan for safe changes.
+The DevOps agent produces the DevOps step artifacts and output artifacts for a run.
+It reviews inputs and prior outputs for operational considerations and records guidance.
+It does not execute user work or modify plan.json.
 
-This agent does not own product architecture. It informs the Architect and Tech Lead with operational constraints and recommends reliability and cost tradeoffs for approval by the Decision Maker.
+## Owns
 
-## When it runs (trigger conditions)
+1. The DevOps step artifacts for a run.
+2. The DevOps output artifacts for a run.
+3. A deterministic decision record for the DevOps step.
 
-- A Task impacts deployment, environments, or operational posture.
-- A Task introduces new runtime requirements, external dependencies, or scaling needs.
-- The Coordinator requests an operational plan or reliability review.
+## Cannot
+
+1. Execute repository changes.
+2. Call external services.
+3. Write or modify plan.json.
+4. Modify run.json.
+5. Change flow type or step ordering.
+
+## Blocking Behavior
+
+1. Blocking: Yes when the DevOps step exists in plan.json.
+2. Missing required inputs, missing outputs, or invalid DevOps step artifacts cause verify-run and downstream validation to fail.
+
+## Run Artifacts
+
+1. Produces `runs/<RUN_ID>/outputs/devops/result.json`, `runs/<RUN_ID>/outputs/devops/notes.md`, and `runs/<RUN_ID>/outputs/devops/status.json`.
+2. Produces `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`, `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`, `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`, and updates `runs/<RUN_ID>/steps/index.json`.
+3. Reads `runs/<RUN_ID>/inputs/request.md`, `runs/<RUN_ID>/inputs/context.md`, and prior outputs listed in depends_on for the DevOps step in plan.json.
+
+### Observability
+
+1. `runs/<RUN_ID>/outputs/devops/notes.md` records the excerpts of request and context used by the DevOps agent.
+2. `runs/<RUN_ID>/outputs/devops/status.json` and `runs/<RUN_ID>/steps/index.json` show the DevOps step status, model reference, and duration.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` holds the step decision and result records used by verify-run and status commands.
 
 ## Inputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The DevOps agent reads exactly these required inputs.
 
-Agent specific required inputs (in addition to the contract input model):
+1. `runs/<RUN_ID>/inputs/request.md`
+2. `runs/<RUN_ID>/inputs/context.md`
+3. Prior outputs listed in the plan step depends_on chain.
 
-- The expected service characteristics: availability targets, latency sensitivity, and criticality (**TODO**).
-- Any constraints on environments, deployment cadence, and incident response expectations (**TODO**).
-- The run Policy, especially constraints that affect observability and logging.
+If any required input file or prior output referenced by the step is missing, DevOps does not run.
 
 ## Outputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The DevOps agent writes the canonical outputs directory for the DevOps agent.
 
-Agent specific required outputs (in addition to the contract output envelope):
+1. `runs/<RUN_ID>/outputs/devops/result.json`
+2. `runs/<RUN_ID>/outputs/devops/notes.md`
+3. `runs/<RUN_ID>/outputs/devops/status.json`
 
-- `decisions[]`: at least one decision capturing operational constraints and recommended posture.
-- `next_steps[]`: delegated implementation and verification steps, typically to the Coordinator.
+The DevOps agent also writes the canonical step artifact set for its step id.
 
-Agent specific artifacts (recommended):
+1. `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`
+2. `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`
+3. `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`
+4. `runs/<RUN_ID>/steps/index.json`
 
-- `artifacts[]` of kind `data`: an OperationsPlan including monitoring requirements, scaling notes, reliability risks, and cost optimization guidance.
+## Invariants
 
-Conceptual shape:
+1. Outputs paths in plan.json for the DevOps step match the canonical DevOps outputs folder.
+2. DevOps does not change step statuses other than writing its own step artifacts.
 
-```text
-OperationsPlan {
-  deployment: [string]
-  observability: { metrics: [string], logs: [string], alerts: [string] }
-  reliability: { risks: [string], mitigations: [string], slo_notes?: string }
-  scaling: { strategy: string, triggers: [string] }
-  cost: { drivers: [string], optimizations: [string] }
-}
-```
+## Failure Modes
 
-## Responsibilities
+1. Missing run directory, inputs, or required prior outputs causes an immediate CLI error and no DevOps artifacts are created.
+2. File system write failures can leave incomplete artifacts and cause validation to fail for the run.
 
-- Define operational requirements for monitoring, alerting, and incident response.
-- Identify reliability risks and mitigations.
-- Provide scaling guidance, including automated resource scaling assumptions and triggers.
-- Provide cost notes and optimizations for cloud resource usage and scaling decisions.
-- Provide a deployment and rollback oriented plan.
+## Verification Expectations
 
-## Out of scope
+1. verify flow writes DevOps outputs according to the plan and finishes with a valid run artifact set when the DevOps step exists.
+2. validate run reports success when DevOps output artifacts and DevOps step artifacts exist and parse as valid JSON where applicable.
+3. Status commands are read only and must not change run.json.
 
-- Final approval of cost or reliability tradeoffs.
-- Redesigning system architecture or data models beyond operational concerns.
-- Implementation work as the primary output.
+## Definition of Done
 
-## Interfaces
-
-- Informs the Architect about operational constraints and reliability implications.
-- Informs the Tech Lead about sequencing and deployment risks.
-- Escalates tradeoffs to the Decision Maker when they require approval.
-- Coordinates with the CISO when observability and logging impacts privacy or compliance.
-
-## Example tasks
-
-- Define monitoring requirements and scaling triggers for a new service boundary.
-- Review a deployment plan for rollback safety and reliability risk.
-- Identify primary cost drivers and propose safe optimizations for cloud resource usage.
+1. `runs/<RUN_ID>/outputs/devops/result.json`, `notes.md`, and `status.json` exist and parse as valid JSON where applicable.
+2. `runs/<RUN_ID>/steps/<STEP_ID>/` contains step_result.json, decision_after_step.json, effective_decision.json, and steps/index.json records the DevOps step with a non pending status consistent with the artifacts.
+3. verify-run or validate-run on the run completes without errors attributable to the DevOps step.
 

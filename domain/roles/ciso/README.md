@@ -1,90 +1,89 @@
-# CISO (agent specification)
+# CISO
+
+This document defines the CISO role as implemented today.
 
 ## Purpose
 
-The CISO performs security, privacy, and compliance review of artifacts produced in a run. It identifies issues, classifies severity, and provides clear remediation guidance.
+The CISO produces the CISO step artifacts and output artifacts for a run.
+It reviews run inputs and prior outputs for security and policy concerns.
+It does not execute user work or modify plan.json.
 
-The CISO does not implement fixes. It produces a structured report artifact that the Coordinator can route to the Decision Maker and the rest of the squad.
+## Owns
 
-## When it runs (trigger conditions)
+1. The CISO step artifacts for a run.
+2. The CISO output artifacts for a run.
+3. A deterministic decision record for the CISO step.
 
-- Documentation or policy changes are produced and need review.
-- Any artifact changes security relevant rules, such as data handling or tool boundaries.
-- Before a release or publication milestone (**TODO**).
-- When the Coordinator requests a security or compliance assessment.
+## Cannot
+
+1. Execute repository changes.
+2. Call external services.
+3. Write or modify plan.json.
+4. Modify run.json.
+5. Change flow type or step ordering.
+
+## Blocking Behavior
+
+1. Blocking: Yes when the CISO step exists in plan.json.
+2. Missing required inputs, missing outputs, or invalid CISO step artifacts cause verify-run and downstream validation to fail, including when a skip status lacks the required artifacts.
+
+## Run Artifacts
+
+1. Produces `runs/<RUN_ID>/outputs/ciso/result.json`, `runs/<RUN_ID>/outputs/ciso/notes.md`, and `runs/<RUN_ID>/outputs/ciso/status.json`.
+2. Produces `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`, `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`, `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`, and updates `runs/<RUN_ID>/steps/index.json`, including skip status and reason when skipped.
+3. Reads `runs/<RUN_ID>/inputs/request.md`, `runs/<RUN_ID>/inputs/context.md`, and prior outputs listed in depends_on for the CISO step in plan.json.
+
+### Observability
+
+1. `runs/<RUN_ID>/outputs/ciso/notes.md` records the excerpts of request and context used by the CISO.
+2. `runs/<RUN_ID>/outputs/ciso/status.json` and `runs/<RUN_ID>/steps/index.json` show the CISO step status, model reference, duration, and skip reason when applicable.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` holds the step decision and result records used by verify-run and status commands.
 
 ## Inputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The CISO reads exactly these required inputs.
 
-Agent specific required inputs (in addition to the contract input model):
+1. `runs/<RUN_ID>/inputs/request.md`
+2. `runs/<RUN_ID>/inputs/context.md`
+3. Prior outputs listed in the plan step depends_on chain.
 
-- The artifacts to review, including relevant diffs or file contents when available.
-- The run Policy, especially privacy and allowed tools constraints.
-- The applicable baseline documents, at minimum `LICENSE`, `SECURITY.md`, and `CODE_OF_CONDUCT.md`.
+If any required input file or prior output referenced by the step is missing, CISO does not run.
 
 ## Outputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The CISO writes the canonical outputs directory for the CISO agent.
 
-Agent specific required outputs (in addition to the contract output envelope):
+1. `runs/<RUN_ID>/outputs/ciso/result.json`
+2. `runs/<RUN_ID>/outputs/ciso/notes.md`
+3. `runs/<RUN_ID>/outputs/ciso/status.json`
 
-- `artifacts[]`: a security and compliance report (conceptual) as a `data` artifact.
-- `decisions[]`: classification decisions for findings (blocking or warning) with rationale.
-- `next_steps[]`: remediation actions, assigned to the Coordinator or Decision Maker as appropriate.
+The CISO also writes the canonical step artifact set for its step id.
 
-### Security and compliance report artifact (conceptual)
+1. `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`
+2. `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`
+3. `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`
+4. `runs/<RUN_ID>/steps/index.json`
 
-The CISO produces a `data` artifact with a payload shaped like:
+## Invariants
 
-```text
-SecurityComplianceReport {
-  report_id: string
-  run_id: string
-  scope: { artifacts: [string], notes?: string }
-  summary: string
-  findings: [Finding]
-  overall_status: "pass" | "warning" | "block"
-}
+1. The CISO step in plan.json may be marked skipped when security signals are absent; skip still produces the full step artifact set with a skip reason code.
+2. Outputs paths in plan.json for the CISO step match the canonical CISO outputs folder.
+3. CISO does not change step statuses other than writing its own step artifacts.
 
-Finding {
-  id: string
-  category: "security" | "privacy" | "license" | "compliance" | "process"
-  severity: "low" | "medium" | "high" | "critical"
-  status: "warning" | "block"
-  description: string
-  evidence?: string
-  recommendation: string
-}
-```
+## Failure Modes
 
-Blocking guidance:
+1. Missing run directory, inputs, or required prior outputs causes an immediate CLI error and no CISO artifacts are created.
+2. File system write failures can leave incomplete artifacts and cause validation to fail for the run.
 
-- A finding is `block` when it creates a credible risk of secret leakage, unsafe tool behavior, policy bypass, or license incompatibility.
-- A finding is `warning` when it is low risk, informational, or a best practice gap.
+## Verification Expectations
 
-## Responsibilities
+1. verify flow writes CISO outputs or skip artifacts according to the plan and finishes with a valid run artifact set.
+2. validate run reports success when CISO output artifacts and CISO step artifacts exist, parse as valid JSON where applicable, and include skip reasons when status is skipped.
+3. Status commands are read only and must not change run.json.
 
-- Identify security and privacy risks in artifacts and policies.
-- Check basic compliance and repository hygiene, including licensing and disclosure expectations.
-- Classify findings as blocking or warning with clear rationale.
-- Provide actionable recommendations that can be delegated.
+## Definition of Done
 
-## Out of scope
-
-- Performing invasive testing or scanning that requires tools not granted by Policy.
-- Approving risk acceptance. That belongs to the Decision Maker and humans.
-- Producing large documentation rewrites as the primary output.
-
-## Interfaces
-
-- Receives review requests and artifacts from the Coordinator.
-- Escalates blocking findings to the Decision Maker for explicit risk acceptance or direction.
-- May request clarification from authors of artifacts through the Coordinator.
-
-## Example tasks
-
-- Review documentation changes for disclosure language, security contact details, and secret handling guidance.
-- Review a proposed schema change for fields that could store sensitive data.
-- Review prompt storage guidance for injection risk and data minimization.
+1. `runs/<RUN_ID>/outputs/ciso/result.json`, `notes.md`, and `status.json` exist and parse as valid JSON where applicable, including skip metadata when skipped.
+2. `runs/<RUN_ID>/steps/<STEP_ID>/` contains step_result.json, decision_after_step.json, effective_decision.json, and steps/index.json records the CISO step with a non pending status consistent with the artifacts.
+3. verify-run or validate-run on the run completes without errors attributable to the CISO step.
 

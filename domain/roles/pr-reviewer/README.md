@@ -1,88 +1,88 @@
-# PR Reviewer (agent specification)
+# PR Reviewer
+
+This document defines the PR Reviewer role as implemented today.
 
 ## Purpose
 
-The PR Reviewer performs line level and pull request level review of diffs and change sets. It produces a structured review report that captures blocking issues, non blocking improvements, questions, and risk notes.
+The PR Reviewer produces the PR Reviewer step artifacts and output artifacts for a run.
+It reviews inputs and prior outputs for change quality and records review guidance.
+It does not execute user work or modify plan.json.
 
-This agent does not approve merges. It does not implement large changes. When tradeoffs or disputes exist, it escalates to the Decision Maker through the Coordinator.
+## Owns
 
-## When it runs (trigger conditions)
+1. The PR Reviewer step artifacts for a run.
+2. The PR Reviewer output artifacts for a run.
+3. A deterministic decision record for the PR Reviewer step.
 
-- Mandatory for any PR that changes code or configuration.
-- Optional for docs only PRs, unless explicitly requested.
-- Mandatory when a PR changes dependencies, because dependency changes may imply security or license review scope.
+## Cannot
+
+1. Execute repository changes.
+2. Call external services.
+3. Write or modify plan.json.
+4. Modify run.json.
+5. Change flow type or step ordering.
+
+## Blocking Behavior
+
+1. Blocking: Yes when the PR Reviewer step exists in plan.json.
+2. Missing required inputs, missing outputs, or invalid PR Reviewer step artifacts cause verify-run and downstream validation to fail.
+
+## Run Artifacts
+
+1. Produces `runs/<RUN_ID>/outputs/pr-reviewer/result.json`, `runs/<RUN_ID>/outputs/pr-reviewer/notes.md`, and `runs/<RUN_ID>/outputs/pr-reviewer/status.json`.
+2. Produces `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`, `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`, `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`, and updates `runs/<RUN_ID>/steps/index.json`.
+3. Reads `runs/<RUN_ID>/inputs/request.md`, `runs/<RUN_ID>/inputs/context.md`, and prior outputs listed in depends_on for the PR Reviewer step in plan.json.
+
+### Observability
+
+1. `runs/<RUN_ID>/outputs/pr-reviewer/notes.md` records the excerpts of request and context used by the PR Reviewer.
+2. `runs/<RUN_ID>/outputs/pr-reviewer/status.json` and `runs/<RUN_ID>/steps/index.json` show the PR Reviewer step status, model reference, and duration.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` holds the step decision and result records used by verify-run and status commands.
 
 ## Inputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The PR Reviewer reads exactly these required inputs.
 
-Agent specific required inputs (in addition to the contract input model):
+1. `runs/<RUN_ID>/inputs/request.md`
+2. `runs/<RUN_ID>/inputs/context.md`
+3. Prior outputs listed in the plan step depends_on chain.
 
-- PR link and diff summary, or an equivalent change set description.
-- Context and relevant reference docs or decisions (for example, architecture notes, ADRs, or prior decisions).
-- Constraints from the run Policy, including any privacy limits on what may be copied into outputs.
+If any required input file or prior output referenced by the step is missing, PR Reviewer does not run.
 
 ## Outputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The PR Reviewer writes the canonical outputs directory for the PR Reviewer agent.
 
-Agent specific required outputs (in addition to the contract output envelope):
+1. `runs/<RUN_ID>/outputs/pr-reviewer/result.json`
+2. `runs/<RUN_ID>/outputs/pr-reviewer/notes.md`
+3. `runs/<RUN_ID>/outputs/pr-reviewer/status.json`
 
-- `artifacts[]` of kind `data`: a PRReviewReport.
-- `decisions[]`: classification decisions for blocking versus non blocking items, with rationale.
-- `next_steps[]`: concrete fixes or follow ups, delegated to the Coordinator or appropriate owners.
+The PR Reviewer also writes the canonical step artifact set for its step id.
 
-### PR Review Report artifact (conceptual)
+1. `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`
+2. `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`
+3. `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`
+4. `runs/<RUN_ID>/steps/index.json`
 
-The PR Reviewer produces a `data` artifact with a payload shaped like:
+## Invariants
 
-```text
-PRReviewReport {
-  pr: { link: string, title?: string, scope?: string }
-  summary: string
-  risk: { level: "low" | "medium" | "high", notes: [string] }
-  test_impact: { expected_changes: [string], gaps: [string] }
-  findings: [Finding]
-  questions: [string]
-}
+1. Outputs paths in plan.json for the PR Reviewer step match the canonical PR Reviewer outputs folder.
+2. PR Reviewer does not change step statuses other than writing its own step artifacts.
 
-Finding {
-  id: string
-  status: "block" | "non_blocking"
-  category: "correctness" | "maintainability" | "readability" | "complexity" | "error_handling" | "performance" | "observability" | "security" | "dependency" | "docs" | "other"
-  description: string
-  evidence?: string
-  recommendation: string
-}
-```
+## Failure Modes
 
-## Responsibilities
+1. Missing run directory, inputs, or required prior outputs causes an immediate CLI error and no PR Reviewer artifacts are created.
+2. File system write failures can leave incomplete artifacts and cause validation to fail for the run.
 
-- Review correctness, maintainability, complexity, and readability of the change.
-- Identify error handling gaps and important edge cases.
-- Identify performance considerations when relevant.
-- Identify observability and logging implications without duplicating DevOps work.
-- Identify security and compliance concerns and route them to CISO or Legal when needed.
-- Verify documentation and test impacts are addressed without duplicating Technical Writer or QA work.
+## Verification Expectations
 
-## Out of scope
+1. verify flow writes PR Reviewer outputs according to the plan and finishes with a valid run artifact set when the PR Reviewer step exists.
+2. validate run reports success when PR Reviewer output artifacts and PR Reviewer step artifacts exist and parse as valid JSON where applicable.
+3. Status commands are read only and must not change run.json.
 
-- Implementing large code changes or rewriting modules.
-- Making final approvals or merge decisions.
-- Rewriting architecture decisions or redefining scope without escalation.
+## Definition of Done
 
-## Interfaces
-
-- Coordinator: orchestrates the run and aggregates PR Reviewer outputs.
-- Decision Maker: resolves tradeoffs and disputes and approves outcomes.
-- QA: handles test strategy and quality gates when test adequacy is in question.
-- CISO: handles security review when security relevant concerns are identified.
-- Legal: handles license and notice review when dependency or licensing concerns are identified.
-- Tech Lead and Architect: handle plan and design level concerns when review identifies architectural drift.
-
-## Example tasks
-
-- Review a refactor PR and flag maintainability risks and edge cases.
-- Review a dependency upgrade PR and identify security and license review needs.
-- Review a bugfix PR with tests and flag missing cases and regression risks.
+1. `runs/<RUN_ID>/outputs/pr-reviewer/result.json`, `notes.md`, and `status.json` exist and parse as valid JSON where applicable.
+2. `runs/<RUN_ID>/steps/<STEP_ID>/` contains step_result.json, decision_after_step.json, effective_decision.json, and steps/index.json records the PR Reviewer step with a non pending status consistent with the artifacts.
+3. verify-run or validate-run on the run completes without errors attributable to the PR Reviewer step.
 

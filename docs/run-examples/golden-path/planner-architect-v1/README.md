@@ -18,15 +18,8 @@ This is a **thinking-only flow** — no code is generated or modified.
 ## Prerequisites
 - **Node.js**: v18 or higher.
 - **Dependencies**: Run `pnpm install --frozen-lockfile` in the repo root.
-- **Environment**: A `.env` file in the repo root with valid LLM configuration.
+- **LLM configuration**: `config/llm_models.json` defines defaults and per-agent overrides. Planner uses the `planner` entry; Architect currently runs without an LLM call. Provider auth resolves from the provider `auth_env` unless `LLM_API_KEY` is set. `LLM_ENDPOINT` and `LLM_MODEL` override the resolved endpoint and model for compatibility.
 - **Make**: Git Bash or WSL on Windows (see README for platform notes).
-
-## Required Environment Variables
-Ensure your `.env` contains the keys required by your configured provider. See `.env.example`.
-Commonly:
-- `LLM_PROVIDER` (e.g., `openai`, `anthropic`, `vertex`)
-- `LLM_MODEL` (e.g., `gpt-4o-mini`)
-- `OPENAI_API_KEY` or equivalent provider key
 
 ## Running the Flow
 

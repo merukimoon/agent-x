@@ -1,85 +1,88 @@
-# Architect (agent specification)
+# Architect
+
+This document defines the Architect role as implemented today.
 
 ## Purpose
 
-The Architect ensures architectural coherence and produces design proposals that can be reviewed and implemented. It focuses on system boundaries, interfaces, compatibility, and migration concerns.
+The Architect produces the Architect step artifacts and output artifacts for a run.
+It reviews inputs and prior Planner outputs to record architecture guidance.
+It does not execute user work or modify plan.json.
 
-The Architect does not own day to day delivery coordination and does not issue final approvals. When decisions are required, it provides options and escalates to the Decision Maker.
+## Owns
 
-Terminology note: terms used in this spec follow the canonical glossary at [`/docs/reference/terminology-glossary.md`](/docs/reference/terminology-glossary.md).
+1. The Architect step artifacts for a run.
+2. The Architect output artifacts for a run.
+3. A deterministic decision record for the Architect step.
 
-## When it runs (trigger conditions)
+## Cannot
 
-- A Task proposes an architecture or design change.
-- A contract, schema, or repository structure change needs coherence and migration notes.
-- The Coordinator requests a design proposal to guide implementation.
+1. Execute repository changes.
+2. Call external services.
+3. Write or modify plan.json.
+4. Modify run.json.
+5. Change flow type or step ordering.
+
+## Blocking Behavior
+
+1. Blocking: Yes when the Architect step exists in plan.json.
+2. Missing required inputs, missing outputs, or invalid Architect step artifacts cause verify-run and downstream validation to fail.
 
 ## Inputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The Architect reads exactly these required inputs.
 
-Agent specific required inputs (in addition to the contract input model):
+1. `runs/<RUN_ID>/inputs/request.md`
+2. `runs/<RUN_ID>/inputs/context.md`
+3. Prior outputs listed in the plan step depends_on chain, typically Planner outputs.
 
-- The proposed change description and affected areas.
-- Existing constraints: compatibility expectations, versioning policy, and run Policy.
-- Relevant prior decisions, if any (decision records or ADRs, if they exist).
+If any required input file or prior output referenced by the step is missing, Architect does not run.
 
 ## Outputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The Architect writes the canonical outputs directory for the Architect agent.
 
-Agent specific required outputs (in addition to the contract output envelope):
+1. `runs/<RUN_ID>/outputs/architect/result.json`
+2. `runs/<RUN_ID>/outputs/architect/notes.md`
+3. `runs/<RUN_ID>/outputs/architect/status.json`
 
-- `decisions[]`: design choices and rationales, including compatibility implications.
-- `next_steps[]`: delegated steps for documentation updates and implementation planning.
+The Architect also writes the canonical step artifact set for its step id.
 
-Agent specific artifacts (recommended):
+1. `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`
+2. `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`
+3. `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`
+4. `runs/<RUN_ID>/steps/index.json`
 
-- `artifacts[]` of kind `data`: an architecture proposal and ADR like decision record.
+## Invariants
 
-Conceptual shapes:
+1. The Architect step in plan.json depends_on the Planner step and uses the Planner outputs as prior outputs.
+2. Outputs paths in plan.json for the Architect step match the canonical Architect outputs folder.
+3. Architect does not change step statuses other than writing its own step artifacts.
 
-```text
-ArchitectureProposal {
-  context: string
-  goals: [string]
-  non_goals: [string]
-  options: [ { id, description, pros, cons } ]
-  recommendation: string
-  compatibility: { impact: string, migration: [string] }
-}
+## Run Artifacts
 
-ArchitectureDecisionRecord {
-  adr_id: string
-  title: string
-  decision: string
-  rationale: string
-  consequences: [string]
-}
-```
+1. Produces `runs/<RUN_ID>/outputs/architect/result.json`, `runs/<RUN_ID>/outputs/architect/notes.md`, and `runs/<RUN_ID>/outputs/architect/status.json`.
+2. Produces `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`, `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`, `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`, and updates `runs/<RUN_ID>/steps/index.json`.
+3. Reads `runs/<RUN_ID>/inputs/request.md`, `runs/<RUN_ID>/inputs/context.md`, and prior outputs listed in depends_on for the Architect step in plan.json.
 
-## Responsibilities
+### Observability
 
-- Produce a coherent proposal with clear options and tradeoffs.
-- Identify interface boundaries and invariants that must be preserved.
-- Identify compatibility impacts and migration steps.
-- Ensure proposals align with the Agent Contract and repository conventions.
+1. `runs/<RUN_ID>/outputs/architect/notes.md` records the excerpts of request and context used by the Architect.
+2. `runs/<RUN_ID>/outputs/architect/status.json` and `runs/<RUN_ID>/steps/index.json` show the Architect step status, model reference, and duration.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` holds the step decision and result records used by verify-run and status commands.
 
-## Out of scope
+## Failure Modes
 
-- Delivery coordination and task routing. That is the Coordinator.
-- Final approval of design tradeoffs or risk acceptance.
-- Detailed implementation work as the primary output.
+1. Missing run directory, inputs, or required prior outputs causes an immediate CLI error and no Architect artifacts are created.
+2. File system write failures can leave incomplete artifacts and cause validation to fail for the run.
 
-## Interfaces
+## Verification Expectations
 
-- Works with the Tech Lead to align design with execution plans and sequencing.
-- Works with the Coordinator to route design tasks and track follow ups.
-- Escalates decision points to the Decision Maker.
-- Consults the CISO when proposals affect security, privacy, or compliance.
+1. verify flow writes Architect outputs when the Architect step is present in the plan and finishes with a valid run artifact set.
+2. validate run reports success when Architect output artifacts and Architect step artifacts exist and parse as valid JSON where applicable.
+3. Status commands are read only and must not change run.json.
 
-## Example tasks
+## Definition of Done
 
-- Propose a schema versioning approach and migration notes for agent responses.
-- Define an ADR for introducing a new orchestration flow and its invariants.
-- Review a repository layout change for compatibility and future extension risks.
+1. `runs/<RUN_ID>/outputs/architect/result.json`, `notes.md`, and `status.json` exist and parse as valid JSON where applicable.
+2. `runs/<RUN_ID>/steps/<STEP_ID>/` contains step_result.json, decision_after_step.json, effective_decision.json, and steps/index.json records the Architect step with a non pending status consistent with the artifacts.
+3. verify-run or validate-run on the run completes without errors attributable to the Architect step.

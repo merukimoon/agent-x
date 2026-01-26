@@ -1,0 +1,82 @@
+[
+  {
+    "id": "planner",
+    "runner": "llm",
+    "blocking": true,
+    "required_artifacts": [
+      "outputs/planner/result.json",
+      "outputs/planner/notes.md",
+      "outputs/planner/status.json"
+    ]
+  },
+  {
+    "id": "coordinator",
+    "runner": "rule",
+    "blocking": true,
+    "required_artifacts": [
+      "outputs/coordinator/result.json",
+      "outputs/coordinator/notes.md",
+      "outputs/coordinator/status.json"
+    ]
+  },
+  {
+    "id": "decision-maker",
+    "runner": "rule",
+    "blocking": true,
+    "required_artifacts": [
+      "outputs/decision-maker/result.json",
+      "outputs/decision-maker/notes.md",
+      "outputs/decision-maker/status.json"
+    ]
+  },
+  {
+    "id": "pr-reviewer",
+    "runner": "rule",
+    "blocking": true,
+    "required_artifacts": [
+      "outputs/pr-reviewer/result.json",
+      "outputs/pr-reviewer/notes.md",
+      "outputs/pr-reviewer/status.json"
+    ]
+  },
+  {
+    "id": "ciso",
+    "runner": "rule",
+    "blocking": true,
+    "required_artifacts": [
+      "outputs/ciso/result.json",
+      "outputs/ciso/notes.md",
+      "outputs/ciso/status.json"
+    ]
+  },
+  {
+    "id": "architect",
+    "runner": "rule",
+    "blocking": true,
+    "required_artifacts": [
+      "outputs/architect/result.json",
+      "outputs/architect/notes.md",
+      "outputs/architect/status.json"
+    ]
+  },
+  {
+    "id": "human_gate",
+    "runner": "human_gate",
+    "blocking": true,
+    "required_artifacts": [
+      "outputs/human_gate/result.json",
+      "outputs/human_gate/notes.md",
+      "outputs/human_gate/status.json"
+    ]
+  },
+  {
+    "id": "technical-writer",
+    "runner": "rule",
+    "blocking": true,
+    "required_artifacts": [
+      "outputs/technical-writer/result.json",
+      "outputs/technical-writer/notes.md",
+      "outputs/technical-writer/status.json"
+    ]
+  }
+]

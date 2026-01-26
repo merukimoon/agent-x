@@ -1,61 +1,73 @@
-# Planner (agent specification)
+# Planner
+
+This document defines the Planner role as implemented today.
 
 ## Purpose
 
-The Planner produces structured plans only. It never executes actions or performs side effects. It emits schema-first, safety-first outputs that can be validated and orchestrated by the engine or coordinator.
+The Planner records run inputs and produces canonical run artifacts for the Planner step.
+It does not generate an execution plan.
 
-## When it runs (trigger conditions)
+## Owns
 
-- When a task requires a structured, reviewable plan before any execution.
-- When downstream agents need explicit steps, verification methods, and risks enumerated.
-- When rules-based planning is insufficient or requires augmentation.
+1. The Planner step artifacts for a run.
+2. The Planner output artifacts for a run.
+3. A deterministic decision record for the Planner step.
+
+## Cannot
+
+1. Execute repository changes.
+2. Call external services.
+3. Write plan.json.
+4. Modify run.json.
+5. Decide flow type or step ordering.
+
+## Blocking Behavior
+
+1. Blocking: Yes when the Planner step exists in plan.json.
+2. Missing required inputs, missing outputs, or invalid Planner step artifacts cause verify-run and downstream validation to fail.
 
 ## Inputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The Planner reads exactly these required inputs.
 
-Agent specific required inputs (in addition to the contract input model):
+1. `runs/<RUN_ID>/inputs/request.md`
+2. `runs/<RUN_ID>/inputs/context.md`
 
-- Goal statement and constraints for the task.
-- Capability map indicating allowed `action_type` values and available tools.
-- Context sufficient to plan deterministically (e.g., repo structure, policies).
-- Policies and safety limits that must be enforced at plan time.
+If either input file is missing, Planner does not run.
 
 ## Outputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The Planner writes the canonical outputs directory for the Planner agent.
 
-Agent specific required outputs (in addition to the contract output envelope):
+1. `runs/<RUN_ID>/outputs/planner/result.json`
+2. `runs/<RUN_ID>/outputs/planner/notes.md`
+3. `runs/<RUN_ID>/outputs/planner/status.json`
 
-- A structured plan JSON that conforms to the planner schema (action_type, inputs, verification, risk).
-- `needs_clarification` flag and questions when the plan cannot be produced safely.
-- Exit codes indicating success, schema error, or policy violation (see planner retry policy).
+The Planner also writes the canonical step artifact set for its step id.
 
-## Responsibilities
+1. `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`
+2. `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`
+3. `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`
+4. `runs/<RUN_ID>/steps/index.json`
 
-- Produce plans that are schema-valid, capability-gated, and verification-ready.
-- Enumerate assumptions explicitly; avoid implicit execution or hidden steps.
-- Include verification per step and risk tagging for every action.
-- Return clear exit codes and structured errors; do not attempt execution.
+## Plan Invariants
 
-## Out of scope
+When plan.json exists, it references Planner as an explicit step and points its output paths to the Planner output artifacts.
+The Planner itself does not create or modify plan.json.
 
-- Performing any execution, mutations, or side effects.
-- Inventing tools or actions that are not present in the capability map.
-- Reinterpreting or auto-fixing plans after validation failures.
+## Failure Modes
 
-## Interfaces
+1. Missing run directory or missing input files causes an immediate CLI error and no Planner artifacts are created.
+2. File system write failures can leave incomplete artifacts and cause validation to fail for the run.
 
-- Coordinator/Orchestrator: validates and routes the plan; executes steps deterministically or falls back to rules.
-- Downstream agents (e.g., pr-reviewer, ciso): consume the validated plan to perform their scoped work.
+## Verification Expectations
 
-## Usage & Implementation
+1. verify flow executes Planner before Coordinator and finishes with a valid run artifact set.
+2. validate run reports success when Planner output artifacts and Planner step artifacts exist and parse as valid JSON where applicable.
+3. Status commands are read only and must not change run.json.
 
-- **Golden Path**: [Running the Planner agent](../../docs/run-examples/golden-path/planner-only-v1/README.md)
-- **Orchestration Policy**: [Retry and Safety wrappers](../../docs/orchestrator-policy.md)
+## Observability
 
-## Example tasks
-
-- Produce a plan to add a new documentation page with review steps and risk tags.
-- Produce a plan for a small feature change with explicit verification and rollback notes.
-- Produce a plan that requests clarifications when the goal is underspecified.
+1. `runs/<RUN_ID>/outputs/planner/notes.md` contains the captured excerpts of request and context used for the run.
+2. `runs/<RUN_ID>/steps/index.json` records the Planner step status, decision action, model reference, and duration.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` contains the decision and step result records for audit and gating.
