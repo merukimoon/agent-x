@@ -1,77 +1,71 @@
-# QA (agent specification)
+# QA
+
+This document defines the QA role as implemented today.
 
 ## Purpose
 
-The QA agent defines test strategy and quality gates for a change. It identifies coverage gaps, regression risks, and verification steps so the squad can validate outcomes consistently.
+The QA agent produces the QA step artifacts and output artifacts for a run.
+It reviews inputs and prior outputs for quality risks and records verification guidance.
+It does not execute tests or modify plan.json.
 
-The QA agent does not write production code. It may propose tests conceptually and define what must be verified, but implementation is delegated to other agents.
+## Owns
 
-## When it runs (trigger conditions)
+1. The QA step artifacts for a run.
+2. The QA output artifacts for a run.
+3. A deterministic decision record for the QA step.
 
-- A Task changes behavior or interfaces and needs verification planning.
-- A run produces artifacts that should be validated before approval.
-- The Coordinator requests quality gates or regression assessment.
+## Cannot
+
+1. Execute repository changes.
+2. Call external services.
+3. Write or modify plan.json.
+4. Modify run.json.
+5. Change flow type or step ordering.
 
 ## Inputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The QA agent reads exactly these required inputs.
 
-Agent specific required inputs (in addition to the contract input model):
+1. `runs/<RUN_ID>/inputs/request.md`
+2. `runs/<RUN_ID>/inputs/context.md`
+3. Prior outputs listed in the plan step depends_on chain.
 
-- The change description and acceptance criteria.
-- The artifacts to validate, or a summary of intended behavior.
-- Any existing test expectations or known failure modes, if available.
+If any required input file or prior output referenced by the step is missing, QA does not run.
 
 ## Outputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The QA agent writes the canonical outputs directory for the QA agent.
 
-Agent specific required outputs (in addition to the contract output envelope):
+1. `runs/<RUN_ID>/outputs/qa/result.json`
+2. `runs/<RUN_ID>/outputs/qa/notes.md`
+3. `runs/<RUN_ID>/outputs/qa/status.json`
 
-- `decisions[]`: at least one decision describing the proposed quality gates and assumptions.
-- `next_steps[]`: concrete verification actions and ownership, typically delegated to the Coordinator.
+The QA agent also writes the canonical step artifact set for its step id.
 
-Agent specific artifacts (recommended):
+1. `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`
+2. `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`
+3. `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`
+4. `runs/<RUN_ID>/steps/index.json`
 
-- `artifacts[]` of kind `data`: a TestStrategyReport.
+## Invariants
 
-Conceptual shape:
+1. Outputs paths in plan.json for the QA step match the canonical QA outputs folder.
+2. QA does not change step statuses other than writing its own step artifacts.
 
-```text
-TestStrategyReport {
-  scope: { in: [string], out: [string] }
-  risks: [ { id, description, impact, mitigation } ]
-  quality_gates: [string]
-  coverage_assessment: [string]
-  recommended_tests: [string]
-  regression_concerns: [string]
-  verification_steps: [string]
-}
-```
+## Failure Modes
 
-## Responsibilities
+1. Missing run directory, inputs, or required prior outputs causes an immediate CLI error and no QA artifacts are created.
+2. File system write failures can leave incomplete artifacts and cause validation to fail for the run.
 
-- Identify quality risks and regression areas.
-- Define quality gates that are objective and checkable.
-- Propose a minimal set of verification steps aligned with acceptance criteria.
-- Highlight gaps in coverage and suggest where tests should exist.
+## Verification Expectations
 
-## Out of scope
+1. verify flow writes QA outputs or skip artifacts according to the plan and finishes with a valid run artifact set when the QA step exists.
+2. validate run reports success when QA output artifacts and QA step artifacts exist and parse as valid JSON where applicable.
+3. Status commands are read only and must not change run.json.
 
-- Writing production code or implementing the full test suite.
-- Making final tradeoff decisions about scope or risk acceptance.
-- Approving releases or overriding run Policy.
+## Observability
 
-## Interfaces
-
-- Works with the Tech Lead to align verification steps with the plan.
-- Works with the Coordinator to route test work and track quality gates.
-- Escalates risk acceptance decisions to the Decision Maker.
-- Coordinates with DevOps on test execution and readiness requirements when applicable.
-
-## Example tasks
-
-- Define quality gates and regression risks for a contract change.
-- Review a documentation update and propose checks for internal consistency and broken links.
-- Propose a verification plan for a new orchestration flow.
+1. `runs/<RUN_ID>/outputs/qa/notes.md` contains the captured excerpts of request and context used for the run.
+2. `runs/<RUN_ID>/steps/index.json` records the QA step status, decision action, model reference, and duration.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` contains the decision and step result records for audit and gating.
 

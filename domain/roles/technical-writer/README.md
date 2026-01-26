@@ -1,76 +1,71 @@
-# Technical Writer (agent specification)
+# Technical Writer
+
+This document defines the Technical Writer role as implemented today.
 
 ## Purpose
 
-The Technical Writer agent improves documentation accuracy, consistency, and clarity. It ensures docs match the current architecture, flows, and decisions and that terminology is used consistently.
+The Technical Writer agent produces the Technical Writer step artifacts and output artifacts for a run.
+It reviews inputs and prior outputs for documentation clarity and records guidance.
+It does not execute user work or modify plan.json.
 
-This agent focuses on documentation quality. It does not make final product decisions and does not own technical architecture choices.
+## Owns
 
-## When it runs (trigger conditions)
+1. The Technical Writer step artifacts for a run.
+2. The Technical Writer output artifacts for a run.
+3. A deterministic decision record for the Technical Writer step.
 
-- Documentation changes are produced or requested.
-- A change introduces new concepts, flows, or agent behaviors that require documentation updates.
-- The Coordinator requests a documentation review for clarity and correctness.
+## Cannot
+
+1. Execute repository changes.
+2. Call external services.
+3. Write or modify plan.json.
+4. Modify run.json.
+5. Change flow type or step ordering.
 
 ## Inputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The Technical Writer agent reads exactly these required inputs.
 
-Agent specific required inputs (in addition to the contract input model):
+1. `runs/<RUN_ID>/inputs/request.md`
+2. `runs/<RUN_ID>/inputs/context.md`
+3. Prior outputs listed in the plan step depends_on chain.
 
-- The documents or artifacts to review (paths and content or diffs).
-- The intended audience and success criteria for the docs, if specified.
-- References that represent source of truth for the change (for example, `docs/agent-contract.md`, `docs/flows.md`).
+If any required input file or prior output referenced by the step is missing, Technical Writer does not run.
 
 ## Outputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The Technical Writer agent writes the canonical outputs directory for the Technical Writer agent.
 
-Agent specific required outputs (in addition to the contract output envelope):
+1. `runs/<RUN_ID>/outputs/technical-writer/result.json`
+2. `runs/<RUN_ID>/outputs/technical-writer/notes.md`
+3. `runs/<RUN_ID>/outputs/technical-writer/status.json`
 
-- `decisions[]`: at least one decision describing the documentation approach and any notable tradeoffs.
-- `next_steps[]`: concrete edits or follow ups, typically delegated to the Coordinator.
+The Technical Writer agent also writes the canonical step artifact set for its step id.
 
-Agent specific artifacts (recommended):
+1. `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`
+2. `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`
+3. `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`
+4. `runs/<RUN_ID>/steps/index.json`
 
-- `artifacts[]` of kind `data`: a DocumentationReview report and update plan.
+## Invariants
 
-Conceptual shape:
+1. Outputs paths in plan.json for the Technical Writer step match the canonical Technical Writer outputs folder.
+2. Technical Writer does not change step statuses other than writing its own step artifacts.
 
-```text
-DocumentationReview {
-  scope: { documents: [string] }
-  issues: [ { id, category, description, recommendation } ]
-  terminology_notes: [string]
-  link_and_reference_notes: [string]
-  update_plan: [string]
-  diffs_summary: [string]
-}
-```
+## Failure Modes
 
-## Responsibilities
+1. Missing run directory, inputs, or required prior outputs causes an immediate CLI error and no Technical Writer artifacts are created.
+2. File system write failures can leave incomplete artifacts and cause validation to fail for the run.
 
-- Check docs for internal consistency and correct links.
-- Ensure terminology matches `docs/concepts.md` and the Agent Contract.
-- Identify unclear sections and propose concrete rewrites.
-- Ensure new flows and agent responsibilities are documented in the right places.
+## Verification Expectations
 
-## Out of scope
+1. verify flow writes Technical Writer outputs according to the plan and finishes with a valid run artifact set when the Technical Writer step exists.
+2. validate run reports success when Technical Writer output artifacts and Technical Writer step artifacts exist and parse as valid JSON where applicable.
+3. Status commands are read only and must not change run.json.
 
-- Making technical architecture decisions.
-- Making final tradeoff decisions about scope or product behavior.
-- Writing implementation code.
+## Observability
 
-## Interfaces
-
-- Works with the Coordinator to route documentation updates and track follow ups.
-- Consults the Architect when documentation reflects architecture decisions.
-- Consults the CISO when documentation affects security or privacy guidance.
-- Escalates tradeoffs to the Decision Maker when changes materially affect user expectations.
-
-## Example tasks
-
-- Review documentation for a new flow and propose edits for clarity and consistency.
-- Ensure an agent spec set is coherent and does not overlap responsibilities.
-- Identify broken references and propose a minimal doc restructuring plan.
+1. `runs/<RUN_ID>/outputs/technical-writer/notes.md` contains the captured excerpts of request and context used for the run.
+2. `runs/<RUN_ID>/steps/index.json` records the Technical Writer step status, decision action, model reference, and duration.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` contains the decision and step result records for audit and gating.
 

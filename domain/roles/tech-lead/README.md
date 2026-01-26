@@ -1,78 +1,70 @@
-# Tech Lead (agent specification)
+# Tech Lead
+
+This document defines the Tech Lead role as implemented today.
 
 ## Purpose
 
-The Tech Lead translates goals into an implementable technical plan. It estimates effort at a coarse level, identifies key risks and dependencies, and proposes an execution approach that the Coordinator can route.
+The Tech Lead produces the Tech Lead step artifacts and output artifacts for a run.
+It reviews inputs and prior outputs for technical feasibility and sequencing guidance.
+It does not execute user work or modify plan.json.
 
-The Tech Lead does not make final product decisions. When tradeoffs exist, it provides options and escalates to the Decision Maker for approval.
+## Owns
 
-Terminology note: terms used in this spec follow the canonical glossary at [`/docs/reference/terminology-glossary.md`](/docs/reference/terminology-glossary.md).
+1. The Tech Lead step artifacts for a run.
+2. The Tech Lead output artifacts for a run.
+3. A deterministic decision record for the Tech Lead step.
 
-## When it runs (trigger conditions)
+## Cannot
 
-- A Task needs an implementation plan, sequencing, or effort estimation.
-- A proposal needs technical feasibility analysis and risk discovery.
-- The Coordinator requests a plan to unblock routing and delegation.
+1. Execute repository changes.
+2. Call external services.
+3. Write or modify plan.json.
+4. Modify run.json.
+5. Change flow type or step ordering.
 
 ## Inputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The Tech Lead reads exactly these required inputs.
 
-Agent specific required inputs (in addition to the contract input model):
+1. `runs/<RUN_ID>/inputs/request.md`
+2. `runs/<RUN_ID>/inputs/context.md`
+3. Prior outputs listed in the plan step depends_on chain.
 
-- Clarified goal and acceptance criteria for the Task.
-- Constraints that affect implementation (policy constraints, compatibility expectations, timelines).
-- Any existing architecture notes relevant to the work, if available.
+If any required input file or prior output referenced by the step is missing, Tech Lead does not run.
 
 ## Outputs
 
-This agent follows the canonical Agent Contract in `docs/agent-contract.md`.
+The Tech Lead writes the canonical outputs directory for the Tech Lead agent.
 
-Agent specific required outputs (in addition to the contract output envelope):
+1. `runs/<RUN_ID>/outputs/tech-lead/result.json`
+2. `runs/<RUN_ID>/outputs/tech-lead/notes.md`
+3. `runs/<RUN_ID>/outputs/tech-lead/status.json`
 
-- `decisions[]`: at least one decision describing the proposed plan approach and major assumptions.
-- `next_steps[]`: delegated steps with owners (typically the Coordinator) and checkpoints.
+The Tech Lead also writes the canonical step artifact set for its step id.
 
-Agent specific artifacts (recommended):
+1. `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`
+2. `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`
+3. `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`
+4. `runs/<RUN_ID>/steps/index.json`
 
-- `artifacts[]` of kind `data`: a TechnicalPlan summary containing plan outline, risks, dependencies, and estimates.
+## Invariants
 
-Conceptual shape:
+1. Outputs paths in plan.json for the Tech Lead step match the canonical Tech Lead outputs folder.
+2. Tech Lead does not change step statuses other than writing its own step artifacts.
 
-```text
-TechnicalPlan {
-  scope: { in: [string], out: [string] }
-  approach: [string]
-  risks: [ { id, description, impact, mitigation } ]
-  dependencies: [string]
-  estimates: { effort: string, critical_path?: string }
-  verification: [string]
-}
-```
+## Failure Modes
 
-## Responsibilities
+1. Missing run directory, inputs, or required prior outputs causes an immediate CLI error and no Tech Lead artifacts are created.
+2. File system write failures can leave incomplete artifacts and cause validation to fail for the run.
 
-- Propose a minimal plan outline with sequencing and checkpoints.
-- Identify risks and mitigations early.
-- Identify dependencies (people, documents, decisions, external constraints).
-- Provide coarse estimates and highlight critical path items.
-- Provide verification steps aligned with acceptance criteria.
+## Verification Expectations
 
-## Out of scope
+1. verify flow writes Tech Lead outputs according to the plan and finishes with a valid run artifact set when the Tech Lead step exists.
+2. validate run reports success when Tech Lead output artifacts and Tech Lead step artifacts exist and parse as valid JSON where applicable.
+3. Status commands are read only and must not change run.json.
 
-- Final approval of tradeoffs or scope.
-- Detailed implementation or large artifact creation as the primary deliverable.
-- Overriding run Policy or requesting prohibited actions.
+## Observability
 
-## Interfaces
-
-- Works with the Coordinator to translate plans into routed sub tasks.
-- Escalates tradeoffs and scope conflicts to the Decision Maker.
-- Consults the Architect for design coherence when the plan affects system shape.
-- Consults the DevOps agent for operational constraints when relevant.
-
-## Example tasks
-
-- Produce a plan and risk list for introducing a new schema definition and migration path.
-- Estimate effort and dependencies for adding a new agent flow and updating documentation.
-- Propose an implementation approach for integrating run outputs into a review process.
+1. `runs/<RUN_ID>/outputs/tech-lead/notes.md` contains the captured excerpts of request and context used for the run.
+2. `runs/<RUN_ID>/steps/index.json` records the Tech Lead step status, decision action, model reference, and duration.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` contains the decision and step result records for audit and gating.
