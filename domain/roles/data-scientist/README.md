@@ -27,6 +27,18 @@ It does not execute user work or modify plan.json.
 1. Blocking: Yes when the Data Scientist step exists in plan.json.
 2. Missing required inputs, missing outputs, or invalid Data Scientist step artifacts cause verify-run and downstream validation to fail.
 
+## Run Artifacts
+
+1. Produces `runs/<RUN_ID>/outputs/data-scientist/result.json`, `runs/<RUN_ID>/outputs/data-scientist/notes.md`, and `runs/<RUN_ID>/outputs/data-scientist/status.json`.
+2. Produces `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`, `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`, `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`, and updates `runs/<RUN_ID>/steps/index.json`.
+3. Reads `runs/<RUN_ID>/inputs/request.md`, `runs/<RUN_ID>/inputs/context.md`, and prior outputs listed in depends_on for the Data Scientist step in plan.json.
+
+### Observability
+
+1. `runs/<RUN_ID>/outputs/data-scientist/notes.md` records the excerpts of request and context used by the Data Scientist.
+2. `runs/<RUN_ID>/outputs/data-scientist/status.json` and `runs/<RUN_ID>/steps/index.json` show the Data Scientist step status, model reference, and duration.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` holds the step decision and result records used by verify-run and status commands.
+
 ## Inputs
 
 The Data Scientist agent reads exactly these required inputs.
@@ -68,9 +80,9 @@ The Data Scientist agent also writes the canonical step artifact set for its ste
 2. validate run reports success when Data Scientist output artifacts and Data Scientist step artifacts exist and parse as valid JSON where applicable.
 3. Status commands are read only and must not change run.json.
 
-## Observability
+## Definition of Done
 
-1. `runs/<RUN_ID>/outputs/data-scientist/notes.md` contains the captured excerpts of request and context used for the run.
-2. `runs/<RUN_ID>/steps/index.json` records the Data Scientist step status, decision action, model reference, and duration.
-3. `runs/<RUN_ID>/steps/<STEP_ID>/` contains the decision and step result records for audit and gating.
+1. `runs/<RUN_ID>/outputs/data-scientist/result.json`, `notes.md`, and `status.json` exist and parse as valid JSON where applicable.
+2. `runs/<RUN_ID>/steps/<STEP_ID>/` contains step_result.json, decision_after_step.json, effective_decision.json, and steps/index.json records the Data Scientist step with a non pending status consistent with the artifacts.
+3. verify-run or validate-run on the run completes without errors attributable to the Data Scientist step.
 

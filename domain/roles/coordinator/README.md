@@ -60,6 +60,18 @@ The Coordinator also writes the canonical step artifact set for its step id.
 3. plan.json outputs paths for each step match the canonical outputs folder for that agent.
 4. Coordinator does not overwrite an existing plan.json unless it is missing.
 
+## Run Artifacts
+
+1. Produces plan.json when absent and writes `runs/<RUN_ID>/outputs/coordinator/result.json`, `runs/<RUN_ID>/outputs/coordinator/notes.md`, and `runs/<RUN_ID>/outputs/coordinator/status.json`.
+2. Produces `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`, `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`, `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`, and updates `runs/<RUN_ID>/steps/index.json`.
+3. Reads `runs/<RUN_ID>/inputs/request.md`, `runs/<RUN_ID>/inputs/context.md`, and any prior outputs referenced in depends_on once resolved.
+
+### Observability
+
+1. `runs/<RUN_ID>/outputs/coordinator/notes.md` records the excerpts of request and context used by the Coordinator.
+2. `runs/<RUN_ID>/outputs/coordinator/status.json` and `runs/<RUN_ID>/steps/index.json` show the Coordinator step status, model reference, and duration.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` holds the step decision and result records used by verify-run and status commands; plan.json shows the resolved steps and dependencies.
+
 ## Failure Modes
 
 1. Missing run directory or missing input files causes an immediate CLI error and no Coordinator artifacts are created.
@@ -72,8 +84,9 @@ The Coordinator also writes the canonical step artifact set for its step id.
 2. validate run reports success when Coordinator output artifacts, Coordinator step artifacts, and plan.json exist and parse as valid JSON where applicable.
 3. Status commands are read only and must not change run.json.
 
-## Observability
+## Definition of Done
 
-1. `runs/<RUN_ID>/outputs/coordinator/notes.md` contains the captured excerpts of request and context used for the run.
-2. `runs/<RUN_ID>/steps/index.json` records the Coordinator step status, decision action, model reference, and duration.
-3. `runs/<RUN_ID>/steps/<STEP_ID>/` contains the decision and step result records for audit and gating.
+1. plan.json exists and reflects the Coordinator outputs with resolved depends_on and canonical output paths for each step.
+2. `runs/<RUN_ID>/outputs/coordinator/result.json`, `notes.md`, and `status.json` exist and parse as valid JSON where applicable.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` contains step_result.json, decision_after_step.json, effective_decision.json, and steps/index.json records the Coordinator step with a non pending status consistent with the artifacts.
+4. verify-run or validate-run on the run completes without errors attributable to the Coordinator step.

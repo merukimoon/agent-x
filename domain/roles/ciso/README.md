@@ -27,6 +27,18 @@ It does not execute user work or modify plan.json.
 1. Blocking: Yes when the CISO step exists in plan.json.
 2. Missing required inputs, missing outputs, or invalid CISO step artifacts cause verify-run and downstream validation to fail, including when a skip status lacks the required artifacts.
 
+## Run Artifacts
+
+1. Produces `runs/<RUN_ID>/outputs/ciso/result.json`, `runs/<RUN_ID>/outputs/ciso/notes.md`, and `runs/<RUN_ID>/outputs/ciso/status.json`.
+2. Produces `runs/<RUN_ID>/steps/<STEP_ID>/step_result.json`, `runs/<RUN_ID>/steps/<STEP_ID>/decision_after_step.json`, `runs/<RUN_ID>/steps/<STEP_ID>/effective_decision.json`, and updates `runs/<RUN_ID>/steps/index.json`, including skip status and reason when skipped.
+3. Reads `runs/<RUN_ID>/inputs/request.md`, `runs/<RUN_ID>/inputs/context.md`, and prior outputs listed in depends_on for the CISO step in plan.json.
+
+### Observability
+
+1. `runs/<RUN_ID>/outputs/ciso/notes.md` records the excerpts of request and context used by the CISO.
+2. `runs/<RUN_ID>/outputs/ciso/status.json` and `runs/<RUN_ID>/steps/index.json` show the CISO step status, model reference, duration, and skip reason when applicable.
+3. `runs/<RUN_ID>/steps/<STEP_ID>/` holds the step decision and result records used by verify-run and status commands.
+
 ## Inputs
 
 The CISO reads exactly these required inputs.
@@ -69,9 +81,9 @@ The CISO also writes the canonical step artifact set for its step id.
 2. validate run reports success when CISO output artifacts and CISO step artifacts exist, parse as valid JSON where applicable, and include skip reasons when status is skipped.
 3. Status commands are read only and must not change run.json.
 
-## Observability
+## Definition of Done
 
-1. `runs/<RUN_ID>/outputs/ciso/notes.md` contains the captured excerpts of request and context used for the run.
-2. `runs/<RUN_ID>/steps/index.json` records the CISO step status, decision action, model reference, and duration.
-3. `runs/<RUN_ID>/steps/<STEP_ID>/` contains the decision and step result records for audit and gating.
+1. `runs/<RUN_ID>/outputs/ciso/result.json`, `notes.md`, and `status.json` exist and parse as valid JSON where applicable, including skip metadata when skipped.
+2. `runs/<RUN_ID>/steps/<STEP_ID>/` contains step_result.json, decision_after_step.json, effective_decision.json, and steps/index.json records the CISO step with a non pending status consistent with the artifacts.
+3. verify-run or validate-run on the run completes without errors attributable to the CISO step.
 
