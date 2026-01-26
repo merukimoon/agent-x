@@ -24,10 +24,12 @@ import {
   verifyRun,
   parseRunArgs,
 } from "./cli.ts";
+import { Legacy } from "./imports.ts";
 import { runAgent } from "./agents.ts";
 import { buildStatusView } from "./status_view.ts";
 import { renderStatusView } from "./status_render.ts";
 import type { AgentName } from "./imports.ts";
+const { runValidationChecks } = Legacy;
 
 function resolveVersion() {
   const candidates = [
@@ -181,8 +183,8 @@ function generateRunId() {
   return `run-${utc}`;
 }
 
-function scaffoldRun(params: { goal: string; contextPath: string; runId?: string; json?: boolean }) {
-  const { goal, contextPath, json } = params;
+function scaffoldRun(params: { goal: string; contextPath: string; runId?: string; json?: boolean; printOnly?: boolean }) {
+  const { goal, contextPath, json, printOnly } = params;
   const runId = params.runId || generateRunId();
   const runDir = path.join(process.cwd(), "runs", runId);
   if (fs.existsSync(runDir)) {
@@ -207,14 +209,17 @@ function scaffoldRun(params: { goal: string; contextPath: string; runId?: string
   };
   fs.writeFileSync(path.join(runDir, "run.json"), JSON.stringify(runJson, null, 2));
   fs.writeFileSync(path.join(runDir, "summary", "final.md"), `Run: ${runId}\nStatus: pending\nGoal: ${goal}\n`);
-  if (!json) {
+  if (json) {
+    console.log(JSON.stringify({ run: runId, path: runDir, goal, context: "inputs/context.md" }, null, 2));
+  } else if (printOnly) {
+    console.log(runId);
+  } else {
     console.log(`Created run: ${runId}`);
     console.log(`  inputs/request.md`);
     console.log(`  inputs/context.md`);
     console.log(`  run.json`);
-  } else {
-    console.log(JSON.stringify({ run: runId, path: runDir, goal, context: "inputs/context.md" }, null, 2));
   }
+  return runId;
 }
 
 function showRun(runId: string, json: boolean) {
@@ -261,6 +266,9 @@ async function executeRun(runId: string, scopeArgs: string[], dryRun: boolean, j
   try {
     runFlow(runId, dryRun ? "dry-run" : "live", scope as any);
   } catch (error) {
+    if (error instanceof CLIError) {
+      throw error;
+    }
     throw new CLIError(error instanceof Error ? error.message : String(error), { exitCode: 3 });
   }
   if (!dryRun) {
@@ -346,7 +354,11 @@ export async function runCli(args: string[]) {
     console.log(VERSION);
     process.exit(0);
   }
-  if (flags.help || !command) {
+  if (flags.help) {
+    console.log(command ? renderCommandHelp(command) : renderTopLevelHelp());
+    process.exit(0);
+  }
+  if (!command) {
     console.log(renderTopLevelHelp());
     process.exit(0);
   }
@@ -359,6 +371,10 @@ export async function runCli(args: string[]) {
         process.exit(0);
         break;
       case "run":
+        if (remainder.length === 1 && (remainder[0] === "--help" || remainder[0] === "-h")) {
+          console.log(renderCommandHelp("run"));
+          process.exit(0);
+        }
         if (remainder[0] === "new") {
           let goal = "";
           let context = "";
@@ -382,10 +398,7 @@ export async function runCli(args: string[]) {
           if (!context) {
             fail("Context is required (--context <path|string>)", { exitCode: 1 });
           }
-          scaffoldRun({ goal, contextPath: context, runId, json: flags.json || printRunOnly });
-          if (printRunOnly && !flags.json) {
-            // already printed in scaffold
-          }
+          scaffoldRun({ goal, contextPath: context, runId, json: flags.json, printOnly: printRunOnly });
           break;
         }
         if (remainder[0] === "show") {
@@ -423,7 +436,8 @@ export async function runCli(args: string[]) {
         const parsed = parseRunArgs(remainder);
         const runId = parsed.runId;
         if (flags.json) {
-          const view = buildStatusView(runId);
+          const runDir = path.join(process.cwd(), "runs", runId);
+          const view = buildStatusView(runDir);
           console.log(JSON.stringify(view, null, 2));
         } else {
           handleStatusCommand(remainder);
@@ -454,8 +468,33 @@ export async function runCli(args: string[]) {
         handleValidateCommand(remainder);
         break;
       case "verify":
-        handleValidateCommand(remainder);
-        handleVerifyRunCommand(remainder);
+        if (flags.json) {
+          const parsed = parseRunArgs(remainder);
+          const runDir = path.join(process.cwd(), "runs", parsed.runId);
+          const planPath = path.join(runDir, "plan.json");
+          const validation = runValidationChecks(parsed.runId, runDir, planPath);
+          const validationErrors: string[] = [];
+          if (validation.planLoadError) validationErrors.push(validation.planLoadError);
+          validationErrors.push(...validation.schemaErrors);
+          validationErrors.push(...validation.missingPaths);
+          const verifyResult = verifyRun(runDir);
+          const ok = validationErrors.length === 0 && verifyResult.ok;
+          console.log(
+            JSON.stringify(
+              {
+                run: parsed.runId,
+                validation: { ok: validationErrors.length === 0, errors: validationErrors },
+                verify: { ok: verifyResult.ok, errors: verifyResult.errors },
+              },
+              null,
+              2
+            )
+          );
+          if (!ok) process.exit(2);
+        } else {
+          handleValidateCommand(remainder);
+          handleVerifyRunCommand(remainder);
+        }
         break;
       case "verify-run":
         handleVerifyRunCommand(remainder);

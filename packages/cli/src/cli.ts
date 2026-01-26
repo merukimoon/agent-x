@@ -67,7 +67,7 @@ export function computeExecutionSteps(plan: Plan, scope: ExecutionScope): PlanSt
   const ensureStep = (id: string) => {
     const step = byId.get(id);
     if (!step) {
-      fail(`Step not found in plan: ${id}`);
+      fail(`Step not found in plan: ${id}`, { exitCode: 1 });
     }
     return step!;
   };
@@ -98,7 +98,7 @@ export function computeExecutionSteps(plan: Plan, scope: ExecutionScope): PlanSt
       }
     }
     if (!found) {
-      fail(`Step not found in plan: ${scope.stepId}`);
+      fail(`Step not found in plan: ${scope.stepId}`, { exitCode: 1 });
     }
     return list;
   }
@@ -459,7 +459,7 @@ function validatePlanDependenciesStrict(plan) {
   plan.steps.forEach((step) => {
     step.depends_on.forEach((dep) => {
       if (!ids.has(dep)) {
-        fail(`Invalid dependency "${dep}" on step ${step.id}; no such step id in plan.`);
+        fail(`Invalid dependency "${dep}" on step ${step.id}; no such step id in plan.`, { exitCode: 1 });
       }
     });
   });
@@ -709,7 +709,7 @@ export function verifyRun(runDir) {
 export function runFlow(runId, mode, scope: ExecutionScope = { kind: "full" }) {
   const runDir = path.join(process.cwd(), "runs", runId);
   if (!fs.existsSync(runDir) || !fs.statSync(runDir).isDirectory()) {
-    fail(`Run directory not found: ${runDir}`, { exitCode: 11 });
+    fail(`Run directory not found: ${runDir}`, { exitCode: 1 });
   }
 
   const startedAt = new Date().toISOString();
@@ -733,7 +733,7 @@ export function runFlow(runId, mode, scope: ExecutionScope = { kind: "full" }) {
   ).filter((msg) => msg.startsWith("Missing input"));
   if (missingInputs.length > 0) {
     missingInputs.forEach((msg) => console.error(`ERROR: ${msg}`));
-    fail("Missing required inputs.", { exitCode: 11 });
+    fail("Missing required inputs.", { exitCode: 1 });
   }
 
   const lockPath = createFlowLock(runDir, runId, mode);
@@ -751,19 +751,19 @@ export function runFlow(runId, mode, scope: ExecutionScope = { kind: "full" }) {
     let validation = runValidationChecks(runId, runDir, planPath);
     if (validation.planLoadError) {
       console.error(`ERROR: ${validation.planLoadError}`);
-      fail("Validation failed.", { exitCode: 10 });
+      fail("Validation failed.", { exitCode: 2 });
     }
     if (validation.schemaErrors.length > 0) {
       validation.schemaErrors.forEach((err) => console.error(`ERROR: ${err}`));
-      fail("Validation failed.", { exitCode: 12 });
+      fail("Validation failed.", { exitCode: 2 });
     }
     if (validation.missingPaths.length > 0) {
       validation.missingPaths.forEach((err) => console.error(`ERROR: ${err}`));
-      fail("Validation failed.", { exitCode: 11 });
+      fail("Validation failed.", { exitCode: 2 });
     }
     const planMaybe = validation.plan;
     if (!planMaybe) {
-      fail("Unable to load plan.", { exitCode: 10 });
+      fail("Unable to load plan.", { exitCode: 2 });
     }
 
     const planPathFinal = planPath;
@@ -948,15 +948,15 @@ export function handleValidateCommand(args) {
   const result = runValidationChecks(parsed.runId, runDir, planPath);
   if (result.planLoadError) {
     console.error(`ERROR: ${result.planLoadError}`);
-    process.exit(10);
+    process.exit(2);
   }
   if (result.schemaErrors.length > 0) {
     result.schemaErrors.forEach((err) => console.error(`ERROR: ${err}`));
-    process.exit(12);
+    process.exit(2);
   }
   if (result.missingPaths.length > 0) {
     result.missingPaths.forEach((err) => console.error(`ERROR: ${err}`));
-    process.exit(11);
+    process.exit(2);
   }
   console.log("OK");
 }
@@ -1064,7 +1064,7 @@ export function handleVerifyRunCommand(args) {
     return;
   }
   result.errors.forEach((e) => console.error(e));
-  process.exit(1);
+  process.exit(2);
 }
 
 /**

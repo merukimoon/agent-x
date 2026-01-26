@@ -93,17 +93,12 @@ Aliases remain during beta; deprecation will be announced with a migration windo
 ## Beta Quickstart
 
 ```bash
-# Scaffold a run
-agentic run new --goal "Summarize README" --context README.md --print-run
-
-# Plan and execute
-agentic plan --run <RUN>
-agentic run --run <RUN>
-
-# Execute a specific step
-agentic run --run <RUN> --step planner
-
-# Check status and verify
-agentic status --run <RUN>
-agentic verify --run <RUN>
+RUN=$(agentic run new --goal "Summarize README" --context README.md --print-run)
+agentic run show --run "$RUN"
+agentic plan --run "$RUN"
+agentic run --run "$RUN"
+agentic status --run "$RUN"
+agentic status --run "$RUN" --json
+agentic verify --run "$RUN"
+agentic verify --run "$RUN" --json
 ```
