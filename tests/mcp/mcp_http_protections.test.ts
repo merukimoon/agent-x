@@ -60,7 +60,6 @@ describe.sequential("MCP HTTP Protections", () => {
         } finally {
             if (httpServer) {
                 await closeServer(httpServer);
-                await new Promise(resolve => setTimeout(resolve, 10)); // Allow OS to release port
             }
             if (originalMaxBody !== undefined) {
                 process.env.AGENTX_MCP_MAX_BODY_BYTES = originalMaxBody;
@@ -109,6 +108,9 @@ describe.sequential("MCP HTTP Protections", () => {
                     rateLimitedResponse = res;
                     break;
                 }
+
+                // Small delay to avoid ECONNRESET from rapid requests
+                await new Promise(resolve => setTimeout(resolve, 10));
             }
 
             expect(rateLimitedResponse).not.toBeNull();
@@ -116,7 +118,6 @@ describe.sequential("MCP HTTP Protections", () => {
         } finally {
             if (httpServer) {
                 await closeServer(httpServer);
-                await new Promise(resolve => setTimeout(resolve, 10)); // Allow OS to release port
             }
             if (originalPerMin !== undefined) {
                 process.env.AGENTX_MCP_RL_PER_MIN = originalPerMin;
@@ -168,7 +169,6 @@ describe.sequential("MCP HTTP Protections", () => {
         } finally {
             if (httpServer) {
                 await closeServer(httpServer);
-                await new Promise(resolve => setTimeout(resolve, 10)); // Allow OS to release port
             }
             if (originalTimeout !== undefined) {
                 process.env.AGENTX_MCP_TIMEOUT_MS = originalTimeout;
@@ -211,7 +211,6 @@ describe.sequential("MCP HTTP Protections", () => {
         } finally {
             if (httpServer) {
                 await closeServer(httpServer);
-                await new Promise(resolve => setTimeout(resolve, 10)); // Allow OS to release port
             }
         }
     });

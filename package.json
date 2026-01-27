@@ -11,6 +11,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --config vitest.config.js",
     "test:watch": "vitest --config vitest.config.js",
+    "test:mcp-protections": "vitest run --config vitest.mcp-protections.config.js",
     "test:golden": "node --import tsx tests/agentic/generate-golden.ts",
     "verify:esm": "node --import tsx scripts/verify-esm.ts",
     "verify-run": "pnpm run dev verify-run",
