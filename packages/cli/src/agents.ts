@@ -286,7 +286,7 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   let outputsWritten = false;
   if (agentName === "technical-writer") {
     const mcpServer = createMcpServer();
-    mcpServer.registerMethod("runner.technical-writer", (payload) => {
+    mcpServer.registerDeterministic("runner.technical-writer", (payload) => {
       const params = (payload ?? {}) as Parameters<typeof runTechnicalWriter>[0];
       return runTechnicalWriter({
         runId,
@@ -305,6 +305,8 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
       to: agentName,
       method: "runner.technical-writer",
       payload: { runId, outputsDir, requestPath, contextPath, mode },
+      trace_id: runId,
+      parent_id: stepId,
     });
     if (mcpResponse.ok && mcpResponse.result) {
       const runnerOutput = mcpResponse.result as { status: string; summary: string };
