@@ -10,8 +10,7 @@ $(call register_target,e2e-plan-flow,VERIFY,Run planner with fresh inputs and fu
 
 .PHONY: verify-flow
 verify-flow:
-	@set -eu; \
-	echo "Running verify-flow..."; \
+	@echo "Running verify-flow..."
 	node --import tsx scripts/smoke/verify-flow.ts
 
 .PHONY: orchestrator-validate
