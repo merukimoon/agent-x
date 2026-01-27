@@ -11,6 +11,15 @@ Exit codes are meaningful:
 
 To automate this sequence, use `make verify-flows`.
 
+### Stress Tests
+Tests marked as `*.stress.test.ts` (e.g. MCP Async HTTP) are **non-blocking** and isolated from the main suite. They verify behavior under load or flaky network conditions.
+
+Run them explicitly:
+```bash
+pnpm run test:mcp-stress
+```
+If these fail, create an issue for triage. They should not block PR merges unless steady-state reliability is compromised.
+
 ### Command sequence
 
 Base flow verification:

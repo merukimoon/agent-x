@@ -9,7 +9,7 @@ export default defineConfig({
     ],
     exclude: [
       "packages/mcp/src/__tests__/mcp_http_protections.test.ts",
-      "packages/mcp/src/__tests__/mcp_async_http.test.ts",
+      "**/*.stress.test.{js,ts}",
       "**/node_modules/**",
       "**/dist/**"
     ],
