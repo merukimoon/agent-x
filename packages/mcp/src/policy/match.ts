@@ -44,6 +44,6 @@ export function authorize(ctx: AuthContext, policy: Policy): AuthResult {
 
     return {
         ok: false,
-        reason: `Method "${ctx.method}" not allowed by policy for HTTP transport`,
+        reason: `Forbidden: Method "${ctx.method}" not allowed by policy for HTTP transport`,
     };
 }

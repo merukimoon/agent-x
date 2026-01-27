@@ -24,4 +24,4 @@ export interface AuthResult {
   reason?: string;
 }
 
-export type AuthorizeFunc = (ctx: AuthContext) => AuthResult;
+export type AuthorizeFunc = (ctx: AuthContext, policy: Policy) => AuthResult;

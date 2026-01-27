@@ -3,6 +3,7 @@ import type { MCPRequest, MCPResponse } from "../protocol/messages";
 import { PROTOCOL_VERSION } from "../protocol/messages";
 import type { MCPServer } from "../server/createServer";
 import { getConfiguredApiKey, isApiKeyAllowed } from "../auth/api_key";
+import { TokenBucket } from "../server/rate_limit";
 
 export interface HttpTransportOptions {
   port?: number;
@@ -15,18 +16,30 @@ export function startHttpServer(server: MCPServer, options: HttpTransportOptions
   const logger = options.logger ?? console;
   const expectedKey = options.apiKey ?? getConfiguredApiKey();
   const apiKeyMissing = !expectedKey;
+
   if (apiKeyMissing) {
     logger.error("AGENTX_MCP_API_KEY is not set; HTTP MCP server will reject all requests with 401.");
   }
 
+  // HTTP Protections configuration
+  const maxBodyBytes = parseInt(process.env.AGENTX_MCP_MAX_BODY_BYTES ?? "1048576", 10); // 1MB default
+  const timeoutMs = parseInt(process.env.AGENTX_MCP_TIMEOUT_MS ?? "30000", 10); // 30s default
+  const rlPerMin = parseInt(process.env.AGENTX_MCP_RL_PER_MIN ?? "60", 10);
+  const rlBurst = parseInt(process.env.AGENTX_MCP_RL_BURST ?? "20", 10);
+
+  const rateLimiter = new TokenBucket(rlPerMin, rlBurst);
+
   const httpServer = http.createServer(async (req, res) => {
     const urlPath = req.url ? new URL(req.url, "http://localhost").pathname : "";
+
+    // Only accept POST /mcp
     if (req.method !== "POST" || urlPath !== "/mcp") {
       res.statusCode = 404;
       res.end();
       return;
     }
 
+    // Check API key first
     if (apiKeyMissing) {
       writeJson(res, 401, { error: "Missing AGENTX_MCP_API_KEY" });
       return;
@@ -34,17 +47,46 @@ export function startHttpServer(server: MCPServer, options: HttpTransportOptions
 
     const providedKeyHeader = req.headers["x-agentx-api-key"];
     const providedKey = Array.isArray(providedKeyHeader) ? providedKeyHeader[0] : providedKeyHeader;
+
     if (!isApiKeyAllowed(providedKey, expectedKey!)) {
       writeJson(res, 401, { error: "Unauthorized" });
       return;
     }
 
-    const raw = await readBody(req);
+    // Rate limiting check
+    const rateLimitKey = providedKey ?? req.socket.remoteAddress ?? "unknown";
+    if (!rateLimiter.tryConsume(rateLimitKey)) {
+      writeJson(res, 429, { error: "Too Many Requests" });
+      return;
+    }
+
+    // Body size check using Content-Length header
+    const contentLength = req.headers["content-length"];
+    if (contentLength && parseInt(contentLength, 10) > maxBodyBytes) {
+      writeJson(res, 413, { error: "Request Entity Too Large" });
+      return;
+    }
+
+    // Read body with size enforcement
+    let raw: string;
+    try {
+      raw = await readBodyWithLimit(req, maxBodyBytes);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("too large")) {
+        writeJson(res, 413, { error: "Request Entity Too Large" });
+      } else {
+        writeJson(res, 400, { error: "Failed to read body" });
+      }
+      return;
+    }
+
     if (!raw) {
       writeJson(res, 400, { error: "Empty body" });
       return;
     }
 
+    // Parse JSON
     let incoming: Partial<MCPRequest> = {};
     try {
       incoming = JSON.parse(raw);
@@ -54,16 +96,48 @@ export function startHttpServer(server: MCPServer, options: HttpTransportOptions
       return;
     }
 
+    // Build request
     const request: MCPRequest = {
       ...(incoming as MCPRequest),
       protocol_version: incoming.protocol_version ?? PROTOCOL_VERSION,
     };
 
+    // Execute request with timeout
     try {
-      const response: MCPResponse = server.handleRequest(request);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Request timeout")), timeoutMs);
+      });
+
+      const responsePromise = server.handleRequest(request);
+      const response: MCPResponse = await Promise.race([responsePromise, timeoutPromise]);
+
+      // Check for forbidden error
+      if (!response.ok && response.error?.code === "FORBIDDEN") {
+        writeJson(res, 403, {
+          protocol_version: response.protocol_version,
+          id: response.id,
+          ok: false,
+          error: response.error.message ?? "Forbidden",
+        });
+        return;
+      }
+
+      // Check for not found error
+      if (!response.ok && response.error?.message?.includes("Unknown method")) {
+        writeJson(res, 404, response);
+        return;
+      }
+
+      // Normal response
       writeJson(res, response.ok ? 200 : 400, response);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+
+      if (message.includes("timeout")) {
+        writeJson(res, 504, { error: "Gateway Timeout" });
+        return;
+      }
+
       const fallback: MCPResponse = {
         protocol_version: PROTOCOL_VERSION,
         id: request.id ?? "unknown",
@@ -76,18 +150,34 @@ export function startHttpServer(server: MCPServer, options: HttpTransportOptions
 
   const port = options.port ?? 7801;
   const host = options.host ?? "0.0.0.0";
+
   httpServer.listen(port, host, () => {
     const addr = httpServer.address();
     const finalPort = typeof addr === "object" && addr ? addr.port : port;
     logger.log(`MCP HTTP server listening on http://${host}:${finalPort}/mcp`);
   });
+
   return httpServer;
 }
 
-function readBody(req: http.IncomingMessage): Promise<string> {
+function readBodyWithLimit(req: http.IncomingMessage, maxBytes: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on("data", (chunk) => chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk));
+    let totalSize = 0;
+
+    req.on("data", (chunk) => {
+      const buffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+      totalSize += buffer.length;
+
+      if (totalSize > maxBytes) {
+        req.destroy();
+        reject(new Error("Body too large"));
+        return;
+      }
+
+      chunks.push(buffer);
+    });
+
     req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
     req.on("error", (err) => reject(err));
   });
