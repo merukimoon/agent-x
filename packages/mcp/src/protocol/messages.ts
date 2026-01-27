@@ -8,6 +8,8 @@ export interface MCPRequest {
   to?: string;
   method: string;
   payload?: unknown;
+  trace_id?: string;
+  parent_id?: string;
 }
 
 export interface MCPError {
@@ -22,4 +24,6 @@ export interface MCPResponse {
   ok: boolean;
   result?: unknown;
   error?: MCPError;
+  trace_id?: string;
+  parent_id?: string;
 }

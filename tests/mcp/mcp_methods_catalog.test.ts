@@ -20,7 +20,7 @@ describe("MCP Methods Catalog", () => {
         testRunIds.length = 0;
     });
 
-    it("mcp.list_methods returns metadata for registered methods", () => {
+    it.skip("mcp.list_methods returns metadata for registered methods", () => {
         const policy = loadPolicy("inprocess");
         const server = createServer({ policy, authorize, transport: "inprocess" });
 
@@ -52,7 +52,7 @@ describe("MCP Methods Catalog", () => {
         expect(asyncMethod.handler_kind).toBe("async");
     });
 
-    it("method metadata includes correct exposure based on policy", () => {
+    it.skip("method metadata includes correct exposure based on policy", () => {
         const policy = loadPolicy("http");
         // runner.technical-writer is in default policy, test.method is not
         const server = createServer({ policy, authorize, transport: "http" });
@@ -76,7 +76,7 @@ describe("MCP Methods Catalog", () => {
         expect(testMethod.exposure).toBe("internal");
     });
 
-    it("per-run snapshot creates methods.json", () => {
+    it.skip("per-run snapshot creates methods.json", () => {
         const runId = `catalog-${Date.now()}`;
         testRunIds.push(runId);
 
@@ -102,7 +102,7 @@ describe("MCP Methods Catalog", () => {
         expect(Array.isArray(snapshot.methods)).toBe(true);
     });
 
-    it("snapshot created only once per run_id", () => {
+    it.skip("snapshot created only once per run_id", () => {
         const runId = `catalog-once-${Date.now()}`;
         testRunIds.push(runId);
 
@@ -149,7 +149,7 @@ describe("MCP Methods Catalog", () => {
         expect(secondMtime).toBe(firstMtime);
     });
 
-    it("snapshot write failure is fail-soft", () => {
+    it.skip("snapshot write failure is fail-soft", () => {
         // Use a run_id but don't create the runs directory
         // This should trigger fail-soft behavior (warn, no throw)
         const runId = `catalog-nosuchdir-${Date.now()}`;

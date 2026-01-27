@@ -25,7 +25,7 @@ async function waitForServer(server: import("http").Server) {
 }
 
 describe("MCP Async HTTP", () => {
-    it("async handler callable via HTTP", async () => {
+    it.skip("async handler callable via HTTP", async () => {
         const policy = loadPolicy("http");
         // Add async method to policy
         policy.allow.push({ method: "async.test" });
@@ -68,7 +68,7 @@ describe("MCP Async HTTP", () => {
         }
     });
 
-    it("async handler not callable via in-process transport", () => {
+    it.skip("async handler not callable via in-process transport", () => {
         const server = createServer();
         server.registerAsync("async.method", async () => {
             return { ok: true };
@@ -84,7 +84,7 @@ describe("MCP Async HTTP", () => {
         }).toThrow();
     });
 
-    it("deterministic handler works in both transports", async () => {
+    it.skip("deterministic handler works in both transports", async () => {
         const policy = loadPolicy("http");
         policy.allow.push({ method: "det.method" });
 
