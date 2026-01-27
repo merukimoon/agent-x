@@ -8,6 +8,7 @@ import { writeDecision, writeEffectiveDecision, writeSkippedStepArtifacts, write
 import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy, readOverride } from "./gating_runtime.ts";
 import { requireExecutableRole } from "../../../scripts/agentic/roles_registry.ts";
 import { runTechnicalWriter } from "../../../scripts/agentic/runners.ts";
+import { createServer as createMcpServer, createInprocessTransport } from "../../mcp/src/index.ts";
 
 // Deconstruct from Legacy where helpful for cleaner code, or use Legacy.*
 const {
@@ -284,18 +285,41 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   };
   let outputsWritten = false;
   if (agentName === "technical-writer") {
-    const runnerOutput = runTechnicalWriter({
-      runId,
-      outputsDir,
-      requestPath,
-      contextPath,
-      mode,
+    const mcpServer = createMcpServer();
+    mcpServer.registerMethod("runner.technical-writer", (payload) => {
+      const params = (payload ?? {}) as Parameters<typeof runTechnicalWriter>[0];
+      return runTechnicalWriter({
+        runId,
+        outputsDir,
+        requestPath,
+        contextPath,
+        mode,
+        ...params,
+      });
     });
-    status = runnerOutput.status as AgentStatus;
-    resultSummary = runnerOutput.summary;
-    result.status = status;
-    result.summary = resultSummary;
-    outputsWritten = true;
+    const transport = createInprocessTransport(mcpServer);
+    const mcpResponse = transport.send({
+      id: `${runId}:${agentName}`,
+      run_id: runId,
+      from: "agent.runner",
+      to: agentName,
+      method: "runner.technical-writer",
+      payload: { runId, outputsDir, requestPath, contextPath, mode },
+    });
+    if (mcpResponse.ok && mcpResponse.result) {
+      const runnerOutput = mcpResponse.result as { status: string; summary: string };
+      status = runnerOutput.status as AgentStatus;
+      resultSummary = runnerOutput.summary;
+      result.status = status;
+      result.summary = resultSummary;
+      outputsWritten = true;
+    } else {
+      status = "failed";
+      result.status = status;
+      resultSummary = mcpResponse.error?.message ?? "MCP request failed";
+      result.summary = resultSummary;
+      writeJsonFile(resultPath, result);
+    }
   } else {
     writeJsonFile(resultPath, result);
   }
