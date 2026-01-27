@@ -10,6 +10,7 @@ export default defineConfig({
     exclude: [
       "packages/mcp/src/__tests__/mcp_http_protections.test.ts",
       "**/*.stress.test.{js,ts}",
+      "tests/integration/**",
       "**/node_modules/**",
       "**/dist/**"
     ],
