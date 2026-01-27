@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it, afterEach } from "vitest";
-import { createServer, createInprocessTransport, loadPolicy, authorize } from "../../packages/mcp/src/index";
+import { createServer, createInprocessTransport, loadPolicy, authorize } from "../index";
 
 function cleanup(dir: string) {
     if (fs.existsSync(dir)) {

@@ -15,7 +15,7 @@ endif
 
 $(call register_target,test,TEST,Run unit tests via pnpm run test.,make test)
 $(call register_target,test,TEST,  With custom tmp dir:,make test TEST_TMPDIR=/tmp)
-$(call register_target,test,TEST,  With extra args:,make test TEST_ARGS="tests/mcp")
+$(call register_target,test,TEST,  With extra args:,make test TEST_ARGS="packages/mcp/src/__tests__")
 $(call register_target,test,TEST,  With reporter:,make test TEST_ARGS="--reporter=verbose")
 .PHONY: test
 test:

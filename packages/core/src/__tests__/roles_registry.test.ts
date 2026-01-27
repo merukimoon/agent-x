@@ -2,10 +2,10 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadRolesRegistry } from "../../scripts/agentic/roles_registry";
-import { gatherPlanSchemaErrors } from "../../scripts/agentic/plan";
-import { runTechnicalWriter } from "../../scripts/agentic/runners";
-import { PLAN_VERSION } from "../../scripts/agentic/core";
+import { loadRolesRegistry } from "../../../../scripts/agentic/roles_registry";
+import { gatherPlanSchemaErrors } from "../../../../scripts/agentic/plan";
+import { runTechnicalWriter } from "../../../../scripts/agentic/runners";
+import { PLAN_VERSION } from "../../../../scripts/agentic/core";
 
 const ORIGINAL_CWD = process.cwd();
 

@@ -1,8 +1,8 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import fs from "fs";
 import path from "path";
-import { createServer, loadPolicy, authorize } from "../../packages/mcp/src/index";
-import { startHttpServer } from "../../packages/mcp/src/transports/http";
+import { createServer, loadPolicy, authorize } from "../index";
+import { startHttpServer } from "../transports/http";
 import type { AddressInfo } from "net";
 
 function silenceLogger() {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createServer, createInprocessTransport } from "../../packages/mcp/src/index";
-import { startHttpServer } from "../../packages/mcp/src/transports/http";
-import { loadPolicy } from "../../packages/mcp/src/policy/loadPolicy";
-import { authorize } from "../../packages/mcp/src/policy/match";
+import { createServer, createInprocessTransport } from "../index";
+import { startHttpServer } from "../transports/http";
+import { loadPolicy } from "../policy/loadPolicy";
+import { authorize } from "../policy/match";
 import type { AddressInfo } from "net";
 
 function silenceLogger() {

@@ -1,7 +1,7 @@
 import { once } from "events";
 import { describe, expect, it } from "vitest";
 import type { AddressInfo } from "net";
-import { createServer, startHttpServer } from "../../packages/mcp/src/index";
+import { createServer, startHttpServer } from "../index";
 
 function silenceLogger() {
   return { log: () => {}, error: () => {}, warn: () => {} } as const;

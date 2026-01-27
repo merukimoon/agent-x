@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it, vi } from "vitest";
-import { handleStatusCommand } from "../../packages/cli/src/cli";
+import { handleStatusCommand } from "../cli";
 
 function writeJson(filePath: string, data: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -64,7 +64,7 @@ describe("status CLI", () => {
     fs.writeFileSync(path.join(runDir, "outputs", "planner", "notes.md"), "notes", "utf8");
     writeJson(path.join(runDir, "outputs", "planner", "result.json"), { status: "done" });
 
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => { });
     const logs: string[] = [];
     logSpy.mockImplementation((msg?: unknown) => {
       logs.push(String(msg ?? ""));
@@ -75,7 +75,7 @@ describe("status CLI", () => {
     } finally {
       cwdSpy.mockRestore();
       logSpy.mockRestore();
-      try { fs.rmSync(runDir, { recursive: true, force: true }); } catch {}
+      try { fs.rmSync(runDir, { recursive: true, force: true }); } catch { }
     }
 
     const output = logs.join("\n");
@@ -85,7 +85,7 @@ describe("status CLI", () => {
 
   it("throws when run directory is missing", () => {
     const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(repoRoot);
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => { });
     try {
       expect(() => handleStatusCommand(["--run", "missing-run"])).toThrowError();
     } finally {
