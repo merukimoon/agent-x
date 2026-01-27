@@ -1,13 +1,14 @@
 import fs from "fs";
 import path from "path";
 import process from "process";
-import { Core, Legacy } from "./imports.ts";
-import type { AgentName, AgentStatus, ExecutionMode, Plan, PlanStep, AgentResult } from "./imports.ts";
-import type { DecisionAfterStep, ExecutionStatus, ModelRef, SkipReason, SkipReasonCode, StepResult, StepOverride } from "../../contracts/src/index.ts";
-import { writeDecision, writeEffectiveDecision, writeSkippedStepArtifacts, writeStepResult, updateStepsIndex } from "./step_persistence.ts";
-import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy, readOverride } from "./gating_runtime.ts";
-import { requireExecutableRole } from "../../../scripts/agentic/roles_registry.ts";
-import { runTechnicalWriter } from "../../../scripts/agentic/runners.ts";
+import { Core, Legacy } from "./imports";
+import type { AgentName, AgentStatus, ExecutionMode, Plan, PlanStep, AgentResult } from "./imports";
+import type { DecisionAfterStep, ExecutionStatus, ModelRef, SkipReason, SkipReasonCode, StepResult, StepOverride } from "../../contracts/src/index";
+import { writeDecision, writeEffectiveDecision, writeSkippedStepArtifacts, writeStepResult, updateStepsIndex } from "./step_persistence";
+import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy, readOverride } from "./gating_runtime";
+import { requireExecutableRole } from "../../../scripts/agentic/roles_registry";
+import { runTechnicalWriter } from "../../../scripts/agentic/runners";
+import { createServer as createMcpServer, createInprocessTransport } from "../../mcp/src/index";
 
 // Deconstruct from Legacy where helpful for cleaner code, or use Legacy.*
 const {
@@ -284,18 +285,43 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   };
   let outputsWritten = false;
   if (agentName === "technical-writer") {
-    const runnerOutput = runTechnicalWriter({
-      runId,
-      outputsDir,
-      requestPath,
-      contextPath,
-      mode,
+    const mcpServer = createMcpServer();
+    mcpServer.registerDeterministic("runner.technical-writer", (payload) => {
+      const params = (payload ?? {}) as Parameters<typeof runTechnicalWriter>[0];
+      return runTechnicalWriter({
+        runId,
+        outputsDir,
+        requestPath,
+        contextPath,
+        mode,
+        ...params,
+      });
     });
-    status = runnerOutput.status as AgentStatus;
-    resultSummary = runnerOutput.summary;
-    result.status = status;
-    result.summary = resultSummary;
-    outputsWritten = true;
+    const transport = createInprocessTransport(mcpServer);
+    const mcpResponse = transport.send({
+      id: `${runId}:${agentName}`,
+      run_id: runId,
+      from: "agent.runner",
+      to: agentName,
+      method: "runner.technical-writer",
+      payload: { runId, outputsDir, requestPath, contextPath, mode },
+      trace_id: runId,
+      parent_id: stepId,
+    });
+    if (mcpResponse.ok && mcpResponse.result) {
+      const runnerOutput = mcpResponse.result as { status: string; summary: string };
+      status = runnerOutput.status as AgentStatus;
+      resultSummary = runnerOutput.summary;
+      result.status = status;
+      result.summary = resultSummary;
+      outputsWritten = true;
+    } else {
+      status = "failed";
+      result.status = status;
+      resultSummary = mcpResponse.error?.message ?? "MCP request failed";
+      result.summary = resultSummary;
+      writeJsonFile(resultPath, result);
+    }
   } else {
     writeJsonFile(resultPath, result);
   }

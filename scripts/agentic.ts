@@ -3,7 +3,7 @@
  * Delegates to the internal CLI package.
  */
 
-import { runCli } from "../packages/cli/src/index.ts";
+import { runCli } from "../packages/cli/src/index";
 import process from "process";
 
 // Pass arguments to the CLI handler

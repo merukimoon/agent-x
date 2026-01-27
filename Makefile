@@ -19,6 +19,7 @@ include make/help.mk
 
 # Include Topic modules
 include make/dev.mk
+include make/test.mk
 include make/runs.mk
 include make/agents.mk
 include make/verify.mk

@@ -11,17 +11,6 @@ typecheck:
 .PHONY: check
 check: typecheck
 
-$(call register_target,test,DEV,Run unit tests (via vitest).,make test TEST_TMPDIR=/tmp)
-.PHONY: test
-test:
-	@echo "Running tests..."
-	@set -eu; \
-	if [ -n "${TEST_TMPDIR}" ]; then \
-		TMPDIR="${TEST_TMPDIR}" MAKEFLAGS= $(PNPM) run test; \
-	else \
-		MAKEFLAGS= $(PNPM) run test; \
-	fi
-
 $(call register_target,verify-esm,DEV,Verify ESM compatibility (no require calls).,make verify-esm)
 .PHONY: verify-esm
 verify-esm:

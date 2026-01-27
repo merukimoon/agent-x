@@ -2,8 +2,8 @@
 
 import fs from "fs";
 import path from "path";
-import { readFirstLines, writeFileAtomic, writeJsonFile } from "./fs.ts";
-import type { ExecutionMode } from "./core.ts";
+import { readFirstLines, writeFileAtomic, writeJsonFile } from "./fs";
+import type { ExecutionMode } from "./core";
 
 export interface RunnerParams {
   runId: string;

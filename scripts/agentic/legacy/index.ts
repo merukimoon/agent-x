@@ -7,9 +7,9 @@
  * - It should be the ONLY place packages/cli imports from scripts/.
  */
 
-export * from "../errors.ts";
-export * from "../lock.ts";
-export * from "../plan.ts";
-export * from "../fs.ts";
-export * from "../rules.ts";
-export * from "../llm-planner.ts";
+export * from "../errors";
+export * from "../lock";
+export * from "../plan";
+export * from "../fs";
+export * from "../rules";
+export * from "../llm-planner";

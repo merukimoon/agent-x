@@ -3,21 +3,18 @@
 
 $(call register_target,verify-fast,VERIFY,Quick verification (typecheck + verify-esm, no tests).,make verify-fast)
 .PHONY: verify-fast
+.PHONY: verify-fast
 verify-fast:
-	@set -eu; \
-	echo "Running verify-fast (typecheck, verify-esm)..."; \
-	$(PNPM) run typecheck; \
+	@echo "Running verify-fast (typecheck, verify-esm)..."
+	$(PNPM) run typecheck
 	$(PNPM) run verify:esm
 
 $(call register_target,verify,VERIFY,Full verification (verify-fast + tests).,make verify)
 .PHONY: verify
 verify:
-	@set -eu; \
-	$(MAKE) verify-fast; \
-	echo "Running tests..."; \
-	TMPDIR_RESOLVED="$${TMPDIR:-/tmp}"; \
-	mkdir -p "$$TMPDIR_RESOLVED"; \
-	TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) run test; \
+	@$(MAKE) verify-fast
+	@echo "Running tests..."
+	@$(MAKE) test TEST_TMPDIR=/tmp
 
 $(call register_target,validate-run,VERIFY,Validate run artifacts contract (requires RUN=<run-id>).,make validate-run RUN=<run-id>)
 $(call register_target,verify-run,VERIFY,Alias for validate-run.,make verify-run RUN=<run-id>)

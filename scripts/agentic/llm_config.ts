@@ -3,7 +3,7 @@
 import fs from "fs";
 import path from "path";
 import process from "process";
-import { isAgentName } from "./core.ts";
+import { isAgentName } from "./core";
 
 type AgentName = import("./core.ts").AgentName;
 type ProviderConfig = { endpoint: string; auth_env: string; auth_header: string; auth_prefix: string };
