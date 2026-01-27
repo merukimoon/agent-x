@@ -113,7 +113,7 @@ e2e-plan-flow:
 	echo "Running verification gates..."; \
 	$(PNPM) run typecheck; \
 	$(PNPM) run verify:esm; \
-	TMPDIR_RESOLVED="$${TMPDIR:-/tmp}"; mkdir -p "$$TMPDIR_RESOLVED"; TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) run test; \
+	$(MAKE) test TEST_TMPDIR=/tmp; \
 	$(MAKE) verify-flow; \
 	$(MAKE) validate-run RUN="$$RUN_ID"; \
 	$(MAKE) orchestrator-validate GOAL="verify" CONTEXT="verify"; \

@@ -11,17 +11,6 @@ typecheck:
 .PHONY: check
 check: typecheck
 
-# Handle TEST_TMPDIR mapping to TMPDIR using Make logic
-ifdef TEST_TMPDIR
-export TMPDIR := $(TEST_TMPDIR)
-endif
-
-$(call register_target,test,DEV,Run unit tests (via pnpm run test).,make test TEST_TMPDIR=/tmp)
-.PHONY: test
-test:
-	@echo "Running tests..."
-	$(PNPM) run test
-
 $(call register_target,verify-esm,DEV,Verify ESM compatibility (no require calls).,make verify-esm)
 .PHONY: verify-esm
 verify-esm:
