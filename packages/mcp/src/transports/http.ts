@@ -1,8 +1,8 @@
 import http from "http";
-import type { MCPRequest, MCPResponse } from "../protocol/messages.ts";
-import { PROTOCOL_VERSION } from "../protocol/messages.ts";
-import type { MCPServer } from "../server/createServer.ts";
-import { getConfiguredApiKey, isApiKeyAllowed } from "../auth/api_key.ts";
+import type { MCPRequest, MCPResponse } from "../protocol/messages";
+import { PROTOCOL_VERSION } from "../protocol/messages";
+import type { MCPServer } from "../server/createServer";
+import { getConfiguredApiKey, isApiKeyAllowed } from "../auth/api_key";
 
 export interface HttpTransportOptions {
   port?: number;

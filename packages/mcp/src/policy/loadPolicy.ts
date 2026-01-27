@@ -1,5 +1,5 @@
 import fs from "fs";
-import type { Policy } from "./policy.ts";
+import type { Policy } from "./policy";
 
 /**
  * Default policy: allow only safe built-in methods over HTTP.

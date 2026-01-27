@@ -1,4 +1,4 @@
-import type { AuthContext, AuthResult, Policy, PolicyRule } from "./policy.ts";
+import type { AuthContext, AuthResult, Policy, PolicyRule } from "./policy";
 
 /**
  * Check if an auth context matches a policy rule.

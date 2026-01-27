@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { Policy } from "../policy/policy.ts";
+import type { Policy } from "../policy/policy";
 
 export interface MethodMetadata {
     name: string;

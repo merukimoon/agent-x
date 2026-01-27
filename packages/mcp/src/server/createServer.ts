@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
-import type { MCPRequest, MCPResponse, MCPError } from "../protocol/messages.ts";
-import { PROTOCOL_VERSION } from "../protocol/messages.ts";
+import type { MCPRequest, MCPResponse, MCPError } from "../protocol/messages";
+import { PROTOCOL_VERSION } from "../protocol/messages";
 
 export type MCPMethodHandler = (payload: MCPRequest["payload"], request: MCPRequest) => unknown | Promise<unknown>;
 
