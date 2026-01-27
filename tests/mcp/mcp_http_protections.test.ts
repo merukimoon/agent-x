@@ -24,10 +24,11 @@ async function waitForServer(server: import("http").Server) {
     return address as AddressInfo;
 }
 
-describe("MCP HTTP Protections", () => {
+describe.sequential("MCP HTTP Protections", () => {
     it("body too large returns 413", async () => {
         const originalMaxBody = process.env.AGENTX_MCP_MAX_BODY_BYTES;
         process.env.AGENTX_MCP_MAX_BODY_BYTES = "100"; // Very small limit
+        let httpServer: import("http").Server | null = null;
 
         try {
             const policy = loadPolicy("http");
@@ -35,7 +36,7 @@ describe("MCP HTTP Protections", () => {
             const server = createServer({ policy, authorize, transport: "http" });
             server.registerDeterministic("test", () => ({ ok: true }));
 
-            const httpServer = startHttpServer(server, {
+            httpServer = startHttpServer(server, {
                 port: 0,
                 apiKey: "test-key",
                 logger: silenceLogger(),
@@ -56,8 +57,11 @@ describe("MCP HTTP Protections", () => {
             });
 
             expect(res.status).toBe(413);
-            await closeServer(httpServer);
         } finally {
+            if (httpServer) {
+                await closeServer(httpServer);
+                await new Promise(resolve => setTimeout(resolve, 10)); // Allow OS to release port
+            }
             if (originalMaxBody !== undefined) {
                 process.env.AGENTX_MCP_MAX_BODY_BYTES = originalMaxBody;
             } else {
@@ -71,6 +75,7 @@ describe("MCP HTTP Protections", () => {
         const originalBurst = process.env.AGENTX_MCP_RL_BURST;
         process.env.AGENTX_MCP_RL_PER_MIN = "2"; // Very low rate
         process.env.AGENTX_MCP_RL_BURST = "2"; // Small burst
+        let httpServer: import("http").Server | null = null;
 
         try {
             const policy = loadPolicy("http");
@@ -78,7 +83,7 @@ describe("MCP HTTP Protections", () => {
             const server = createServer({ policy, authorize, transport: "http" });
             server.registerDeterministic("test", () => ({ ok: true }));
 
-            const httpServer = startHttpServer(server, {
+            httpServer = startHttpServer(server, {
                 port: 0,
                 apiKey: "test-key",
                 logger: silenceLogger(),
@@ -108,9 +113,11 @@ describe("MCP HTTP Protections", () => {
 
             expect(rateLimitedResponse).not.toBeNull();
             expect(rateLimitedResponse!.status).toBe(429);
-
-            await closeServer(httpServer);
         } finally {
+            if (httpServer) {
+                await closeServer(httpServer);
+                await new Promise(resolve => setTimeout(resolve, 10)); // Allow OS to release port
+            }
             if (originalPerMin !== undefined) {
                 process.env.AGENTX_MCP_RL_PER_MIN = originalPerMin;
             } else {
@@ -127,6 +134,7 @@ describe("MCP HTTP Protections", () => {
     it("request timeout returns 504", async () => {
         const originalTimeout = process.env.AGENTX_MCP_TIMEOUT_MS;
         process.env.AGENTX_MCP_TIMEOUT_MS = "100"; // Very short timeout
+        let httpServer: import("http").Server | null = null;
 
         try {
             const policy = loadPolicy("http");
@@ -138,7 +146,7 @@ describe("MCP HTTP Protections", () => {
                 return { ok: true };
             });
 
-            const httpServer = startHttpServer(server, {
+            httpServer = startHttpServer(server, {
                 port: 0,
                 apiKey: "test-key",
                 logger: silenceLogger(),
@@ -157,8 +165,11 @@ describe("MCP HTTP Protections", () => {
             });
 
             expect(res.status).toBe(504);
-            await closeServer(httpServer);
         } finally {
+            if (httpServer) {
+                await closeServer(httpServer);
+                await new Promise(resolve => setTimeout(resolve, 10)); // Allow OS to release port
+            }
             if (originalTimeout !== undefined) {
                 process.env.AGENTX_MCP_TIMEOUT_MS = originalTimeout;
             } else {
@@ -168,33 +179,40 @@ describe("MCP HTTP Protections", () => {
     });
 
     it("valid request under limits returns 200", async () => {
-        const policy = loadPolicy("http");
-        policy.allow.push({ method: "test" });
-        const server = createServer({ policy, authorize, transport: "http" });
-        server.registerDeterministic("test", (payload) => ({ result: "success", input: payload }));
+        let httpServer: import("http").Server | null = null;
 
-        const httpServer = startHttpServer(server, {
-            port: 0,
-            apiKey: "test-key",
-            logger: silenceLogger(),
-        });
+        try {
+            const policy = loadPolicy("http");
+            policy.allow.push({ method: "test" });
+            const server = createServer({ policy, authorize, transport: "http" });
+            server.registerDeterministic("test", (payload) => ({ result: "success", input: payload }));
 
-        const address = await waitForServer(httpServer);
-        const url = `http://127.0.0.1:${address.port}/mcp`;
+            httpServer = startHttpServer(server, {
+                port: 0,
+                apiKey: "test-key",
+                logger: silenceLogger(),
+            });
 
-        const res = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-agentx-api-key": "test-key",
-            },
-            body: JSON.stringify({ id: "valid", method: "test", payload: { value: 123 } }),
-        });
+            const address = await waitForServer(httpServer);
+            const url = `http://127.0.0.1:${address.port}/mcp`;
 
-        expect(res.status).toBe(200);
-        const payload = await res.json();
-        expect(payload.ok).toBe(true);
+            const res = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-agentx-api-key": "test-key",
+                },
+                body: JSON.stringify({ id: "valid", method: "test", payload: { value: 123 } }),
+            });
 
-        await closeServer(httpServer);
+            expect(res.status).toBe(200);
+            const payload = await res.json();
+            expect(payload.ok).toBe(true);
+        } finally {
+            if (httpServer) {
+                await closeServer(httpServer);
+                await new Promise(resolve => setTimeout(resolve, 10)); // Allow OS to release port
+            }
+        }
     });
 });
