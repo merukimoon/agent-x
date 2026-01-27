@@ -3,13 +3,12 @@
     "allowJs": true,
     "checkJs": false,
     "noEmit": true,
-    "moduleResolution": "Bundler",
+    "moduleResolution": "node",
     "module": "ESNext",
     "target": "ES2022",
     "types": [
       "node"
     ],
-    "allowImportingTsExtensions": true,
     "incremental": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
