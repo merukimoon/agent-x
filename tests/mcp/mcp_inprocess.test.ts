@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createServer, createInprocessTransport, PROTOCOL_VERSION } from "../../packages/mcp/src/index.ts";
+import { createServer, createInprocessTransport, PROTOCOL_VERSION } from "../../packages/mcp/src/index";
 
 describe("MCP in-process transport", () => {
   it("routes to registered method and returns payload", () => {

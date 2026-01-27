@@ -2,7 +2,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { describe, expect, it } from "vitest";
-import { verifyRun } from "../../packages/cli/src/cli.ts";
+import { verifyRun } from "../../packages/cli/src/cli";
 
 function writeJson(filePath: string, data: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });

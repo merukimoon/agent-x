@@ -8,7 +8,7 @@
 
 // Implementation is currently hosted in scripts/agentic/core.ts
 // We re-export only the stable public surface.
-import * as Impl from "../../../scripts/agentic/core.ts";
+import * as Impl from "../../../scripts/agentic/core";
 
 // --- Types ---
 export type {
@@ -25,7 +25,7 @@ export type {
     RulePack,
     Plan,
     ValidationResult
-} from "../../../scripts/agentic/core.ts";
+} from "../../../scripts/agentic/core";
 
 export type {
     StepResult,
@@ -35,7 +35,7 @@ export type {
     ArtifactRef,
     CheckResult,
     ExecutionStatus
-} from "../../contracts/src/index.ts";
+} from "../../contracts/src/index";
 
 // --- Constants ---
 export const PLAN_VERSION = Impl.PLAN_VERSION;
@@ -54,23 +54,23 @@ export {
     getStepResultPath,
     getDecisionPath,
     getStepsIndexPath,
-} from "./paths/steps.ts";
+} from "./paths/steps";
 
 export type {
     StepsIndex,
     StepsIndexEntry,
-} from "./paths/steps.ts";
+} from "./paths/steps";
 
 export type {
     GatingPolicy,
     Strictness,
     GateOutcome,
-} from "./policy/gating.ts";
+} from "./policy/gating";
 
 export {
     resolveStrictness,
     evaluateGates,
-} from "./policy/gating.ts";
+} from "./policy/gating";
 
 // --- Internal/Legacy (Exposed but use with caution) ---
 export const RULES_DIR = Impl.RULES_DIR;

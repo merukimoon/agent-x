@@ -2,8 +2,8 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { describe, expect, it } from "vitest";
-import { buildStatusView } from "../../packages/cli/src/status_view.ts";
-import { renderStatusView } from "../../packages/cli/src/status_render.ts";
+import { buildStatusView } from "../../packages/cli/src/status_view";
+import { renderStatusView } from "../../packages/cli/src/status_render";
 
 function writeJson(filePath: string, data: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });

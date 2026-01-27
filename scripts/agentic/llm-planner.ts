@@ -2,9 +2,9 @@
 
 import fs from "fs";
 import path from "path";
-import { fail } from "./errors.ts";
-import { writeJsonFile } from "./fs.ts";
-import { resolveLlmTarget } from "./llm_config.ts";
+import { fail } from "./errors";
+import { writeJsonFile } from "./fs";
+import { resolveLlmTarget } from "./llm_config";
 
 /**
  * @typedef {Object} PlannerAssumption

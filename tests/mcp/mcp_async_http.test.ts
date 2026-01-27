@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createServer, createInprocessTransport } from "../../packages/mcp/src/index.ts";
-import { startHttpServer } from "../../packages/mcp/src/transports/http.ts";
-import { loadPolicy } from "../../packages/mcp/src/policy/loadPolicy.ts";
-import { authorize } from "../../packages/mcp/src/policy/match.ts";
+import { createServer, createInprocessTransport } from "../../packages/mcp/src/index";
+import { startHttpServer } from "../../packages/mcp/src/transports/http";
+import { loadPolicy } from "../../packages/mcp/src/policy/loadPolicy";
+import { authorize } from "../../packages/mcp/src/policy/match";
 import type { AddressInfo } from "net";
 
 function silenceLogger() {
@@ -25,7 +25,7 @@ async function waitForServer(server: import("http").Server) {
 }
 
 describe("MCP Async HTTP", () => {
-    it.skip("async handler callable via HTTP", async () => {
+    it("async handler callable via HTTP", async () => {
         const policy = loadPolicy("http");
         // Add async method to policy
         policy.allow.push({ method: "async.test" });
@@ -68,33 +68,33 @@ describe("MCP Async HTTP", () => {
         }
     });
 
-    it.skip("async handler not callable via in-process transport", () => {
+    it("async handler not callable via in-process transport", () => {
         const server = createServer();
         server.registerAsync("async.method", async () => {
             return { ok: true };
         });
 
         const transport = createInprocessTransport(server);
+        const response = transport.send({
+            id: "in-process-async",
+            method: "async.method",
+        });
 
-        expect(() => {
-            transport.send({
-                id: "in-process-async",
-                method: "async.method",
-            });
-        }).toThrow();
+        expect(response.ok).toBe(false);
+        expect(response.error?.message).toContain("Async MCP handlers are not supported");
     });
 
-    it.skip("deterministic handler works in both transports", async () => {
+    it("deterministic handler works in both transports", async () => {
         const policy = loadPolicy("http");
         policy.allow.push({ method: "det.method" });
 
-        const server = createServer({ policy, authorize, transport: "http" });
-        server.registerDeterministic("det.method", (payload) => {
+        // Test in-process: create server with inprocess transport
+        const inprocessServer = createServer({ policy, authorize, transport: "inprocess" });
+        inprocessServer.registerDeterministic("det.method", (payload) => {
             return { deterministic: true, input: payload };
         });
 
-        // Test in-process
-        const inprocessTransport = createInprocessTransport(server);
+        const inprocessTransport = createInprocessTransport(inprocessServer);
         const inprocessResponse = inprocessTransport.send({
             id: "det-inprocess",
             method: "det.method",
@@ -104,8 +104,12 @@ describe("MCP Async HTTP", () => {
         expect(inprocessResponse.ok).toBe(true);
         expect(inprocessResponse.result).toEqual({ deterministic: true, input: { value: 42 } });
 
-        // Test HTTP
-        const httpServer = startHttpServer(server, {
+        // Test HTTP: create server with http transport
+        const httpMcpServer = createServer({ policy, authorize, transport: "http" });
+        httpMcpServer.registerDeterministic("det.method", (payload) => {
+            return { deterministic: true, input: payload };
+        });
+        const httpServer = startHttpServer(httpMcpServer, {
             port: 0,
             apiKey: "test-key",
             logger: silenceLogger(),

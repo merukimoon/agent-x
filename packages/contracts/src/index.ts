@@ -1,1 +1,1 @@
-export * from "./step.ts";
+export * from "./step";

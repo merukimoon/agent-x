@@ -13,7 +13,8 @@ export function createInprocessTransport(server: MCPServer): InprocessTransport 
         ...requestInput,
         protocol_version: requestInput.protocol_version ?? PROTOCOL_VERSION,
       } as MCPRequest;
-      return server.handleRequest(request);
+      // In-process transport is always synchronous, handleRequest returns MCPResponse directly
+      return server.handleRequest(request) as MCPResponse;
     },
   };
 }

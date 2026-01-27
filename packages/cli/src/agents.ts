@@ -1,14 +1,14 @@
 import fs from "fs";
 import path from "path";
 import process from "process";
-import { Core, Legacy } from "./imports.ts";
-import type { AgentName, AgentStatus, ExecutionMode, Plan, PlanStep, AgentResult } from "./imports.ts";
-import type { DecisionAfterStep, ExecutionStatus, ModelRef, SkipReason, SkipReasonCode, StepResult, StepOverride } from "../../contracts/src/index.ts";
-import { writeDecision, writeEffectiveDecision, writeSkippedStepArtifacts, writeStepResult, updateStepsIndex } from "./step_persistence.ts";
-import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy, readOverride } from "./gating_runtime.ts";
-import { requireExecutableRole } from "../../../scripts/agentic/roles_registry.ts";
-import { runTechnicalWriter } from "../../../scripts/agentic/runners.ts";
-import { createServer as createMcpServer, createInprocessTransport } from "../../mcp/src/index.ts";
+import { Core, Legacy } from "./imports";
+import type { AgentName, AgentStatus, ExecutionMode, Plan, PlanStep, AgentResult } from "./imports";
+import type { DecisionAfterStep, ExecutionStatus, ModelRef, SkipReason, SkipReasonCode, StepResult, StepOverride } from "../../contracts/src/index";
+import { writeDecision, writeEffectiveDecision, writeSkippedStepArtifacts, writeStepResult, updateStepsIndex } from "./step_persistence";
+import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy, readOverride } from "./gating_runtime";
+import { requireExecutableRole } from "../../../scripts/agentic/roles_registry";
+import { runTechnicalWriter } from "../../../scripts/agentic/runners";
+import { createServer as createMcpServer, createInprocessTransport } from "../../mcp/src/index";
 
 // Deconstruct from Legacy where helpful for cleaner code, or use Legacy.*
 const {

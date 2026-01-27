@@ -146,7 +146,7 @@ export function createServer(opts?: MCPServerOptions): MCPServer {
           // Snapshot methods catalog once per run_id
           if (!snapshotted.has(request.run_id)) {
             snapshotted.add(request.run_id);
-            snapshotMethodsForRun(request.run_id, deterministicRegistry, asyncRegistry, policy);
+            snapshotMethodsForRun(request.run_id, getMethodsCatalog());
           }
         }
       } catch (err) {
@@ -226,7 +226,7 @@ export function createServer(opts?: MCPServerOptions): MCPServer {
             // Snapshot methods catalog once per run_id
             if (!snapshotted.has(request.run_id)) {
               snapshotted.add(request.run_id);
-              snapshotMethodsForRun(request.run_id, deterministicRegistry, asyncRegistry, policy);
+              snapshotMethodsForRun(request.run_id, getMethodsCatalog());
             }
           }
         } catch (err) {

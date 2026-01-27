@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createServer } from "../../packages/mcp/src/index.ts";
-import { startHttpServer } from "../../packages/mcp/src/transports/http.ts";
-import { loadPolicy } from "../../packages/mcp/src/policy/loadPolicy.ts";
-import { authorize } from "../../packages/mcp/src/policy/match.ts";
+import { createServer } from "../../packages/mcp/src/index";
+import { startHttpServer } from "../../packages/mcp/src/transports/http";
+import { loadPolicy } from "../../packages/mcp/src/policy/loadPolicy";
+import { authorize } from "../../packages/mcp/src/policy/match";
 import type { AddressInfo } from "net";
 
 function silenceLogger() {
@@ -25,12 +25,13 @@ async function waitForServer(server: import("http").Server) {
 }
 
 describe("MCP HTTP Protections", () => {
-    it.skip("body too large returns 413", async () => {
+    it("body too large returns 413", async () => {
         const originalMaxBody = process.env.AGENTX_MCP_MAX_BODY_BYTES;
         process.env.AGENTX_MCP_MAX_BODY_BYTES = "100"; // Very small limit
 
         try {
             const policy = loadPolicy("http");
+            policy.allow.push({ method: "test" });
             const server = createServer({ policy, authorize, transport: "http" });
             server.registerDeterministic("test", () => ({ ok: true }));
 
@@ -65,7 +66,7 @@ describe("MCP HTTP Protections", () => {
         }
     });
 
-    it.skip("rate limited returns 429", async () => {
+    it("rate limited returns 429", async () => {
         const originalPerMin = process.env.AGENTX_MCP_RL_PER_MIN;
         const originalBurst = process.env.AGENTX_MCP_RL_BURST;
         process.env.AGENTX_MCP_RL_PER_MIN = "2"; // Very low rate
@@ -73,6 +74,7 @@ describe("MCP HTTP Protections", () => {
 
         try {
             const policy = loadPolicy("http");
+            policy.allow.push({ method: "test" });
             const server = createServer({ policy, authorize, transport: "http" });
             server.registerDeterministic("test", () => ({ ok: true }));
 
@@ -122,7 +124,7 @@ describe("MCP HTTP Protections", () => {
         }
     });
 
-    it.skip("request timeout returns 504", async () => {
+    it("request timeout returns 504", async () => {
         const originalTimeout = process.env.AGENTX_MCP_TIMEOUT_MS;
         process.env.AGENTX_MCP_TIMEOUT_MS = "100"; // Very short timeout
 
@@ -165,8 +167,9 @@ describe("MCP HTTP Protections", () => {
         }
     });
 
-    it.skip("valid request under limits returns 200", async () => {
+    it("valid request under limits returns 200", async () => {
         const policy = loadPolicy("http");
+        policy.allow.push({ method: "test" });
         const server = createServer({ policy, authorize, transport: "http" });
         server.registerDeterministic("test", (payload) => ({ result: "success", input: payload }));
 

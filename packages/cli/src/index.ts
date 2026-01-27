@@ -23,12 +23,12 @@ import {
   runFlow,
   verifyRun,
   parseRunArgs,
-} from "./cli.ts";
-import { Legacy } from "./imports.ts";
-import { runAgent } from "./agents.ts";
-import { buildStatusView } from "./status_view.ts";
-import { renderStatusView } from "./status_render.ts";
-import type { AgentName } from "./imports.ts";
+} from "./cli";
+import { Legacy } from "./imports";
+import { runAgent } from "./agents";
+import { buildStatusView } from "./status_view";
+import { renderStatusView } from "./status_render";
+import type { AgentName } from "./imports";
 const { runValidationChecks } = Legacy;
 
 function resolveVersion() {
@@ -49,7 +49,7 @@ function resolveVersion() {
   return process.env.AGENTIC_VERSION || "0.0.0";
 }
 const VERSION = resolveVersion();
-import { fail, handleFatalError, CLIError } from "../../../scripts/agentic/errors.ts";
+import { fail, handleFatalError, CLIError } from "../../../scripts/agentic/errors";
 
 type GlobalFlags = { json: boolean; quiet: boolean; help: boolean; version: boolean };
 

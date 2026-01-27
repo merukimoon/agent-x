@@ -2,7 +2,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { describe, expect, it } from "vitest";
-import { updateRunMetadata } from "../../packages/cli/src/cli.ts";
+import { updateRunMetadata } from "../../packages/cli/src/cli";
 
 function readRun(runPath: string) {
   return JSON.parse(fs.readFileSync(runPath, "utf8"));

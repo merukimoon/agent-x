@@ -1,4 +1,4 @@
-import type { NormalizedStatus } from "./status_view.ts";
+import type { NormalizedStatus } from "./status_view";
 
 export function renderStatusView(view: NormalizedStatus, lockStatus: string | null = null): string {
     const lines: string[] = [];

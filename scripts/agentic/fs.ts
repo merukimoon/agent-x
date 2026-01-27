@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import process from "process";
-import { fail } from "./errors.ts";
+import { fail } from "./errors";
 
 /**
  * Read the first N lines from a file.

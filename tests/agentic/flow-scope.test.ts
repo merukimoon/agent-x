@@ -2,8 +2,8 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { describe, expect, it, vi } from "vitest";
-import { computeExecutionSteps, runFlow, verifyRun } from "../../packages/cli/src/cli.ts";
-import type { Plan } from "../../packages/cli/src/imports.ts";
+import { computeExecutionSteps, runFlow, verifyRun } from "../../packages/cli/src/cli";
+import type { Plan } from "../../packages/cli/src/imports";
 
 const ORIGINAL_CWD = process.cwd();
 

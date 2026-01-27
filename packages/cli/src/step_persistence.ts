@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
-import type { DecisionAfterStep, ExecutionStatus, ModelRef, SkipReason, StepResult } from "../../contracts/src/index.ts";
-import { getDecisionPath, getStepDir, getStepResultPath, getStepsIndexPath } from "../../core/src/paths/steps.ts";
+import type { DecisionAfterStep, ExecutionStatus, ModelRef, SkipReason, StepResult } from "../../contracts/src/index";
+import { getDecisionPath, getStepDir, getStepResultPath, getStepsIndexPath } from "../../core/src/paths/steps";
 
 export function ensureDir(dirPath: string) {
     fs.mkdirSync(dirPath, { recursive: true });

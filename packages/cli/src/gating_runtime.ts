@@ -1,10 +1,10 @@
 import fs from "fs";
 import path from "path";
-import type { DecisionAfterStep, StepOverride, StepResult } from "../../contracts/src/index.ts";
-import type { GateOutcome, GatingPolicy, Strictness } from "../../core/src/policy/gating.ts";
-import { evaluateGates, resolveStrictness } from "../../core/src/policy/gating.ts";
-import { getDecisionPath, getStepDir } from "../../core/src/paths/steps.ts";
-import { writeJsonAtomic } from "./step_persistence.ts";
+import type { DecisionAfterStep, StepOverride, StepResult } from "../../contracts/src/index";
+import type { GateOutcome, GatingPolicy, Strictness } from "../../core/src/policy/gating";
+import { evaluateGates, resolveStrictness } from "../../core/src/policy/gating";
+import { getDecisionPath, getStepDir } from "../../core/src/paths/steps";
+import { writeJsonAtomic } from "./step_persistence";
 
 const DEFAULT_POLICY: GatingPolicy = {
     schema_version: "gating-policy.v1",

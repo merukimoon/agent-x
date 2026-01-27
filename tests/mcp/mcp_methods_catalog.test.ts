@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it, afterEach } from "vitest";
-import { createServer, createInprocessTransport, loadPolicy, authorize } from "../../packages/mcp/src/index.ts";
+import { createServer, createInprocessTransport, loadPolicy, authorize } from "../../packages/mcp/src/index";
 
 function cleanup(dir: string) {
     if (fs.existsSync(dir)) {
@@ -20,7 +20,7 @@ describe("MCP Methods Catalog", () => {
         testRunIds.length = 0;
     });
 
-    it.skip("mcp.list_methods returns metadata for registered methods", () => {
+    it("mcp.list_methods returns metadata for registered methods", () => {
         const policy = loadPolicy("inprocess");
         const server = createServer({ policy, authorize, transport: "inprocess" });
 
@@ -52,10 +52,12 @@ describe("MCP Methods Catalog", () => {
         expect(asyncMethod.handler_kind).toBe("async");
     });
 
-    it.skip("method metadata includes correct exposure based on policy", () => {
+    it("method metadata includes correct exposure based on policy", () => {
         const policy = loadPolicy("http");
         // runner.technical-writer is in default policy, test.method is not
-        const server = createServer({ policy, authorize, transport: "http" });
+        const server = createServer({
+            policy, authorize, transport: "inprocess"
+        });
 
         server.registerDeterministic("test.method", () => ({ ok: true }));
 
@@ -65,6 +67,7 @@ describe("MCP Methods Catalog", () => {
             method: "mcp.list_methods",
         });
 
+        expect(response.ok).toBe(true);
         const result = response.result as { methods: any[] };
 
         // mcp.list_methods should be in default policy -> "both"
@@ -76,7 +79,7 @@ describe("MCP Methods Catalog", () => {
         expect(testMethod.exposure).toBe("internal");
     });
 
-    it.skip("per-run snapshot creates methods.json", () => {
+    it("per-run snapshot creates methods.json", () => {
         const runId = `catalog-${Date.now()}`;
         testRunIds.push(runId);
 
@@ -102,7 +105,7 @@ describe("MCP Methods Catalog", () => {
         expect(Array.isArray(snapshot.methods)).toBe(true);
     });
 
-    it.skip("snapshot created only once per run_id", () => {
+    it("snapshot created only once per run_id", () => {
         const runId = `catalog-once-${Date.now()}`;
         testRunIds.push(runId);
 
@@ -149,7 +152,7 @@ describe("MCP Methods Catalog", () => {
         expect(secondMtime).toBe(firstMtime);
     });
 
-    it.skip("snapshot write failure is fail-soft", () => {
+    it("snapshot write failure is fail-soft", () => {
         // Use a run_id but don't create the runs directory
         // This should trigger fail-soft behavior (warn, no throw)
         const runId = `catalog-nosuchdir-${Date.now()}`;

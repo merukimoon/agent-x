@@ -2,9 +2,9 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { describe, expect, it } from "vitest";
-import { detectGate } from "../../packages/cli/src/gate_check.ts";
-import { runFlow } from "../../packages/cli/src/cli.ts";
-import { CLIError } from "../../scripts/agentic/errors.ts";
+import { detectGate } from "../../packages/cli/src/gate_check";
+import { runFlow } from "../../packages/cli/src/cli";
+import { CLIError } from "../../scripts/agentic/errors";
 
 function writeJson(filePath: string, data: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
