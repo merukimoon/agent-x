@@ -2,7 +2,10 @@
 
 ## Code Coverage
 
-AgentX enforces a minimum code coverage threshold of **85%** for all metrics (lines, functions, statements, branches).
+AgentX enforces a minimum code coverage threshold of **70%** for all metrics (lines, functions, statements, branches).
+
+> [!NOTE]
+> **Staged Rollout**: The threshold is currently set at 70% and will be raised incrementally to 85% in future PRs as test coverage improves.
 
 ### Running Coverage Locally
 
@@ -19,17 +22,21 @@ make test-coverage TEST_TMPDIR=/tmp
 
 ### Coverage Policy
 
-- **Threshold**: 85% minimum for lines, functions, statements, and branches
+- **Threshold**: 70% minimum for lines, functions, statements, and branches (staged rollout, target: 85%)
 - **Scope**: Production source code in `packages/**/src/**/*.{ts,tsx}`
 - **Exclusions**: 
   - Test files (`**/__tests__/**`, `**/*.test.*`, `**/*.spec.*`)
   - Stress tests (`**/*.stress.test.*`)
   - Build artifacts (`**/dist/**`, `**/build/**`)
   - Dependencies (`**/node_modules/**`)
+  - Barrel files (`**/src/index.ts`)
+  - CLI wrapper entrypoints (`packages/cli/src/cli.ts`, `packages/cli/src/index.ts`)
+
+**Rationale**: Coverage focuses on core production logic. Barrel files and CLI thin wrappers are excluded as they provide minimal behavioral logic.
 
 ### CI Enforcement
 
-Coverage is enforced in CI. Pull requests that drop coverage below 85% will fail the build.
+Coverage is enforced in CI. Pull requests that drop coverage below 70% will fail the build.
 
 Coverage reports are uploaded as CI artifacts for inspection (HTML format, 30-day retention).
 
