@@ -44,7 +44,7 @@ export const {
 
 const ALLOWED_SKIP_REASON_CODES: SkipReasonCode[] = ["dry_run", "not_applicable", "precondition_unmet", "policy_disabled"];
 
-function normalizeStatusLocal(raw: string | undefined | null) {
+export function normalizeStatusLocal(raw: string | undefined | null) {
   const r = (raw || "").toLowerCase().trim();
   if (r === "skipped") return "skipped";
   if (r === "failed") return "failed";
@@ -54,7 +54,7 @@ function normalizeStatusLocal(raw: string | undefined | null) {
   return "pending";
 }
 
-function buildSkipReason(code: SkipReasonCode, message: string): SkipReason {
+export function buildSkipReason(code: SkipReasonCode, message: string): SkipReason {
   const safeMessage = message && message.trim().length > 0 ? message.trim() : `Skipped (${code})`;
   return {
     code: ALLOWED_SKIP_REASON_CODES.includes(code) ? code : "policy_disabled",
@@ -63,7 +63,7 @@ function buildSkipReason(code: SkipReasonCode, message: string): SkipReason {
   };
 }
 
-function deriveSkipReason(params: { step: PlanStep; mode: ExecutionMode }): SkipReason {
+export function deriveSkipReason(params: { step: PlanStep; mode: ExecutionMode }): SkipReason {
   const { step, mode } = params;
   const message = step.last_error || "Skipped by policy";
   const code: SkipReasonCode = mode === "dry-run" ? "dry_run" : "not_applicable";
