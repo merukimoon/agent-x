@@ -1,5 +1,44 @@
 # Verify.md
 
+## Code Coverage
+
+AgentX enforces a minimum code coverage threshold of **85%** for all metrics (lines, functions, statements, branches).
+
+### Running Coverage Locally
+
+Using pnpm:
+```bash
+pnpm run test:coverage
+```
+
+Using Make:
+```bash
+make test-coverage
+make test-coverage TEST_TMPDIR=/tmp
+```
+
+### Coverage Policy
+
+- **Threshold**: 85% minimum for lines, functions, statements, and branches
+- **Scope**: Production source code in `packages/**/src/**/*.{ts,tsx}`
+- **Exclusions**: 
+  - Test files (`**/__tests__/**`, `**/*.test.*`, `**/*.spec.*`)
+  - Stress tests (`**/*.stress.test.*`)
+  - Build artifacts (`**/dist/**`, `**/build/**`)
+  - Dependencies (`**/node_modules/**`)
+
+### CI Enforcement
+
+Coverage is enforced in CI. Pull requests that drop coverage below 85% will fail the build.
+
+Coverage reports are uploaded as CI artifacts for inspection (HTML format, 30-day retention).
+
+### Notes
+
+- Coverage applies only to the main deterministic test suite
+- Specialized suites (MCP protections, stress tests) are excluded
+- Initial CI runs may fail if current coverage is below threshold — this is expected and drives test improvement
+
 ## Verify Flows
 
 Verify Flows is the feature-level confidence pass that confirms all canonical execution flows still work end-to-end after a change. Run it after finishing a feature or refactor, alongside Verify (tooling/contracts) and VerifyFest (broader regression).

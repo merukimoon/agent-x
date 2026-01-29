@@ -21,3 +21,8 @@ Thumbs.db
 # pnpm / Node accidental artifacts
 agenticx@*
 
+# Vitest / coverage artifacts
+coverage/
+
+
+
