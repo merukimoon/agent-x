@@ -517,7 +517,7 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   return result;
 }
 
-function buildDecision(params: {
+export function buildDecision(params: {
   runId: string;
   stepId: string;
   finishedAt: Date;
@@ -585,14 +585,14 @@ function buildDecision(params: {
   return decision;
 }
 
-function mapAgentStatusToExecutionStatus(status: AgentStatus): ExecutionStatus {
+export function mapAgentStatusToExecutionStatus(status: AgentStatus): ExecutionStatus {
   if (status === "failed") return "failed";
   if (status === "blocked" || status === "in_progress") return "blocked";
   if (status === "skipped") return "skipped";
   return "ok";
 }
 
-function resolveStepMeta(runDir: string, agentName: AgentName) {
+export function resolveStepMeta(runDir: string, agentName: AgentName) {
   const planPath = path.join(runDir, "plan.json");
   let stepId: string = agentName;
   let stepIndex = 0;
@@ -617,7 +617,7 @@ function resolveStepMeta(runDir: string, agentName: AgentName) {
   return { stepId, stepIndex, priorOutputs, pipelineId };
 }
 
-function detectMissingInputs(runDir: string, inputs: StepResult["inputs"]) {
+export function detectMissingInputs(runDir: string, inputs: StepResult["inputs"]) {
   const missing: string[] = [];
   const refs = [
     inputs.context_ref,
