@@ -590,7 +590,7 @@ describe("runAgent", () => {
         flow_type: "test-flow",
         keywords: [],
         steps: [
-          { id: "step1", agent: "planner", depends_on: [] }
+          { id: "step1", agent: "planner", depends_on: ["planner"] }
           // planner is mapped to "planner", coordinator to "coordinator"
         ]
       },

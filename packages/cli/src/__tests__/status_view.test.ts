@@ -262,4 +262,39 @@ describe("renderStatusView (unit)", () => {
         const output = renderStatusView(stepView);
         expect(output).toContain("0   agentA          done         continue    -                    100");
     });
+
+    it("renders lock status and missing step details", () => {
+        const stepView: NormalizedStatus = {
+            ...baseView,
+            steps: [
+                {
+                    step_index: 0,
+                    step_id: "s1",
+                    agent_name: "a1",
+                    status: "done",
+                    decision_action: "continue",
+                    // Missing model and duration
+                } as any
+            ]
+        };
+        const output = renderStatusView(stepView, "LOCKED by user");
+        expect(output).toContain("LOCKED by user");
+        expect(output).toContain("-                    -"); // model - duration -
+    });
+
+    it("renders blocked state with missing specific details", () => {
+        const blockedView: NormalizedStatus = {
+            ...baseView,
+            current_state: {
+                ...baseView.current_state,
+                is_blocked: true,
+                blocked_step_id: null, // test fallback to "-"
+                blocked_reason: null, // test fallback to "-"
+                next_action: "provide_inputs"
+            }
+        };
+        const output = renderStatusView(blockedView);
+        expect(output).toContain("Blocked step: -");
+        expect(output).toContain("Reason: -");
+    });
 });
