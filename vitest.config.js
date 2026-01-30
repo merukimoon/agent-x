@@ -4,6 +4,11 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.{js,ts}"],
+    include: [
+      "tests/**/*.{test,spec}.{js,ts,tsx}",
+      "packages/**/src/__tests__/**/*.{test,spec}.{js,ts,tsx}",
+      "packages/**/src/**/*.{test,spec}.{js,ts,tsx}",
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov", "html"],
@@ -21,10 +26,10 @@ export default defineConfig({
         "packages/cli/src/index.ts",
       ],
       thresholds: {
-        lines: 70,
-        functions: 70,
-        branches: 70,
-        statements: 70,
+        lines: 80,
+        functions: 80,
+        branches: 75,
+        statements: 80,
       },
     },
   },

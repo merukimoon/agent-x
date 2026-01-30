@@ -272,9 +272,8 @@ describe("step_persistence", () => {
                         ],
                     }),
                     writeFileSync: (path, data) => {
-                        if (!(path as string).includes(".tmp.")) {
-                            writtenData = JSON.parse(data as string);
-                        }
+                        // Capture data from temp file (will be renamed)
+                        writtenData = JSON.parse(data as string);
                     },
                     openSync: () => -1,
                     renameSync: (from, to) => {
@@ -316,9 +315,8 @@ describe("step_persistence", () => {
                         ],
                     }),
                     writeFileSync: (path, data) => {
-                        if (!(path as string).includes(".tmp.")) {
-                            writtenData = JSON.parse(data as string);
-                        }
+                        // Capture data from temp file (will be renamed)
+                        writtenData = JSON.parse(data as string);
                     },
                     openSync: () => -1,
                     renameSync: () => { },
