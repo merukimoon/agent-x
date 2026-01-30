@@ -3,7 +3,6 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["tests/**/*.test.{js,ts}"],
     include: [
       "tests/**/*.{test,spec}.{js,ts,tsx}",
       "packages/**/src/__tests__/**/*.{test,spec}.{js,ts,tsx}",
@@ -26,10 +25,10 @@ export default defineConfig({
         "packages/cli/src/index.ts",
       ],
       thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 75,
-        statements: 80,
+        lines: 85,
+        functions: 85,
+        branches: 80,
+        statements: 85,
       },
     },
   },

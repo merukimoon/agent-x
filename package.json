@@ -10,7 +10,11 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --config vitest.config.js",
-    "test:coverage": "vitest run --config vitest.config.js --coverage",
+    "test:unit": "vitest run --config vitest.unit.config.js",
+    "test:unit:coverage": "vitest run --config vitest.unit.config.js --coverage",
+    "test:integration": "vitest run --config vitest.integration.config.js",
+    "test:all": "vitest run --config vitest.config.js",
+    "test:coverage": "vitest run --config vitest.unit.config.js --coverage",
     "test:watch": "vitest --config vitest.config.js",
     "test:golden": "node --import tsx tests/agentic/generate-golden.ts",
     "verify:esm": "node --import tsx scripts/verify-esm.ts",
