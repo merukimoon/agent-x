@@ -49,12 +49,12 @@ Edit these files and ensure they are non-empty:
 ### Step 2. Run Planner
 Git Bash:
 ```bash
-pnpm run dev planner --run "$RUN"
+pnpm exec agentic plan --run "$RUN"
 ```
 
 PowerShell:
 ```powershell
-pnpm run dev planner --run $RUN
+pnpm exec agentic plan --run $RUN
 ```
 
 Check outputs:
@@ -65,12 +65,12 @@ Check outputs:
 ### Step 3. Run Status (informational)
 Git Bash:
 ```bash
-pnpm run dev status --run "$RUN"
+pnpm exec agentic status --run "$RUN"
 ```
 
 PowerShell:
 ```powershell
-pnpm run dev status --run $RUN
+pnpm exec agentic status --run $RUN
 ```
 
 ### Step 4. Run Coordinator (dry-run)
@@ -78,12 +78,12 @@ Coordinator creates `plan.json` used by `flow`.
 
 Git Bash:
 ```bash
-pnpm run dev agent coordinator --run "$RUN" --dry-run
+pnpm exec agentic agent coordinator --run "$RUN" --dry-run
 ```
 
 PowerShell:
 ```powershell
-pnpm run dev agent coordinator --run $RUN --dry-run
+pnpm exec agentic agent coordinator --run $RUN --dry-run
 ```
 
 Check outputs:
@@ -94,12 +94,12 @@ Check outputs:
 ### Step 5. Run Flow (dry-run)
 Git Bash:
 ```bash
-pnpm run dev flow --run "$RUN" --dry-run
+pnpm exec agentic flow --run "$RUN" --dry-run
 ```
 
 PowerShell:
 ```powershell
-pnpm run dev flow --run $RUN --dry-run
+pnpm exec agentic flow --run $RUN --dry-run
 ```
 
 Check outputs:
@@ -112,12 +112,12 @@ Run the artifact contract verifier (read-only, exits non-zero on mismatch):
 
 Git Bash:
 ```bash
-pnpm run verify-run --run "$RUN"
+pnpm exec agentic verify-run --run "$RUN"
 ```
 
 PowerShell:
 ```powershell
-pnpm run verify-run --run $RUN
+pnpm exec agentic verify-run --run $RUN
 ```
 
 ### Step 7. Run Agents Directly (dry-run)
@@ -126,21 +126,21 @@ These validate the agent command path directly (agent name is positional, no `--
 
 Git Bash:
 ```bash
-pnpm run dev agent ciso --run "$RUN" --dry-run
-pnpm run dev agent decision-maker --run "$RUN" --dry-run
-pnpm run dev agent pr-reviewer --run "$RUN" --dry-run
+pnpm exec agentic agent ciso --run "$RUN" --dry-run
+pnpm exec agentic agent decision-maker --run "$RUN" --dry-run
+pnpm exec agentic agent pr-reviewer --run "$RUN" --dry-run
 ```
 
 PowerShell:
 ```powershell
-pnpm run dev agent ciso --run $RUN --dry-run
-pnpm run dev agent decision-maker --run $RUN --dry-run
-pnpm run dev agent pr-reviewer --run $RUN --dry-run
+pnpm exec agentic agent ciso --run $RUN --dry-run
+pnpm exec agentic agent decision-maker --run $RUN --dry-run
+pnpm exec agentic agent pr-reviewer --run $RUN --dry-run
 ```
 
 ## Troubleshooting
 
-- If `pnpm run dev status --run <RUN>` exits non-zero, confirm the run directory exists and you are passing the run id (not a full path).
+- If `pnpm exec agentic status --run <RUN>` exits non-zero, confirm the run directory exists and you are passing the run id (not a full path).
 - If planner fails, inspect `runs/<RUN>/outputs/planner/stderr.txt` and confirm `.env` LLM configuration is valid.
 - If `flow` fails, ensure coordinator ran and created `runs/<RUN>/plan.json`.
-- If `pnpm run verify-run --run <RUN>` fails, inspect the listed missing/invalid artifacts and fix them; verify-run is read-only and will not repair the run.
+- If `pnpm exec agentic verify-run --run <RUN>` fails, inspect the listed missing/invalid artifacts and fix them; verify-run is read-only and will not repair the run.

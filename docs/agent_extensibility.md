@@ -39,7 +39,7 @@
 - Any mismatch between `run.json` terminal status/exit_code and artifacts causes verification failure.
 
 ## 7) Observability and Debugging
-- Status is derived from run artifacts only; use `node --import tsx scripts/agentic.ts status --run <RUN_ID>` to view it.
+- Status is derived from run artifacts only; use `pnpm exec agentic status --run <RUN_ID>` to view it.
 - `docs/status.md` explains the fields: Overall (lifecycle), Artifacts (valid/invalid), Blocking (blocked/unblocked), per-step rows.
 - Inspect `outputs/<agent>/result.json` and `outputs/<agent>/notes.md` to confirm the agent behavior.
 - Verification errors list missing or invalid artifacts; fix artifacts, not the verifier.

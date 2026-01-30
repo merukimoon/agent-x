@@ -154,7 +154,8 @@ describe("CLI help snapshots", () => {
     const result = runCli({ cwd: REPO_ROOT, args: ["scripts/agentic.ts", "--help"], useTsx: true });
     expect(result.code).toBe(0);
     const out = result.stdout || result.stderr;
-    expect(out).toContain("AgentX CLI");
+    expect(out).toContain("ADX");
+    expect(out).toContain("ADX is the CLI interface of AgentX");
     expect(out).toContain("Primary commands");
     expect(out).toContain("Quickstart");
     expect(out).toContain("Exit codes");

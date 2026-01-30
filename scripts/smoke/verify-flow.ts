@@ -115,7 +115,7 @@ function runPlannerOrFail(runId: string, runDir: string) {
   writeJson(statusPath, { status: "running", started_at: startedAt, agent: "planner", run_id: runId });
 
   try {
-    const args = ["run", "dev", "planner", "--run", runId];
+    const args = ["exec", "agentic", "plan", "--run", runId];
     const res = spawnPnpmSync(args, { stdio: "pipe" });
     const attempted = `pnpm ${args.join(" ")}`;
     if (res.stdout) {
@@ -267,7 +267,7 @@ function runPlannerOrFail(runId: string, runDir: string) {
       [
         "# Planner failure",
         "",
-        `- command: pnpm run dev planner --run ${runId}`,
+        `- command: pnpm exec agentic plan --run ${runId}`,
         `- cwd: ${repoRoot}`,
         `- error: ${message}`,
         stack ? `- stack:\n\n${stack}` : "- stack: <none>",
@@ -399,9 +399,9 @@ function main() {
   ensureInputsPresent(runDir);
 
   runPlannerOrFail(runId, runDir);
-  const statusArgs = ["run", "dev", "status", "--run", runId];
-  const agentArgs = ["run", "dev", "agent", "coordinator", "--run", runId, "--dry-run"];
-  const flowArgs = ["run", "dev", "flow", "--run", runId, "--dry-run"];
+  const statusArgs = ["exec", "agentic", "status", "--run", runId];
+  const agentArgs = ["exec", "agentic", "agent", "coordinator", "--run", runId, "--dry-run"];
+  const flowArgs = ["exec", "agentic", "flow", "--run", runId, "--dry-run"];
   const steps: Array<{ name: string; args: string[] }> = [
     { name: "status", args: statusArgs },
     { name: "coordinator", args: agentArgs },

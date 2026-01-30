@@ -2,7 +2,7 @@
 
 Start here if you’re new to the project.
 
-Package manager: pnpm (pinned via Corepack). Make targets are contributor convenience only; the supported surface is the CLI (`pnpm run dev ...`). See `docs/adr/ADR-003-package-manager-and-contracts.md` for the canonical decision.
+Package manager: pnpm (pinned via Corepack). Make targets are contributor convenience only; the supported surface is ADX (the `agentic` CLI). From this repo, invoke it via `pnpm exec agentic ...`. See `docs/adr/ADR-003-package-manager-and-contracts.md` for the canonical decision.
 
 ## What to read
 
@@ -36,7 +36,7 @@ Package manager: pnpm (pinned via Corepack). Make targets are contributor conven
 - Quick verification: `make verify-fast`
 - Full verification: `make verify`
 - Product wiring verification: `make verify-flow`
-- Run artifacts contract check: `make validate-run RUN=<RUN>` (alias: `make verify-run RUN=<RUN>` or `pnpm run verify-run --run <RUN>`)
+- Run artifacts contract check: `make validate-run RUN=<RUN>` (alias: `make verify-run RUN=<RUN>` or `pnpm exec agentic verify-run --run <RUN>`)
 - Orchestrator validation: `make orchestrator-validate GOAL="..." [MODE=planner|planner-architect]` (default mode is planner-architect; runs orchestrator then verify-run)
 - Gated flow demo: `make orchestrator-gated-demo GOAL="..." [CONTEXT="..."]` (pauses with exit code 2, writes override.json, resumes, validates)
 - Verify Flows: `make verify-flows` (feature-level end-to-end flow verification; gated pause/resume included)

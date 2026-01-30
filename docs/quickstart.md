@@ -7,22 +7,30 @@
 - Node.js v18+ installed.
 - Dependencies installed: `pnpm install --frozen-lockfile` in repo root.
 
-- Optional: `.env` configured if using LLM-backed planner; Golden Path v0 uses 
-built-in flows.
+- Optional: `.env` configured if using an LLM-backed planner.
 
 ## Quick Start (Commands)
 ```bash
 # From repo root
-make verify
-make verify-plan-e2e GOAL="Sample verification" CONTEXT="Local quickstart"
+RUN=$(pnpm exec agentic run new --goal "Sample verification" --context "Local quickstart" --print-run)
+pnpm exec agentic plan --run "$RUN" --dry-run
+pnpm exec agentic agent coordinator --run "$RUN" --dry-run
+pnpm exec agentic flow --run "$RUN" --dry-run
+pnpm exec agentic status --run "$RUN"
+pnpm exec agentic verify-run --run "$RUN"
 ```
 
-Make targets are provided for contributor convenience; the supported interfaces remain the CLI commands (`pnpm run dev ...`) and verifiers (`pnpm run verify-run ...`).
+ADX is the CLI interface of AgentX, used by developers to run, plan, and verify AI-driven workflows via a deterministic API.
+
+Make targets are provided for contributor convenience only; user-facing workflows should use ADX (the `agentic` CLI).
 
 ## What Happens During a Run
-- `make verify` runs typecheck, ESM checks, and tests.
-- `make verify-plan-e2e` creates a new run, executes planner-only flow, runs verification gates, and exercises `verify-flow` plus orchestrator validation.
-- Runs are written under `runs/<timestamp>-.../` with inputs, outputs, steps, and summary.
+- `agentic run new` scaffolds a run folder with inputs.
+- `agentic plan` runs the planner command path and writes planner outputs under `outputs/planner/`.
+- `agentic agent coordinator` classifies inputs and writes `plan.json`.
+- `agentic flow` executes the dry-run flow and writes step outputs.
+- `agentic verify-run` validates run artifacts (read-only; fails on missing/invalid artifacts).
+- Runs are written under `runs/<RUN_ID>/` with inputs, outputs, steps, and summary.
 
 ## Outputs and Where to Find Them
 - Runs: `runs/<RUN_ID>/` contains `run.json`, `plan.json`, inputs, outputs per agent, steps, and `summary/final.md`.

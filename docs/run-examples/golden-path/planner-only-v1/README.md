@@ -24,7 +24,7 @@ make planner \
   RUN="$RUN"
 
 # OR: manually edit runs/$RUN/inputs/request.md and context.md, then run CLI directly
-pnpm run dev planner --run "$RUN"
+pnpm exec agentic plan --run "$RUN"
 ```
 
 ## Output Artifacts

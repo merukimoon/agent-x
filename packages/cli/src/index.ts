@@ -2,7 +2,7 @@
  * @agentsquad/cli
  * Public entrypoint for the CLI package.
  *
- * This file provides the stable external CLI surface for the `agentic` binary.
+ * This file provides the stable external ADX CLI surface for the `agentic` binary.
  * It keeps legacy aliases working while exposing a structured command set with
  * help output and step-scoped execution flags.
  */
@@ -81,7 +81,8 @@ function parseGlobalFlags(args: string[]): { flags: GlobalFlags; rest: string[] 
 
 export function renderTopLevelHelp(): string {
   return [
-    "AgentX CLI (agentic) — governed multi-agent runs and verification",
+    "ADX (agentic) — governed multi-agent runs and verification",
+    "ADX is the CLI interface of AgentX, used by developers to run, plan, and verify AI-driven workflows via a deterministic API.",
     "",
     "Usage:",
     "  agentic <command> [options]",

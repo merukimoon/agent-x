@@ -13,7 +13,7 @@ This document explains what **verify-flow** is, what it checks, and how it valid
 Verify Flow validates that the main moving parts of the system are wired together correctly:
 
 - Make targets
-- CLI commands
+- ADX CLI commands
 - Run-based contract
 - Planner
 - Agent runtime
@@ -99,7 +99,7 @@ Two input files are written:
 Command executed:
 
 ```
-pnpm run dev planner --run <RUN>
+pnpm exec agentic plan --run <RUN>
 ```
 
 **What this validates**
@@ -134,7 +134,7 @@ The flow explicitly checks that planner outputs exist.
 Command executed:
 
 ```
-pnpm run dev status --run <RUN>
+pnpm exec agentic status --run <RUN>
 ```
 
 **What this validates**
@@ -154,7 +154,7 @@ pnpm run dev status --run <RUN>
 Command executed:
 
 ```
-pnpm run dev agent coordinator --run <RUN> --dry-run
+pnpm exec agentic agent coordinator --run <RUN> --dry-run
 ```
 
 **What this validates**
@@ -172,7 +172,7 @@ pnpm run dev agent coordinator --run <RUN> --dry-run
 Command executed:
 
 ```
-pnpm run dev flow --run <RUN> --dry-run
+pnpm exec agentic flow --run <RUN> --dry-run
 ```
 
 **What this validates**

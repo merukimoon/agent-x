@@ -1,8 +1,8 @@
-# Agentic CLI golden tests
+# ADX CLI golden tests
 
 ## Overview
 
-Golden snapshots lock the current behavior of `scripts/agentic.js` so refactors can be validated without changing outputs. Snapshots cover help, validate, status, flow, agent, retry, and skip.
+Golden snapshots lock the current behavior of ADX (the `agentic` CLI) so refactors can be validated without changing outputs. Snapshots cover help, validate, status, flow, agent, retry, and skip.
 
 ## How to regenerate goldens
 

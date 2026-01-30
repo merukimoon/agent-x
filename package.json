@@ -18,7 +18,7 @@
     "test:watch": "pnpm exec vitest --config vitest.config.js",
     "test:golden": "node --import tsx tests/agentic/generate-golden.ts",
     "verify:esm": "node --import tsx scripts/verify-esm.ts",
-    "verify-run": "pnpm run dev verify-run",
+    "verify-run": "pnpm exec agentic verify-run",
     "dev": "node --import tsx scripts/agentic.ts",
     "run-new": "node --import tsx scripts/scaffold-run.ts",
     "build": "tsc -p tsconfig.json",

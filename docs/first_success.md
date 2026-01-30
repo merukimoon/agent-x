@@ -6,29 +6,31 @@
 - Assumes reader is a user/operator, not a maintainer changing core contracts.
 
 ## 2) Preconditions
-- Tools: `node` (>=18), `pnpm`, `make` (contributor convenience), `git`, and a POSIX shell.
-- Knowledge: can run make/pnpm commands, read markdown, inspect files.
+- Tools: `node` (>=18), `pnpm`, `git`, and a POSIX shell.
+- Knowledge: can run CLI commands, read markdown, inspect files.
 - Repo is cloned locally and dependencies are installed via `pnpm install`.
-- No API keys required for this path; it uses bundled flows and fixtures.
+- No API keys required for this path; it uses dry-run flows and fixtures.
 
 ## 3) First Success Path
 - Scenario: run the canonical verification flow that generates a run directory and validates artifacts.
 - Commands (run from repo root):
-  1. `make verify` — proves type, ESM, and test suite are passing.
-  2. `make verify-flow` — generates a dry-run flow under `runs/<RUN_ID>` and validates it.
+  1. `RUN=$(pnpm exec agentic run new --goal "First success path" --context "Verify ADX wiring" --print-run)`
+  2. `pnpm exec agentic plan --run "$RUN" --dry-run`
+  3. `pnpm exec agentic agent coordinator --run "$RUN" --dry-run`
+  4. `pnpm exec agentic flow --run "$RUN" --dry-run`
+  5. `pnpm exec agentic verify-run --run "$RUN"`
 - Expected outputs:
-  - `make verify` exits 0.
-  - `make verify-flow` prints a `RUN=` line and lists run contents.
+  - `agentic verify-run` exits 0.
   - A new directory under `runs/` containing `run.json`, `plan.json`, `summary/final.md`, `steps/index.json`, per-step folders, and `outputs/<agent>/result.json` and `notes.md`.
 - Expected failures and interpretation:
-  - Missing tools/deps → install prerequisites (`node`, `pnpm`, `make`) and rerun.
+  - Missing tools/deps → install prerequisites (`node`, `pnpm`) and rerun.
   - Validation errors listing missing artifacts → inspect the mentioned file paths; a valid run must contain them.
   - Non-zero exits from any command mean the first success path is not achieved; fix the reported cause before retrying.
 
 ## 4) How to Know It Worked
 - All commands above exit with status 0.
-- `node --import tsx scripts/agentic.ts status --run <RUN_ID>` shows `Overall: FINISHED_SUCCESS` or `IN_PROGRESS` with `Artifacts: VALID` for the generated run.
-- `pnpm run verify-run --run <RUN_ID>` (or `make validate-run RUN=<RUN_ID>`) exits 0 for the same run.
+- `pnpm exec agentic status --run <RUN_ID>` shows `Overall: FINISHED_SUCCESS` or `IN_PROGRESS` with `Artifacts: VALID` for the generated run.
+- `pnpm exec agentic verify-run --run <RUN_ID>` exits 0 for the same run.
 - Required artifacts exist in the run directory and match the contracts.
 
 ## 5) Where to Stop

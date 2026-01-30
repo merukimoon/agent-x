@@ -17,6 +17,11 @@ Not: A per-agent policy or prompt; not optional guidance.
 Definition: The project and repository that host agent specifications, orchestration definitions, prompts, schemas, and run scaffolding. Short name: AgentSquad.  
 Not: A deployed service or language-specific SDK (implementation is **TODO**).
 
+## ADX
+
+Definition: ADX is the CLI interface of AgentX, used by developers to run, plan, and verify AI-driven workflows via a deterministic API.  
+Not: The AgentX product/system/architecture itself; not Make targets or internal scripts; not an internal agent implementation.
+
 ## Squad
 
 Definition: A set of agents coordinated to complete a task under shared Policy. Composition depends on the flow and scenario.  

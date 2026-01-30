@@ -82,7 +82,7 @@ describe("CLI behavior", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-test-"));
     try {
       // Real filesystem interaction in temp directory
-      execSync(`node scripts/agentic.ts planner --mode dry-run`, { cwd: tmpDir });
+      execSync(`pnpm exec agentic planner --mode dry-run`, { cwd: tmpDir });
       const planPath = path.join(tmpDir, "runs", "run-123", "plan.json");
       expect(fs.existsSync(planPath)).toBe(true);
       const plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
@@ -132,7 +132,7 @@ describe("buildDecision", () => {
 describe("runAgent CLI", () => {
   it("should execute agent and write artifacts", () => {
     const tmpDir = fs.mkdtempSync(...);
-    execSync(`node scripts/agentic.ts run-agent planner`);
+    execSync(`pnpm exec agentic agent planner --run <RUN_ID>`);
     expect(fs.existsSync(path.join(tmpDir, "outputs", "planner", "result.json"))).toBe(true);
   });
 });
