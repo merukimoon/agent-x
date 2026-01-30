@@ -172,4 +172,55 @@ describe("MCP Methods Catalog", () => {
             });
         }).not.toThrow();
     });
+
+    it("snapshot skips when run directory does not exist", () => {
+        const runId = `catalog-nodir-${Date.now()}`;
+        // Do NOT create the run directory - tests line 58-60
+
+        const policy = loadPolicy("inprocess");
+        const server = createServer({ policy, authorize, transport: "inprocess" });
+        server.registerDeterministic("test.method", () => ({ ok: true }));
+
+        const transport = createInprocessTransport(server);
+
+        // Should not throw and should not create snapshot
+        transport.send({
+            id: "nodir",
+            run_id: runId,
+            method: "test.method",
+        });
+
+        const runDir = path.join(process.cwd(), "runs", runId);
+        const snapshotPath = path.join(runDir, "mcp", "methods.json");
+
+        // Snapshot should not be created because run directory doesn't exist
+        expect(fs.existsSync(snapshotPath)).toBe(false);
+    });
+
+    it("snapshot write error is caught and logged", () => {
+        const runId = `catalog-error-${Date.now()}`;
+        testRunIds.push(runId);
+
+        const runDir = path.join(process.cwd(), "runs", runId);
+        fs.mkdirSync(runDir, { recursive: true });
+
+        // Create mcp directory as a file instead of directory to force write error
+        const mcpPath = path.join(runDir, "mcp");
+        fs.writeFileSync(mcpPath, "block", "utf8"); // This will cause mkdir to fail
+
+        const policy = loadPolicy("inprocess");
+        const server = createServer({ policy, authorize, transport: "inprocess" });
+        server.registerDeterministic("test.method", () => ({ ok: true }));
+
+        const transport = createInprocessTransport(server);
+
+        // Should not throw despite write error (fail-soft)
+        expect(() => {
+            transport.send({
+                id: "error",
+                run_id: runId,
+                method: "test.method",
+            });
+        }).not.toThrow();
+    });
 });
