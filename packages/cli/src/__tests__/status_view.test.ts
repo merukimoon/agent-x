@@ -92,6 +92,72 @@ describe("buildStatusView (unit)", () => {
         expect(view?.current_state.next_action).toBe("approve_or_override");
         expect(view?.current_state.paths.some(p => p.includes("human_prompt.md"))).toBe(true);
     });
+    it("handles corrupt run.json", () => {
+        const files = {
+            [path.join(mockRunDir, "run.json")]: "{ bad json",
+        };
+        const deps = createMockDeps(files);
+        const view = buildStatusView(mockRunDir, deps);
+        expect(view?.errors).toContain("INVALID_JSON run.json");
+    });
+
+    it("handles corrupt decision files gracefully", () => {
+        const files = {
+            [path.join(mockRunDir, "run.json")]: JSON.stringify({ id: mockRunId, status: "done", exit_code: 0 }),
+            [path.join(mockRunDir, "steps", "index.json")]: JSON.stringify({
+                run_id: mockRunId,
+                steps: [{ step_index: 0, step_id: "s1", status: "done" }]
+            }),
+            [path.join(mockRunDir, "steps", "s1", "effective_decision.json")]: "{ bad json"
+        };
+        const deps = createMockDeps(files);
+        const view = buildStatusView(mockRunDir, deps);
+        expect(view?.overall).toBe("finished_success");
+    });
+
+    it("detects blocked state from request_clarification", () => {
+        const files = {
+            [path.join(mockRunDir, "run.json")]: JSON.stringify({ id: mockRunId, status: "running" }),
+            [path.join(mockRunDir, "steps", "index.json")]: JSON.stringify({
+                run_id: mockRunId,
+                steps: [
+                    { step_index: 0, step_id: "s1", status: "done", decision_action: "request_clarification" },
+                ],
+            }),
+            [path.join(mockRunDir, "steps", "s1", "effective_decision.json")]: JSON.stringify({
+                decision: { action: "request_clarification", reason: "need info" },
+                requirements: { required_inputs: ["docs"] }
+            }),
+        };
+        const deps = createMockDeps(files);
+        const view = buildStatusView(mockRunDir, deps);
+
+        expect(view?.current_state.is_blocked).toBe(true);
+        expect(view?.current_state.next_action).toBe("provide_inputs");
+        expect(view?.current_state.required_inputs).toContain("docs");
+    });
+
+    it("detects failed step state", () => {
+        const files = {
+            [path.join(mockRunDir, "run.json")]: JSON.stringify({ id: mockRunId, status: "failed", exit_code: 1 }),
+            [path.join(mockRunDir, "steps", "index.json")]: JSON.stringify({
+                run_id: mockRunId,
+                steps: [
+                    { step_index: 0, step_id: "s1", status: "failed" },
+                ],
+            }),
+        };
+        const deps = createMockDeps(files);
+        const view = buildStatusView(mockRunDir, deps);
+
+        expect(view?.current_state.is_blocked).toBe(true);
+        expect(view?.current_state.next_action).toBe("inspect_artifacts");
+        expect(view?.overall).toBe("finished_failure");
+    });
+    it("uses default deps (coverage)", () => {
+        const view = buildStatusView("/non-existent/path");
+        expect(view?.overall).toBe("invalid");
+    });
 });
 
 describe("renderStatusView (unit)", () => {

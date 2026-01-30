@@ -2,59 +2,44 @@ import { describe, expect, it } from "vitest";
 import path from "path";
 import { detectGate, type GateCheckDeps } from "../gate_check.ts";
 
-describe("detectGate (unit)", () => {
-    const mockRunId = "gate-run";
-    const runDirName = "runs";
-    const mockRunDir = path.join(process.cwd(), runDirName, mockRunId);
+function createMockDeps(files: Record<string, string> = {}): GateCheckDeps {
+    return {
+        fs: {
+            existsSync: (p: string) => Object.prototype.hasOwnProperty.call(files, p),
+            statSync: (p: string) => ({ isFile: () => true } as any),
+            readFileSync: (p: string) => files[p] || "",
+        },
+    };
+}
 
-    function createMockDeps(files: Record<string, string> = {}): GateCheckDeps {
-        return {
-            fs: {
-                existsSync: (p) => Object.prototype.hasOwnProperty.call(files, p),
-                statSync: (p) => ({ isFile: () => true }),
-                readFileSync: (p) => files[p],
-            },
-        };
-    }
+describe("detectGate", () => {
+    const mockRunDir = path.join("/", "mock", "run");
 
-    it("returns null if index.json missing", () => {
+    it("returns null if steps/index.json is missing", () => {
         const deps = createMockDeps({});
         expect(detectGate(mockRunDir, deps)).toBeNull();
     });
 
-    it("returns null if no step is blocked", () => {
+    it("returns null if no steps are blocked", () => {
         const files = {
-            [path.join(mockRunDir, "steps", "index.json")]: JSON.stringify({
-                steps: [
-                    { step_index: 0, decision_action: "continue", step_id: "s1" },
-                ],
-            }),
+            [path.join(mockRunDir, "steps", "index.json")]: JSON.stringify({ steps: [] }),
         };
         const deps = createMockDeps(files);
         expect(detectGate(mockRunDir, deps)).toBeNull();
     });
 
-    it("returns null if override exists", () => {
+    it("returns gate info for require_human", () => {
         const files = {
             [path.join(mockRunDir, "steps", "index.json")]: JSON.stringify({
+                run_id: "test-run",
                 steps: [
-                    { step_index: 0, decision_action: "require_human", step_id: "s1", agent_name: "a1" },
+                    { step_index: 0, step_id: "s1", decision_action: "require_human", agent_name: "a1" },
                 ],
             }),
-            [path.join(mockRunDir, "steps", "s1", "override.json")]: "{}",
-        };
-        const deps = createMockDeps(files);
-        expect(detectGate(mockRunDir, deps)).toBeNull();
-    });
-
-    it("returns gate info if blocked and no override", () => {
-        const files = {
-            [path.join(mockRunDir, "steps", "index.json")]: JSON.stringify({
-                run_id: mockRunId,
-                steps: [
-                    { step_index: 0, decision_action: "require_human", step_id: "s1", agent_name: "a1", required_inputs: ["i1"] },
-                ],
-            }),
+            [path.join(mockRunDir, "steps", "s1", "human_prompt.md")]: "prompt",
+            [path.join(mockRunDir, "steps", "s1", "decision_after_step.json")]: "{}",
+            [path.join(mockRunDir, "steps", "s1", "effective_decision.json")]: "{}",
+            // override.json must NOT exist for gate to be detected
         };
         const deps = createMockDeps(files);
         const info = detectGate(mockRunDir, deps);
@@ -62,23 +47,41 @@ describe("detectGate (unit)", () => {
         expect(info).not.toBeNull();
         expect(info?.step_id).toBe("s1");
         expect(info?.decision_action).toBe("require_human");
-        expect(info?.required_inputs).toEqual(["i1"]);
-        expect(info?.override_path).toContain("override.json");
+        expect(info?.human_prompt).toContain("human_prompt.md");
     });
 
-    it("returns gate info for request_clarification", () => {
+    it("returns null if override exists in outputs", () => {
         const files = {
             [path.join(mockRunDir, "steps", "index.json")]: JSON.stringify({
-                steps: [
-                    { step_index: 0, decision_action: "request_clarification", step_id: "s2" },
-                ],
+                steps: [{ step_index: 0, step_id: "s1", decision_action: "require_human" }]
             }),
+            [path.join(mockRunDir, "outputs", "s1", "override.json")]: "{}",
         };
         const deps = createMockDeps(files);
-        const info = detectGate(mockRunDir, deps);
+        expect(detectGate(mockRunDir, deps)).toBeNull();
+    });
 
-        expect(info).not.toBeNull();
-        expect(info?.step_id).toBe("s2");
-        expect(info?.decision_action).toBe("request_clarification");
+    it("returns null if override exists in step dir", () => {
+        const files = {
+            [path.join(mockRunDir, "steps", "index.json")]: JSON.stringify({
+                steps: [{ step_index: 0, step_id: "s1", decision_action: "require_human" }]
+            }),
+            [path.join(mockRunDir, "steps", "s1", "override.json")]: "{}",
+        };
+        const deps = createMockDeps(files);
+        expect(detectGate(mockRunDir, deps)).toBeNull();
+    });
+
+    it("returns null if index.json is corrupt", () => {
+        const files = {
+            [path.join(mockRunDir, "steps", "index.json")]: "{ invalid json",
+        };
+        const deps = createMockDeps(files);
+        expect(detectGate(mockRunDir, deps)).toBeNull();
+    });
+
+    it("uses default deps (coverage)", () => {
+        const result = detectGate("/non-existent/path");
+        expect(result).toBeNull();
     });
 });

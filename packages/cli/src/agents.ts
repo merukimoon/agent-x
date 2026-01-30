@@ -1,13 +1,13 @@
 import fs from "fs";
 import path from "path";
 import process from "process";
-import { Core, Legacy } from "./imports.ts";
+import { Core, Legacy, Runners } from "./imports.ts";
 import type { AgentName, AgentStatus, ExecutionMode, Plan, PlanStep, AgentResult } from "./imports.ts";
 import type { DecisionAfterStep, ExecutionStatus, ModelRef, SkipReason, SkipReasonCode, StepResult, StepOverride } from "../../contracts/src/index.ts";
 import { writeDecision, writeEffectiveDecision, writeSkippedStepArtifacts, writeStepResult, updateStepsIndex } from "./step_persistence.ts";
 import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy, readOverride } from "./gating_runtime.ts";
 import { requireExecutableRole } from "../../../scripts/agentic/roles_registry.ts";
-import { runTechnicalWriter } from "../../../scripts/agentic/runners.ts";
+
 
 
 
@@ -267,7 +267,7 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   };
   let outputsWritten = false;
   if (agentName === "technical-writer") {
-    const runnerOutput = runTechnicalWriter({
+    const runnerOutput = Runners.runTechnicalWriter({
       runId,
       outputsDir,
       requestPath,

@@ -1,5 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { createGatingRuntime, type GatingRuntimeDeps } from "../gating_runtime.ts";
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("../step_persistence.ts", () => ({
+    writeJsonAtomic: vi.fn(),
+}));
+import { writeJsonAtomic } from "../step_persistence.ts";
+import { createGatingRuntime, defaultDeps, loadGatingPolicy, determineStrictness, evaluateStepGates, writeEffectiveDecision, readOverride, applyOverride, type GatingRuntimeDeps } from "../gating_runtime.ts";
 import type { DecisionAfterStep, StepOverride } from "../../../contracts/src/index.ts";
 import type { GatingPolicy, GateOutcome } from "../../../core/src/policy/gating.ts";
 
@@ -476,3 +481,52 @@ function defaultFsMock(): GatingRuntimeDeps["fs"] {
         statSync: () => ({ isFile: () => true } as any),
     };
 }
+
+describe("gating_runtime delegates (unit)", () => {
+    const MOCK_POLICY = { schema_version: "gating-policy.v1", system_default: { strictness: "soft" } } as any;
+
+    it("determineStrictness delegates to core logic", () => {
+        const strictness = determineStrictness(MOCK_POLICY, {});
+        expect(strictness).toBe("soft");
+    });
+
+    it("evaluateStepGates delegates to core logic", () => {
+        const stepResult = { validation: { hard_checks: [], soft_checks: [] } } as any;
+        const outcome = evaluateStepGates(stepResult, "soft");
+        expect(outcome.gate_status).toBe("pass");
+    });
+
+    it("writeEffectiveDecision writes to file", () => {
+        const runId = "r1";
+        const stepId = "s1";
+        const decision = { decision: { action: "continue" } } as any;
+
+        writeEffectiveDecision(runId, stepId, decision);
+
+        expect(writeJsonAtomic).toHaveBeenCalled();
+        const args = (writeJsonAtomic as any).mock.calls[0];
+        expect(args[0]).toContain("effective_decision.json");
+        expect(args[1]).toEqual(decision);
+    });
+
+    it("readOverride finds valid override", () => {
+        const runtime = createGatingRuntime({
+            fs: {
+                ...defaultFsMock(),
+                existsSync: () => true,
+                statSync: () => ({ isFile: () => true } as any),
+                readFileSync: (() => JSON.stringify({
+                    schema_version: "step-override.v1",
+                    run_id: "r1",
+                    step_id: "s1",
+                    override_action: "halt",
+                    actor: { type: "human", id: "u1" }
+                })) as any
+            },
+            cwd: () => "/test"
+        });
+        const override = runtime.readOverride("r1", "s1");
+        expect(override).not.toBeNull();
+        expect(override?.override_action).toBe("halt");
+    });
+});

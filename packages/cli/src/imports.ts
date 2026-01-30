@@ -6,9 +6,11 @@
 // Re-export EVERYTHING from Core/Legacy as namespaces for values
 import * as _CoreValues from "../../core/src/index.ts";
 import * as _LegacyValues from "../../../scripts/agentic/legacy/index.ts";
+import { runTechnicalWriter } from "../../../scripts/agentic/runners.ts";
 
 export const Core = _CoreValues;
 export const Legacy = _LegacyValues;
+export const Runners = { runTechnicalWriter };
 
 // Also re-export types directly so "import type { Plan } from './imports.ts'" works?
 // No, that would require `export type { Plan } from ...`
