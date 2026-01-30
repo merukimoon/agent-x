@@ -1,59 +1,51 @@
 # make/test.mk
-# Unit Test Targets
-#
-# Conventions:
-# - All test invocations use the canonical command: pnpm run test
-# - Support TEST_TMPDIR for tmp directory override (portable via Make export)
-# - Support TEST_ARGS for passing additional arguments to test runner
-# - No direct vitest invocations
-# - Windows-compatible (no bash-only constructs)
+# Unit and integration test targets
 
-# Handle TEST_TMPDIR mapping to TMPDIR using Make logic
-ifdef TEST_TMPDIR
-export TMPDIR := $(TEST_TMPDIR)
-endif
-
-$(call register_target,test,TEST,Run default unit tests.,pnpm run test)
-$(call register_target,test-watch,TEST,Run unit tests in watch mode.,pnpm run test:watch)
-$(call register_target,test-unit,TEST,Explicitly run unit tests.,pnpm run test:unit)
-$(call register_target,test-integration,TEST,Run integration tests.,pnpm run test:integration)
-$(call register_target,test-integration-watch,TEST,Run integration tests in watch mode.,pnpm run test:integration:watch)
-$(call register_target,test-mcp,TEST,Run MCP unit tests.,pnpm run test:unit --dir packages/mcp/src/__tests__)
-$(call register_target,test-cli,TEST,Run CLI unit tests.,pnpm run test:unit --dir packages/cli/src/__tests__)
-$(call register_target,test-core,TEST,Run Core unit tests.,pnpm run test:unit --dir packages/core/src/__tests__)
-$(call register_target,test-mcp-protections,TEST,Run MCP protections suite.,pnpm run test:mcp-protections)
-$(call register_target,test-mcp-stress,TEST,Run MCP stress suite.,pnpm run test:mcp-stress)
-
-.PHONY: test test-watch test-unit test-integration test-integration-watch
-.PHONY: test-mcp test-cli test-core test-mcp-protections test-mcp-stress
-
+# Legacy target - runs all tests (unit + integration)
+$(call register_target,test,TEST,Run all tests (unit + integration).,make test)
+.PHONY: test
 test:
-	@echo "Running unit tests via pnpm..."
-	$(PNPM) run test $(if $(TEST_ARGS),-- $(TEST_ARGS))
+	@set -eu; \
+	TMPDIR_RESOLVED="$${TEST_TMPDIR:-$${TMPDIR:-/tmp}}"; \
+	mkdir -p "$$TMPDIR_RESOLVED"; \
+	TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) exec vitest run --config vitest.config.js
 
-test-watch:
-	$(PNPM) run test:watch $(if $(TEST_ARGS),-- $(TEST_ARGS))
-
+# Unit tests only (packages/**/src/__tests__/**)
+$(call register_target,test-unit,TEST,Run unit tests only (deterministic isolated tests in packages/).,make test-unit)
+.PHONY: test-unit
 test-unit:
-	$(PNPM) run test:unit $(if $(TEST_ARGS),-- $(TEST_ARGS))
+	@set -eu; \
+	TMPDIR_RESOLVED="$${TEST_TMPDIR:-$${TMPDIR:-/tmp}}"; \
+	mkdir -p "$$TMPDIR_RESOLVED"; \
+	TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) exec vitest run --config vitest.unit.config.js
 
+# Unit tests with coverage enforcement (thresholds: 80/75/80/80)
+$(call register_target,test-unit-coverage,TEST,Run unit tests with enforced coverage (80%% lines 75%% branches).,make test-unit-coverage)
+.PHONY: test-unit-coverage
+test-unit-coverage:
+	@set -eu; \
+	TMPDIR_RESOLVED="$${TEST_TMPDIR:-$${TMPDIR:-/tmp}}"; \
+	mkdir -p "$$TMPDIR_RESOLVED"; \
+	TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) exec vitest run --config vitest.unit.config.js --coverage
+
+# Integration tests only (tests/**)
+$(call register_target,test-integration,TEST,Run integration tests only (e2e workflows in tests/).,make test-integration)
+.PHONY: test-integration
 test-integration:
-	$(PNPM) run test:integration $(if $(TEST_ARGS),-- $(TEST_ARGS))
+	@set -eu; \
+	TMPDIR_RESOLVED="$${TEST_TMPDIR:-$${TMPDIR:-/tmp}}"; \
+	mkdir -p "$$TMPDIR_RESOLVED"; \
+	TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) exec vitest run --config vitest.integration.config.js
 
-test-integration-watch:
-	$(PNPM) run test:integration:watch $(if $(TEST_ARGS),-- $(TEST_ARGS))
+# Legacy coverage target - now points to unit coverage
+$(call register_target,test-coverage,TEST,Run unit tests with coverage (alias for test-unit-coverage).,make test-coverage)
+.PHONY: test-coverage
+test-coverage: test-unit-coverage
 
-test-mcp:
-	$(PNPM) run test:unit --dir packages/mcp/src/__tests__ $(if $(TEST_ARGS),-- $(TEST_ARGS))
+# Test watch mode
+$(call register_target,test-watch,TEST,Run all tests in watch mode.,make test-watch)
+.PHONY: test-watch
+test-watch:
+	@$(PNPM) exec vitest --config vitest.config.js
 
-test-cli:
-	$(PNPM) run test:unit --dir packages/cli/src/__tests__ $(if $(TEST_ARGS),-- $(TEST_ARGS))
 
-test-core:
-	$(PNPM) run test:unit --dir packages/core/src/__tests__ $(if $(TEST_ARGS),-- $(TEST_ARGS))
-
-test-mcp-protections:
-	$(PNPM) run test:mcp-protections $(if $(TEST_ARGS),-- $(TEST_ARGS))
-
-test-mcp-stress:
-	$(PNPM) run test:mcp-stress $(if $(TEST_ARGS),-- $(TEST_ARGS))

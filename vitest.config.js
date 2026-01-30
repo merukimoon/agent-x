@@ -4,15 +4,32 @@ export default defineConfig({
   test: {
     environment: "node",
     include: [
-      "packages/**/src/__tests__/**/*.test.{js,ts}",
-      "tests/**/*.test.{js,ts}"
+      "tests/**/*.{test,spec}.{js,ts,tsx}",
+      "packages/**/src/__tests__/**/*.{test,spec}.{js,ts,tsx}",
+      "packages/**/src/**/*.{test,spec}.{js,ts,tsx}",
     ],
-    exclude: [
-      "packages/mcp/src/__tests__/mcp_http_protections.test.ts",
-      "**/*.stress.test.{js,ts}",
-      "tests/integration/**",
-      "**/node_modules/**",
-      "**/dist/**"
-    ],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov", "html"],
+      include: ["packages/**/src/**/*.{ts,tsx}"],
+      exclude: [
+        "**/__tests__/**",
+        "**/*.test.*",
+        "**/*.spec.*",
+        "**/*.stress.test.*",
+        "**/dist/**",
+        "**/build/**",
+        "**/node_modules/**",
+        "**/src/index.ts",
+        "packages/cli/src/cli.ts",
+        "packages/cli/src/index.ts",
+      ],
+      thresholds: {
+        lines: 85,
+        functions: 85,
+        branches: 80,
+        statements: 85,
+      },
+    },
   },
 });

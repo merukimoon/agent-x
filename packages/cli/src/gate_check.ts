@@ -1,6 +1,22 @@
 import fs from "fs";
 import path from "path";
 
+export interface GateCheckDeps {
+    fs: {
+        existsSync(path: string): boolean;
+        statSync(path: string): { isFile(): boolean };
+        readFileSync(path: string, encoding: "utf8"): string;
+    };
+}
+
+const defaultDeps: GateCheckDeps = {
+    fs: {
+        existsSync: (p) => fs.existsSync(p),
+        statSync: (p) => fs.statSync(p),
+        readFileSync: (p, e) => fs.readFileSync(p, e),
+    },
+};
+
 export type GateInfo = {
     run_id: string;
     step_id: string;
@@ -14,7 +30,8 @@ export type GateInfo = {
 
 const GATE_ACTIONS = new Set(["require_human", "request_clarification", "requires_human"]);
 
-export function detectGate(runDir: string): GateInfo | null {
+export function detectGate(runDir: string, deps: GateCheckDeps = defaultDeps): GateInfo | null {
+    const { fs } = deps;
     const indexPath = path.join(runDir, "steps", "index.json");
     if (!fs.existsSync(indexPath) || !fs.statSync(indexPath).isFile()) return null;
     let parsed: any = null;

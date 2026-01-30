@@ -12,9 +12,10 @@ verify-fast:
 $(call register_target,verify,VERIFY,Full verification (verify-fast + tests).,make verify)
 .PHONY: verify
 verify:
-	@$(MAKE) verify-fast
-	@echo "Running tests..."
-	@$(MAKE) test TEST_TMPDIR=/tmp
+	@set -eu; \
+	$(MAKE) verify-fast; \
+	echo "Running tests..."; \
+	$(MAKE) test
 
 $(call register_target,validate-run,VERIFY,Validate run artifacts contract (requires RUN=<run-id>).,make validate-run RUN=<run-id>)
 $(call register_target,verify-run,VERIFY,Alias for validate-run.,make verify-run RUN=<run-id>)

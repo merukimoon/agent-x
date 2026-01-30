@@ -18,6 +18,7 @@ endif
 include make/help.mk
 
 # Include Topic modules
+include make/test.mk
 include make/dev.mk
 include make/test.mk
 include make/runs.mk

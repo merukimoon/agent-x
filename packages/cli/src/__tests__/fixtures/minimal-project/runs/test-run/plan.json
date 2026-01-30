@@ -12,6 +12,25 @@
   "confidence": "high",
   "steps": [
     {
+      "id": "coordinator",
+      "agent": "coordinator",
+      "depends_on": [],
+      "inputs": {
+        "request": "inputs/request.md",
+        "context": "inputs/context.md",
+        "prior_outputs": []
+      },
+      "outputs": {
+        "result": "outputs/coordinator/result.json",
+        "notes": "outputs/coordinator/notes.md"
+      },
+      "status": "done",
+      "attempt": 0,
+      "max_attempts": 1,
+      "last_error": null,
+      "allow_skip": true
+    },
+    {
       "id": "step-1",
       "agent": "decision-maker",
       "depends_on": ["coordinator"],

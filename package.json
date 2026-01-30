@@ -1,6 +1,6 @@
 {
   "name": "agenticx",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@9.12.3",
@@ -9,14 +9,14 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run --config vitest.config.js",
-    "test:watch": "vitest --config vitest.config.js",
-    "test:unit": "vitest run --config vitest.config.js",
-    "test:integration": "vitest run --config vitest.integration.config.js",
-    "test:integration:watch": "vitest --config vitest.integration.config.js",
-    "test:mcp-protections": "vitest run --config vitest.mcp-protections.config.js",
-    "test:mcp-stress": "vitest run --config vitest.mcp-stress.config.js",
-    "test:golden": "node --import tsx packages/cli/src/__tests__/generate-golden.ts",
+    "test": "pnpm exec vitest run --config vitest.config.js",
+    "test:unit": "pnpm exec vitest run --config vitest.unit.config.js",
+    "test:unit:coverage": "pnpm exec vitest run --config vitest.unit.config.js --coverage",
+    "test:integration": "pnpm exec vitest run --config vitest.integration.config.js",
+    "test:all": "pnpm exec vitest run --config vitest.config.js",
+    "test:coverage": "pnpm exec vitest run --config vitest.unit.config.js --coverage",
+    "test:watch": "pnpm exec vitest --config vitest.config.js",
+    "test:golden": "node --import tsx tests/agentic/generate-golden.ts",
     "verify:esm": "node --import tsx scripts/verify-esm.ts",
     "verify-run": "pnpm run dev verify-run",
     "dev": "node --import tsx scripts/agentic.ts",
@@ -28,6 +28,7 @@
   "devDependencies": {
     "@rollup/rollup-linux-x64-gnu": "^4.55.1",
     "@types/node": "^20.11.30",
+    "@vitest/coverage-v8": "^1.6.0",
     "tsx": "^4.19.1",
     "typescript": "^5.6.2",
     "vitest": "^1.6.0"

@@ -1,0 +1,44 @@
+﻿
+> agenticx@0.0.9 test:unit:coverage C:\Users\merukimon\source\git\merukimoon\agent-x
+> pnpm exec vitest run --config vitest.unit.config.js --coverage
+
+
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/Users/merukimon/source/git/merukimoon/agent-x[39m
+[2m      Coverage enabled with [22m[33mv8[39m
+
+ [2m[90mΓåô[39m[22m packages/cli/src/__tests__/agents_runner.test.ts [2m ([22m[2m3 tests[22m [2m|[22m [33m3 skipped[39m[2m)[22m
+ [32mΓ£ô[39m packages/cli/src/__tests__/gate_check.test.ts [2m ([22m[2m6 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32mΓ£ô[39m packages/core/src/policy/__tests__/gating.test.ts [2m ([22m[2m7 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32mΓ£ô[39m packages/cli/src/__tests__/status_view.test.ts [2m ([22m[2m12 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32mΓ£ô[39m packages/cli/src/__tests__/step_persistence.test.ts [2m ([22m[2m15 tests[22m[2m)[22m[90m 38[2mms[22m[39m
+ [32mΓ£ô[39m packages/cli/src/__tests__/gating_runtime.test.ts [2m ([22m[2m23 tests[22m[2m)[22m[90m 35[2mms[22m[39m
+ [32mΓ£ô[39m packages/cli/src/__tests__/status.test.ts [2m ([22m[2m4 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32mΓ£ô[39m packages/cli/src/__tests__/agents.test.ts [2m ([22m[2m20 tests[22m[2m)[22m[90m 71[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m7 passed[39m[22m[2m | [22m[33m1 skipped[39m[90m (8)[39m
+[2m      Tests [22m [1m[32m87 passed[39m[22m[2m | [22m[33m3 skipped[39m[90m (90)[39m
+[2m   Start at [22m 10:09:45
+[2m   Duration [22m 1.24s[2m (transform 1.02s, setup 1ms, collect 1.98s, tests 189ms, environment 3ms, prepare 2.80s)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   76.48 |    89.36 |   83.33 |   76.48 |                   
+ cli/src           |    74.9 |    89.01 |   80.85 |    74.9 |                   
+  agents.ts        |   41.78 |    83.11 |   85.71 |   41.78 | ...24-126,169-501 
+  gate_check.ts    |     100 |    94.73 |      25 |     100 | 43                
+  ...ng_runtime.ts |     100 |      100 |    87.5 |     100 |                   
+  imports.ts       |     100 |      100 |     100 |     100 |                   
+  status.ts        |     100 |    88.88 |     100 |     100 | 30                
+  status_render.ts |   91.89 |    66.66 |     100 |   91.89 | 25-27             
+  status_view.ts   |   99.04 |    89.18 |    62.5 |   99.04 | 67-68             
+  ...ersistence.ts |     100 |      100 |     100 |     100 |                   
+ core/src/paths    |     100 |      100 |     100 |     100 |                   
+  steps.ts         |     100 |      100 |     100 |     100 |                   
+ core/src/policy   |     100 |     91.3 |     100 |     100 |                   
+  gating.ts        |     100 |     91.3 |     100 |     100 | 65-66             
+-------------------|---------|----------|---------|---------|-------------------
+ERROR: Coverage for lines (76.48%) does not meet global threshold (80%)
+ERROR: Coverage for statements (76.48%) does not meet global threshold (80%)
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

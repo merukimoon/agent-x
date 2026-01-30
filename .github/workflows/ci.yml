@@ -41,10 +41,24 @@ jobs:
       - name: Install dependencies (includes dev)
         run: pnpm install --frozen-lockfile
 
-      - name: Run verify
-        run: make verify
+      - name: Run typecheck and verify:esm
+        run: make verify-fast
         env:
           CI: "true"
+
+      - name: Run tests with coverage
+        run: make test-coverage
+        env:
+          CI: "true"
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            coverage/
+          retention-days: 30
 
       - name: Run verify-plan-e2e (pull requests)
         if: github.event_name == 'pull_request'

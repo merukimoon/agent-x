@@ -1,33 +1,15 @@
 import fs from "fs";
 import path from "path";
 import process from "process";
-import { Core, Legacy } from "./imports";
-import type { AgentName, AgentStatus, ExecutionMode, Plan, PlanStep, AgentResult } from "./imports";
-import type { DecisionAfterStep, ExecutionStatus, ModelRef, SkipReason, SkipReasonCode, StepResult, StepOverride } from "../../contracts/src/index";
-import { writeDecision, writeEffectiveDecision, writeSkippedStepArtifacts, writeStepResult, updateStepsIndex } from "./step_persistence";
-import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy, readOverride } from "./gating_runtime";
-import { requireExecutableRole } from "../../../scripts/agentic/roles_registry";
-import { runTechnicalWriter } from "../../../scripts/agentic/runners";
-import { createServer as createMcpServer, createInprocessTransport } from "../../mcp/src/index";
-
-// Deconstruct from Legacy where helpful for cleaner code, or use Legacy.*
-const {
-  readFirstLines,
-  readFileText,
-  ensureRunAndInputs,
-  buildNotes,
-  writeJsonFile,
-  writeFileAtomic,
-} = Legacy;
-
-const {
-  PLAN_VERSION,
-  isAgentName,
-  getStepDir,
-} = Core;
+import { Core, Legacy, Runners } from "./imports.ts";
+import type { AgentName, AgentStatus, ExecutionMode, Plan, PlanStep, AgentResult } from "./imports.ts";
+import type { DecisionAfterStep, ExecutionStatus, ModelRef, SkipReason, SkipReasonCode, StepResult, StepOverride } from "../../contracts/src/index.ts";
+import { writeDecision, writeEffectiveDecision, writeSkippedStepArtifacts, writeStepResult, updateStepsIndex } from "./step_persistence.ts";
+import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy, readOverride } from "./gating_runtime.ts";
+import { requireExecutableRole } from "../../../scripts/agentic/roles_registry.ts";
 
 
-const { classifyFlow } = Legacy;
+
 
 /**
  * @typedef {import("./imports.ts").Core.AgentName} AgentName
@@ -45,7 +27,7 @@ export const {
 
 const ALLOWED_SKIP_REASON_CODES: SkipReasonCode[] = ["dry_run", "not_applicable", "precondition_unmet", "policy_disabled"];
 
-function normalizeStatusLocal(raw: string | undefined | null) {
+export function normalizeStatusLocal(raw: string | undefined | null) {
   const r = (raw || "").toLowerCase().trim();
   if (r === "skipped") return "skipped";
   if (r === "failed") return "failed";
@@ -55,7 +37,7 @@ function normalizeStatusLocal(raw: string | undefined | null) {
   return "pending";
 }
 
-function buildSkipReason(code: SkipReasonCode, message: string): SkipReason {
+export function buildSkipReason(code: SkipReasonCode, message: string): SkipReason {
   const safeMessage = message && message.trim().length > 0 ? message.trim() : `Skipped (${code})`;
   return {
     code: ALLOWED_SKIP_REASON_CODES.includes(code) ? code : "policy_disabled",
@@ -64,7 +46,7 @@ function buildSkipReason(code: SkipReasonCode, message: string): SkipReason {
   };
 }
 
-function deriveSkipReason(params: { step: PlanStep; mode: ExecutionMode }): SkipReason {
+export function deriveSkipReason(params: { step: PlanStep; mode: ExecutionMode }): SkipReason {
   const { step, mode } = params;
   const message = step.last_error || "Skipped by policy";
   const code: SkipReasonCode = mode === "dry-run" ? "dry_run" : "not_applicable";
@@ -185,7 +167,7 @@ export function ensureDependencies(step, runDir, idToAgent) {
  */
 export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   const runDir = path.join(process.cwd(), "runs", runId);
-  ensureRunAndInputs(runDir);
+  Legacy.ensureRunAndInputs(runDir);
   const registryEntry = requireExecutableRole(agentName);
   const { stepId, stepIndex, priorOutputs, pipelineId } = resolveStepMeta(runDir, agentName);
   const startedAt = new Date();
@@ -237,8 +219,8 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   const requestPath = path.join(runDir, "inputs", "request.md");
   const contextPath = contextOverridePath ? path.resolve(contextOverridePath) : path.join(runDir, "inputs", "context.md");
 
-  const requestExcerpt = readFirstLines(requestPath, 20);
-  const contextExcerpt = readFirstLines(contextPath, 20);
+  const requestExcerpt = Legacy.readFirstLines(requestPath, 20);
+  const contextExcerpt = Legacy.readFirstLines(contextPath, 20);
   const createdAtUtc = new Date().toISOString();
   const summary = `${mode === "dry-run" ? "Dry run" : "Run"
     } completed for ${agentName} on run ${runId}.`;
@@ -285,45 +267,20 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   };
   let outputsWritten = false;
   if (agentName === "technical-writer") {
-    const mcpServer = createMcpServer();
-    mcpServer.registerDeterministic("runner.technical-writer", (payload) => {
-      const params = (payload ?? {}) as Parameters<typeof runTechnicalWriter>[0];
-      return runTechnicalWriter({
-        runId,
-        outputsDir,
-        requestPath,
-        contextPath,
-        mode,
-        ...params,
-      });
+    const runnerOutput = Runners.runTechnicalWriter({
+      runId,
+      outputsDir,
+      requestPath,
+      contextPath,
+      mode,
     });
-    const transport = createInprocessTransport(mcpServer);
-    const mcpResponse = transport.send({
-      id: `${runId}:${agentName}`,
-      run_id: runId,
-      from: "agent.runner",
-      to: agentName,
-      method: "runner.technical-writer",
-      payload: { runId, outputsDir, requestPath, contextPath, mode },
-      trace_id: runId,
-      parent_id: stepId,
-    });
-    if (mcpResponse.ok && mcpResponse.result) {
-      const runnerOutput = mcpResponse.result as { status: string; summary: string };
-      status = runnerOutput.status as AgentStatus;
-      resultSummary = runnerOutput.summary;
-      result.status = status;
-      result.summary = resultSummary;
-      outputsWritten = true;
-    } else {
-      status = "failed";
-      result.status = status;
-      resultSummary = mcpResponse.error?.message ?? "MCP request failed";
-      result.summary = resultSummary;
-      writeJsonFile(resultPath, result);
-    }
+    status = runnerOutput.status as AgentStatus;
+    resultSummary = runnerOutput.summary;
+    result.status = status;
+    result.summary = resultSummary;
+    outputsWritten = true;
   } else {
-    writeJsonFile(resultPath, result);
+    Legacy.writeJsonFile(resultPath, result);
   }
 
   const notesPath = path.join(outputsDir, "notes.md");
@@ -335,7 +292,7 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
       `Inspect prompt: steps/${stepId}/human_prompt.md`,
     ].join("\n")
     : null;
-  const notes = gateNote ?? buildNotes({
+  const notes = gateNote ?? Legacy.buildNotes({
     agentName,
     runId,
     createdAtUtc,
@@ -346,11 +303,11 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     contextExcerpt,
   });
   if (!outputsWritten) {
-    writeFileAtomic(notesPath, notes);
+    Legacy.writeFileAtomic(notesPath, notes);
   }
   const statusPath = path.join(outputsDir, "status.json");
   if (!outputsWritten) {
-    writeJsonFile(statusPath, {
+    Legacy.writeJsonFile(statusPath, {
       agent: agentName,
       run_id: runId,
       status,
@@ -362,9 +319,9 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
 
   if (agentName === "coordinator") {
     const planPath = path.join(runDir, "plan.json");
-    const requestText = readFileText(requestPath);
-    const contextText = readFileText(contextPath);
-    const classification = classifyFlow(requestText, contextText);
+    const requestText = Legacy.readFileText(requestPath);
+    const contextText = Legacy.readFileText(contextPath);
+    const classification = Legacy.classifyFlow(requestText, contextText);
     /** @type {PlanStep[]} */
     const steps = [];
     const matchedSet = new Set(classification.signals.map((s) => s.replace(/^keyword:/, "")));
@@ -387,6 +344,7 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
       const priorOutputs = mappedDepends.flatMap((dep) => {
         const depAgent = idToAgent[dep];
         if (!depAgent) {
+          // istanbul ignore next
           throw new Error(`Unknown dependency mapping for ${dep}`);
         }
         const depOutputs = getCanonicalOutputs(depAgent as any);
@@ -473,14 +431,14 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     const plan = {
       run_id: runId,
       created_at_utc: createdAtUtc,
-      version: PLAN_VERSION,
+      version: Core.PLAN_VERSION,
       flow_type: classification.pack.flow_type,
       rationale,
       signals: classification.signals,
       confidence: classification.confidence,
       steps,
     };
-    writeJsonFile(planPath, plan);
+    Legacy.writeJsonFile(planPath, plan);
   }
 
   const modeLabel = mode === "dry-run" ? "Dry run" : "Run";
@@ -543,7 +501,7 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   return result;
 }
 
-function buildDecision(params: {
+export function buildDecision(params: {
   runId: string;
   stepId: string;
   finishedAt: Date;
@@ -576,7 +534,7 @@ function buildDecision(params: {
   }
 
   const humanPromptRef = (action === "require_human" || action === "request_clarification")
-    ? path.join(getStepDir(runId, stepId), "human_prompt.md")
+    ? path.join(Core.getStepDir(runId, stepId), "human_prompt.md")
     : null;
   if (humanPromptRef) {
     writeHumanPrompt(runId, stepId, { action, reason, required_inputs });
@@ -611,14 +569,14 @@ function buildDecision(params: {
   return decision;
 }
 
-function mapAgentStatusToExecutionStatus(status: AgentStatus): ExecutionStatus {
+export function mapAgentStatusToExecutionStatus(status: AgentStatus): ExecutionStatus {
   if (status === "failed") return "failed";
   if (status === "blocked" || status === "in_progress") return "blocked";
   if (status === "skipped") return "skipped";
   return "ok";
 }
 
-function resolveStepMeta(runDir: string, agentName: AgentName) {
+export function resolveStepMeta(runDir: string, agentName: AgentName) {
   const planPath = path.join(runDir, "plan.json");
   let stepId: string = agentName;
   let stepIndex = 0;
@@ -643,7 +601,7 @@ function resolveStepMeta(runDir: string, agentName: AgentName) {
   return { stepId, stepIndex, priorOutputs, pipelineId };
 }
 
-function detectMissingInputs(runDir: string, inputs: StepResult["inputs"]) {
+export function detectMissingInputs(runDir: string, inputs: StepResult["inputs"]) {
   const missing: string[] = [];
   const refs = [
     inputs.context_ref,
@@ -664,7 +622,7 @@ function detectMissingInputs(runDir: string, inputs: StepResult["inputs"]) {
 }
 
 function writeHumanPrompt(runId: string, stepId: string, params: { action: DecisionAfterStep["decision"]["action"]; reason: string; required_inputs: string[]; }) {
-  const stepDir = getStepDir(runId, stepId);
+  const stepDir = Core.getStepDir(runId, stepId);
   const promptPath = path.join(stepDir, "human_prompt.md");
   const lines = [
     `# Human decision needed for ${stepId}`,
@@ -677,6 +635,6 @@ function writeHumanPrompt(runId: string, stepId: string, params: { action: Decis
     "",
     "Provide the missing inputs and re-run the step.",
   ].join("\n");
-  writeFileAtomic(promptPath, lines);
+  Legacy.writeFileAtomic(promptPath, lines);
   return promptPath;
 }
