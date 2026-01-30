@@ -35,7 +35,7 @@ describe("status CLI", () => {
       created_at_utc: "2026-01-01T00:00:00Z",
       version: "0.1",
       flow_type: "demo",
-      rationale: "",
+      rationale: "status cli fixture",
       signals: [],
       confidence: "low",
       steps: [

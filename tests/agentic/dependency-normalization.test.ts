@@ -30,7 +30,7 @@ describe("plan dependency validation", () => {
       created_at_utc: new Date().toISOString(),
       version: "0.1",
       flow_type: "test",
-      rationale: "",
+      rationale: "dependency normalization test",
       signals: [],
       confidence: "low",
       steps: [

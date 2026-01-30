@@ -1,6 +1,9 @@
-import { describe, it, expect } from "vitest";
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { describe, it, expect, vi } from "vitest";
 import { createStepPersistence, type StepPersistenceDeps } from "../step_persistence.ts";
-import type { DecisionAfterStep, StepResult } from "../../../contracts/src/index.ts";
+import type { DecisionAfterStep, SkipReason, StepResult } from "../../../contracts/src/index.ts";
 
 describe("step_persistence", () => {
     describe("readJson", () => {
@@ -338,6 +341,68 @@ describe("step_persistence", () => {
             expect(writtenData.steps[0].step_id).toBe("step-1");
             expect(writtenData.steps[1].step_id).toBe("step-2");
         });
+    });
+});
+
+describe("writeSkippedStepArtifacts integration", () => {
+    it("emits all outputs for skipped steps", () => {
+        const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "step-persist-skip-"));
+        const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(tmpDir);
+        const runId = "skip-run";
+        const stepId = "step-3";
+        const outputsDir = path.join("runs", runId, "outputs", "decision-maker");
+        const persistence = createStepPersistence({
+            now: () => 1700000000000,
+            process: { pid: 999 },
+        });
+
+        const reason: SkipReason = {
+            code: "not_applicable",
+            message: "Dependency not ready",
+            at_utc: new Date().toISOString(),
+        };
+
+        try {
+            persistence.writeSkippedStepArtifacts({
+                runId,
+                stepId,
+                stepIndex: 2,
+                agentName: "decision-maker",
+                reason,
+                outputsDir,
+                mode: "dry-run",
+            });
+
+            const resultPath = path.join(outputsDir, "result.json");
+            const statusPath = path.join(outputsDir, "status.json");
+            const notesPath = path.join(outputsDir, "notes.md");
+            const stepDir = path.join("runs", runId, "steps", stepId);
+            const indexPath = path.join("runs", runId, "steps", "index.json");
+            const stepResultPath = path.join(stepDir, "step_result.json");
+            const decisionPath = path.join(stepDir, "decision_after_step.json");
+            const effectivePath = path.join(stepDir, "effective_decision.json");
+
+            expect(fs.existsSync(resultPath)).toBe(true);
+            expect(fs.existsSync(statusPath)).toBe(true);
+            expect(fs.existsSync(notesPath)).toBe(true);
+            expect(fs.existsSync(stepResultPath)).toBe(true);
+            expect(fs.existsSync(decisionPath)).toBe(true);
+            expect(fs.existsSync(effectivePath)).toBe(true);
+            expect(fs.existsSync(indexPath)).toBe(true);
+
+            const resultData = JSON.parse(fs.readFileSync(resultPath, "utf8"));
+            expect(resultData.status).toBe("skipped");
+            expect(resultData.reason.code).toBe(reason.code);
+
+            const statusData = JSON.parse(fs.readFileSync(statusPath, "utf8"));
+            expect(statusData.reason.message).toBe(reason.message);
+
+            const indexData = JSON.parse(fs.readFileSync(indexPath, "utf8"));
+            expect(indexData.steps.some((entry: any) => entry.step_id === stepId)).toBe(true);
+        } finally {
+            cwdSpy.mockRestore();
+            fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
     });
 });
 

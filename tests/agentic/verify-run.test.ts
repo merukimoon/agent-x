@@ -23,7 +23,7 @@ describe("verifyRun", () => {
       created_at_utc: "2026-01-01T00:00:00Z",
       version: "0.1",
       flow_type: "demo",
-      rationale: "",
+      rationale: "verify run fixture",
       signals: [],
       confidence: "low",
       steps: [
@@ -155,7 +155,7 @@ describe("verifyRun", () => {
       created_at_utc: "2026-01-01T00:00:00Z",
       version: "0.1",
       flow_type: "demo",
-      rationale: "",
+      rationale: "missing outputs fixture",
       signals: [],
       confidence: "low",
       steps: [
@@ -209,7 +209,7 @@ describe("verifyRun", () => {
       created_at_utc: "2026-01-01T00:00:00Z",
       version: "0.1",
       flow_type: "demo",
-      rationale: "",
+      rationale: "skip policy fixture",
       signals: [],
       confidence: "low",
       steps: [
