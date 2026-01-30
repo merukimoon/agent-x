@@ -158,6 +158,32 @@ describe("buildStatusView (unit)", () => {
         const view = buildStatusView("/non-existent/path");
         expect(view?.overall).toBe("invalid");
     });
+
+    it("handles corrupt steps/index.json", () => {
+        const files = {
+            [path.join(mockRunDir, "run.json")]: JSON.stringify({ id: mockRunId, status: "pending" }),
+            [path.join(mockRunDir, "steps", "index.json")]: "{ bad json",
+        };
+        const deps = createMockDeps(files);
+        const view = buildStatusView(mockRunDir, deps);
+        expect(view?.errors).toContain("MISSING steps/index.json"); // Returns null from readStepsIndex, so error is pushed
+    });
+
+    it("fully exercises defaultDeps via fs mock", () => {
+        const fs = require("fs");
+        vi.spyOn(fs, "existsSync").mockReturnValue(true);
+        vi.spyOn(fs, "statSync").mockReturnValue({ isFile: () => true });
+        vi.spyOn(fs, "readFileSync").mockImplementation((p: any) => {
+            if (p.endsWith("run.json")) return JSON.stringify({ id: mockRunId, status: "done", exit_code: 0 });
+            if (p.endsWith("index.json")) return JSON.stringify({ run_id: mockRunId, steps: [] });
+            return "";
+        });
+
+        const view = buildStatusView(mockRunDir); // Use defaultDeps
+        expect(view?.overall).toBe("finished_success");
+
+        vi.restoreAllMocks();
+    });
 });
 
 describe("renderStatusView (unit)", () => {

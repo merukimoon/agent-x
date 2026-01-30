@@ -24,5 +24,7 @@ agenticx@*
 # Vitest / coverage artifacts
 coverage/
 
+# Agentic artifacts
+.agent/
 
 

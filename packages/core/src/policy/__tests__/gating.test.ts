@@ -87,4 +87,14 @@ describe("evaluateGates", () => {
     expect(outcome.gate_status).toBe("pass");
     expect(outcome.hard_failed_ids).toEqual([]);
   });
+
+  it("handles checks with missing IDs", () => {
+    const result = {
+      ...baseResult,
+      validation: { hard_checks: [{ ok: false, message: "fail" }], soft_checks: [] }
+    } as any;
+    const outcome = evaluateGates(result, "hard");
+    expect(outcome.gate_status).toBe("hard_fail");
+    expect(outcome.hard_failed_ids).toEqual(["unknown"]);
+  });
 });

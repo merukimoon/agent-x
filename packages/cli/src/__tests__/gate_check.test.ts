@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import path from "path";
 import { detectGate, type GateCheckDeps } from "../gate_check.ts";
 
@@ -108,5 +108,47 @@ describe("detectGate", () => {
         };
         const deps = createMockDeps(files);
         expect(detectGate(mockRunDir, deps)).toBeNull();
+    });
+
+    it("returns explicit required_inputs from blocked step", () => {
+        const files = {
+            [path.join(mockRunDir, "steps", "index.json")]: JSON.stringify({
+                steps: [
+                    {
+                        step_index: 0,
+                        step_id: "s1",
+                        decision_action: "require_human",
+                        required_inputs: ["foo", "bar"]
+                    }
+                ],
+            }),
+            [path.join(mockRunDir, "steps", "s1", "human_prompt.md")]: "prompt",
+        };
+        const deps = createMockDeps(files);
+        const info = detectGate(mockRunDir, deps);
+        expect(info?.required_inputs).toEqual(["foo", "bar"]);
+    });
+
+    it("fully exercises defaultDeps via fs mock", () => {
+        // This test validates the defaultDeps lambdas (existsSync, statSync, readFileSync)
+        // We simulate a basic blocked scenario using real fs calls (which are mocked by vitest if we choose, or we mock fs methods)
+        // Here we mock fs methods on the fs module itself, so defaultDeps (which imports fs) calls our mocks.
+        const fs = require("fs");
+        vi.spyOn(fs, "existsSync").mockImplementation((p: any) => {
+            if (p.toString().includes("override.json")) return false;
+            return true;
+        });
+        vi.spyOn(fs, "statSync").mockReturnValue({ isFile: () => true });
+        vi.spyOn(fs, "readFileSync").mockReturnValue(JSON.stringify({
+            steps: [
+                { step_index: 0, step_id: "s1", decision_action: "require_human", required_inputs: [] }
+            ]
+        }));
+
+        // Call WITHOUT deps to trigger defaultDeps
+        const info = detectGate(mockRunDir);
+        expect(info?.decision_action).toBe("require_human");
+
+        vi.restoreAllMocks(); // Cleanup
     });
 });
