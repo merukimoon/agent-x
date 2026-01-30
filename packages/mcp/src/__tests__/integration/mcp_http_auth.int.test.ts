@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AddressInfo } from "net";
-import { createServer, startHttpServer } from "../index";
+import { createServer, startHttpServer } from "../../index";
 
 function silenceLogger() {
   return { log: () => { }, error: () => { }, warn: () => { } } as const;
@@ -23,13 +23,15 @@ async function waitForServer(server: import("http").Server) {
 
 describe.sequential("MCP HTTP transport auth", () => {
   it("returns 401 when API key is missing", async () => {
-    const original = process.env.AGENTX_MCP_API_KEY;
-    delete process.env.AGENTX_MCP_API_KEY;
     let httpServer: import("http").Server | null = null;
 
     try {
       const server = createServer();
-      httpServer = startHttpServer(server, { port: 0, logger: silenceLogger() });
+      httpServer = startHttpServer(server, {
+        port: 0,
+        logger: silenceLogger(),
+        deps: { env: {} as NodeJS.ProcessEnv },
+      });
       const address = await waitForServer(httpServer);
       const url = `http://127.0.0.1:${address.port}/mcp`;
 
@@ -43,11 +45,6 @@ describe.sequential("MCP HTTP transport auth", () => {
     } finally {
       if (httpServer) {
         await closeServer(httpServer);
-      }
-      if (original !== undefined) {
-        process.env.AGENTX_MCP_API_KEY = original;
-      } else {
-        delete process.env.AGENTX_MCP_API_KEY;
       }
     }
   });

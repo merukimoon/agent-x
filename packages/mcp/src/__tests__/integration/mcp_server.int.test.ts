@@ -1,10 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import fs from "fs";
 import path from "path";
-import { createServer } from "../server/createServer";
-import { loadPolicy } from "../policy/loadPolicy";
-import { authorize } from "../policy/match";
-import type { MCPRequest } from "../protocol/messages";
+import { createServer } from "../../server/createServer";
+import { loadPolicy } from "../../policy/loadPolicy";
+import { authorize } from "../../policy/match";
+import type { MCPRequest } from "../../protocol/messages";
 
 describe("MCP CreateServer", () => {
     let tmpDir: string;

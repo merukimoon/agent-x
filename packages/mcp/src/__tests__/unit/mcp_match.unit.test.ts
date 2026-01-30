@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { matchesRule, authorize } from "../policy/match";
-import type { AuthContext, PolicyRule, Policy } from "../policy/policy";
+import { matchesRule, authorize } from "../../policy/match";
+import type { AuthContext, PolicyRule, Policy } from "../../policy/policy";
 
 describe("MCP Policy Matching", () => {
     describe("matchesRule", () => {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createServer } from "../index";
-import { startHttpServer } from "../transports/http";
-import { loadPolicy } from "../policy/loadPolicy";
-import { authorize } from "../policy/match";
+import { createServer } from "../../index";
+import { startHttpServer } from "../../transports/http";
+import { loadPolicy } from "../../policy/loadPolicy";
+import { authorize } from "../../policy/match";
 import type { AddressInfo } from "net";
 
 function silenceLogger() {
@@ -26,8 +26,6 @@ async function waitForServer(server: import("http").Server) {
 
 describe.sequential("MCP HTTP Protections", () => {
     it("body too large returns 413", async () => {
-        const originalMaxBody = process.env.AGENTX_MCP_MAX_BODY_BYTES;
-        process.env.AGENTX_MCP_MAX_BODY_BYTES = "100"; // Very small limit
         let httpServer: import("http").Server | null = null;
 
         try {
@@ -40,6 +38,7 @@ describe.sequential("MCP HTTP Protections", () => {
                 port: 0,
                 apiKey: "test-key",
                 logger: silenceLogger(),
+                deps: { env: { AGENTX_MCP_MAX_BODY_BYTES: "100" } as NodeJS.ProcessEnv },
             });
 
             const address = await waitForServer(httpServer);
@@ -61,19 +60,10 @@ describe.sequential("MCP HTTP Protections", () => {
             if (httpServer) {
                 await closeServer(httpServer);
             }
-            if (originalMaxBody !== undefined) {
-                process.env.AGENTX_MCP_MAX_BODY_BYTES = originalMaxBody;
-            } else {
-                delete process.env.AGENTX_MCP_MAX_BODY_BYTES;
-            }
         }
     });
 
     it("rate limited returns 429", async () => {
-        const originalPerMin = process.env.AGENTX_MCP_RL_PER_MIN;
-        const originalBurst = process.env.AGENTX_MCP_RL_BURST;
-        process.env.AGENTX_MCP_RL_PER_MIN = "2"; // Very low rate
-        process.env.AGENTX_MCP_RL_BURST = "2"; // Small burst
         let httpServer: import("http").Server | null = null;
 
         try {
@@ -86,6 +76,12 @@ describe.sequential("MCP HTTP Protections", () => {
                 port: 0,
                 apiKey: "test-key",
                 logger: silenceLogger(),
+                deps: {
+                    env: {
+                        AGENTX_MCP_RL_PER_MIN: "2",
+                        AGENTX_MCP_RL_BURST: "2",
+                    } as NodeJS.ProcessEnv,
+                },
             });
 
             const address = await waitForServer(httpServer);
@@ -119,22 +115,10 @@ describe.sequential("MCP HTTP Protections", () => {
             if (httpServer) {
                 await closeServer(httpServer);
             }
-            if (originalPerMin !== undefined) {
-                process.env.AGENTX_MCP_RL_PER_MIN = originalPerMin;
-            } else {
-                delete process.env.AGENTX_MCP_RL_PER_MIN;
-            }
-            if (originalBurst !== undefined) {
-                process.env.AGENTX_MCP_RL_BURST = originalBurst;
-            } else {
-                delete process.env.AGENTX_MCP_RL_BURST;
-            }
         }
     }, 10000);
 
     it("request timeout returns 504", async () => {
-        const originalTimeout = process.env.AGENTX_MCP_TIMEOUT_MS;
-        process.env.AGENTX_MCP_TIMEOUT_MS = "100"; // Very short timeout
         let httpServer: import("http").Server | null = null;
 
         try {
@@ -151,6 +135,11 @@ describe.sequential("MCP HTTP Protections", () => {
                 port: 0,
                 apiKey: "test-key",
                 logger: silenceLogger(),
+                deps: {
+                    env: {
+                        AGENTX_MCP_TIMEOUT_MS: "100",
+                    } as NodeJS.ProcessEnv,
+                },
             });
 
             const address = await waitForServer(httpServer);
@@ -169,11 +158,6 @@ describe.sequential("MCP HTTP Protections", () => {
         } finally {
             if (httpServer) {
                 await closeServer(httpServer);
-            }
-            if (originalTimeout !== undefined) {
-                process.env.AGENTX_MCP_TIMEOUT_MS = originalTimeout;
-            } else {
-                delete process.env.AGENTX_MCP_TIMEOUT_MS;
             }
         }
     });

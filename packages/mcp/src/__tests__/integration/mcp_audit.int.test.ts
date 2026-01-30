@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
-import { createServer, createInprocessTransport } from "../index";
+import { createServer, createInprocessTransport } from "../../index";
 
 function cleanup(dir: string) {
   if (fs.existsSync(dir)) {

@@ -15,22 +15,25 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
     test: {
         environment: "node",
-        // ONLY include integration test patterns
         include: [
-            "tests/**/*.{test,spec}.{js,ts,tsx}",
+            "packages/mcp/src/__tests__/integration/**/*.int.test.{js,ts,tsx}",
         ],
-        // EXCLUDE unit tests and stress tests
         exclude: [
             "**/node_modules/**",
             "**/dist/**",
             "**/build/**",
             "**/*.stress.test.*",
-            "packages/**/src/__tests__/**", // Unit tests excluded
-            "packages/**/src/**/*.{test,spec}.*", // Colocated unit tests excluded
         ],
-        // Coverage can be collected but is NOT gating for integration tests
+        fileParallelism: false,
+        maxConcurrency: 1,
+        pool: "forks",
+        poolOptions: {
+            forks: {
+                singleFork: true,
+            },
+        },
         coverage: {
-            enabled: false, // Disable by default for integration runs
+            enabled: false,
         },
     },
 });

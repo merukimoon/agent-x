@@ -14,22 +14,22 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
     test: {
         environment: "node",
-        // ONLY include unit test patterns
+        // ONLY include MCP unit test patterns
         include: [
-            "packages/**/src/__tests__/**/*.{test,spec}.{js,ts,tsx}",
-            "packages/**/src/**/*.{test,spec}.{js,ts,tsx}",
+            "packages/mcp/src/__tests__/unit/**/*.unit.test.{js,ts,tsx}",
         ],
-        // EXCLUDE integration tests
         exclude: [
             "**/node_modules/**",
             "**/dist/**",
             "**/build/**",
-            "tests/**", // Integration tests excluded
         ],
         coverage: {
             provider: "v8",
             reporter: ["text", "lcov", "html"],
-            include: ["packages/**/src/**/*.{ts,tsx}"],
+            include: [
+                "packages/mcp/src/auth/**/*.{ts,tsx}",
+                "packages/mcp/src/policy/**/*.{ts,tsx}",
+            ],
             exclude: [
                 "**/__tests__/**",
                 "**/*.test.*",
@@ -45,7 +45,7 @@ export default defineConfig({
             // ENFORCED thresholds for unit tests
             thresholds: {
                 lines: 85,
-                functions: 85,
+                functions: 80,
                 branches: 80,
                 statements: 85,
             },

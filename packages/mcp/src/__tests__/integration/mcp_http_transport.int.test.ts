@@ -1,9 +1,9 @@
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { AddressInfo } from "net";
-import { createServer } from "../server/createServer";
-import { startHttpServer } from "../transports/http";
-import { loadPolicy } from "../policy/loadPolicy";
-import { authorize } from "../policy/match";
+import { createServer } from "../../server/createServer";
+import { startHttpServer } from "../../transports/http";
+import { loadPolicy } from "../../policy/loadPolicy";
+import { authorize } from "../../policy/match";
 
 function silenceLogger() {
     return { log: () => { }, error: () => { }, warn: () => { } } as const;
@@ -25,19 +25,6 @@ async function waitForServer(server: import("http").Server) {
 }
 
 describe.sequential("MCP HTTP Transport Edge Cases", () => {
-    let originalApiKey: string | undefined;
-
-    beforeEach(() => {
-        originalApiKey = process.env.AGENTX_MCP_API_KEY;
-    });
-
-    afterEach(() => {
-        if (originalApiKey !== undefined) {
-            process.env.AGENTX_MCP_API_KEY = originalApiKey;
-        } else {
-            delete process.env.AGENTX_MCP_API_KEY;
-        }
-    });
 
     it("returns 404 for non-POST requests", async () => {
         let httpServer: import("http").Server | null = null;
@@ -78,13 +65,16 @@ describe.sequential("MCP HTTP Transport Edge Cases", () => {
     });
 
     it("returns 401 when AGENTX_MCP_API_KEY is not configured", async () => {
-        delete process.env.AGENTX_MCP_API_KEY;
         let httpServer: import("http").Server | null = null;
 
         try {
             const server = createServer();
             // Do NOT pass apiKey option, forcing it to use env var
-            httpServer = startHttpServer(server, { port: 0, logger: silenceLogger() });
+            httpServer = startHttpServer(server, {
+                port: 0,
+                logger: silenceLogger(),
+                deps: { env: {} as NodeJS.ProcessEnv },
+            });
             const address = await waitForServer(httpServer);
             const url = `http://127.0.0.1:${address.port}/mcp`;
 

@@ -5,16 +5,22 @@ import type { MCPServer } from "../server/createServer";
 import { getConfiguredApiKey, isApiKeyAllowed } from "../auth/api_key";
 import { TokenBucket } from "../server/rate_limit";
 
+export interface HttpTransportDeps {
+  env?: NodeJS.ProcessEnv;
+}
+
 export interface HttpTransportOptions {
   port?: number;
   host?: string;
   apiKey?: string;
   logger?: Pick<Console, "log" | "error" | "warn">;
+  deps?: HttpTransportDeps;
 }
 
 export function startHttpServer(server: MCPServer, options: HttpTransportOptions = {}) {
   const logger = options.logger ?? console;
-  const expectedKey = options.apiKey ?? getConfiguredApiKey();
+  const env = options.deps?.env ?? process.env;
+  const expectedKey = options.apiKey ?? getConfiguredApiKey(env);
   const apiKeyMissing = !expectedKey;
 
   if (apiKeyMissing) {
@@ -22,10 +28,10 @@ export function startHttpServer(server: MCPServer, options: HttpTransportOptions
   }
 
   // HTTP Protections configuration
-  const maxBodyBytes = parseInt(process.env.AGENTX_MCP_MAX_BODY_BYTES ?? "1048576", 10); // 1MB default
-  const timeoutMs = parseInt(process.env.AGENTX_MCP_TIMEOUT_MS ?? "30000", 10); // 30s default
-  const rlPerMin = parseInt(process.env.AGENTX_MCP_RL_PER_MIN ?? "60", 10);
-  const rlBurst = parseInt(process.env.AGENTX_MCP_RL_BURST ?? "20", 10);
+  const maxBodyBytes = parseInt(env.AGENTX_MCP_MAX_BODY_BYTES ?? "1048576", 10); // 1MB default
+  const timeoutMs = parseInt(env.AGENTX_MCP_TIMEOUT_MS ?? "30000", 10); // 30s default
+  const rlPerMin = parseInt(env.AGENTX_MCP_RL_PER_MIN ?? "60", 10);
+  const rlBurst = parseInt(env.AGENTX_MCP_RL_BURST ?? "20", 10);
 
   const rateLimiter = new TokenBucket(rlPerMin, rlBurst);
 
