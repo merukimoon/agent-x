@@ -1,114 +1,101 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, type Mock } from "vitest";
 import path from "path";
-
-// Mock external dependencies
-vi.mock("fs");
 import fs from "fs";
-
-vi.mock("../../../../scripts/agentic/roles_registry.ts", () => ({
-    requireExecutableRole: vi.fn(),
-}));
 import { requireExecutableRole } from "../../../../scripts/agentic/roles_registry.ts";
+import { Legacy, Core, Runners } from "../imports.ts";
+import * as agents from "../agents.ts";
 
+vi.mock("fs");
+vi.mock("../../../../scripts/agentic/roles_registry.ts");
+
+// Explicit mock for step_persistence
 vi.mock("../step_persistence.ts", () => ({
     writeStepResult: vi.fn(),
     writeDecision: vi.fn(),
     writeEffectiveDecision: vi.fn(),
-    writeSkippedStepArtifacts: vi.fn(),
     updateStepsIndex: vi.fn(),
 }));
 
 vi.mock("../gating_runtime.ts", () => ({
-    loadGatingPolicy: vi.fn().mockReturnValue({ strictness: "soft", rules: [] }),
+    loadGatingPolicy: vi.fn(),
     determineStrictness: vi.fn().mockReturnValue("soft"),
-    applyOverride: vi.fn(),
+    applyOverride: vi.fn().mockReturnValue({ decision: { action: "continue", reason: "mock-reason" } }),
     readOverride: vi.fn().mockReturnValue(null),
     evaluateStepGates: vi.fn().mockReturnValue({ gate_status: "pass", hard_failed_ids: [], soft_failed_ids: [], notes: [] }),
 }));
+vi.mock("../../../../scripts/agentic/runners.ts");
 
-// Synchronous mock for imports.ts including Runners
 vi.mock("../imports.ts", () => {
     const path = require("path");
     return {
         Legacy: {
             ensureRunAndInputs: vi.fn(),
-            readFirstLines: vi.fn().mockReturnValue("mock excerpt"),
-            readFileText: vi.fn().mockReturnValue("mock text"),
+            readFirstLines: vi.fn(),
+            readFileText: vi.fn(),
             writeJsonFile: vi.fn(),
             writeFileAtomic: vi.fn(),
-            buildNotes: vi.fn().mockReturnValue("mock notes"),
-            classifyFlow: vi.fn().mockReturnValue({ signals: [], pack: { steps: [{ id: "s1", agent: "planner", depends_on: [] }], flow_type: "mock-flow" } }),
+            buildNotes: vi.fn(),
+            classifyFlow: vi.fn(),
         },
         Core: {
             PLAN_VERSION: "plan.v1",
             isAgentName: vi.fn().mockReturnValue(true),
             getStepDir: vi.fn((runDir, stepId) => path.join(runDir, "steps", stepId)),
-            getCanonicalOutputs: vi.fn().mockReturnValue({ result: "out.json", notes: "notes.md" }),
+            getCanonicalOutputs: vi.fn(),
             validateCanonicalOutputs: vi.fn(),
         },
         Runners: {
-            runTechnicalWriter: vi.fn().mockReturnValue({ status: "done", summary: "mock summary" }),
+            runTechnicalWriter: vi.fn(),
         }
     };
 });
 
-import * as agents from "../agents.ts";
-
-describe("runAgent (integration-unit)", () => {
-    const mockRunId = "run-unit";
-    const runDirName = "runs";
-    const mockRunDir = path.join(process.cwd(), runDirName, mockRunId);
+describe("agents execution (main path)", () => {
+    const mockRunId = "run-unit-test";
 
     beforeEach(() => {
-        vi.resetAllMocks();
+        vi.clearAllMocks();
+
+        // FS setup
         vi.spyOn(process, "cwd").mockReturnValue("/mock/cwd");
-
-        // Setup fs mocks
         vi.spyOn(fs, "existsSync").mockReturnValue(true);
-        vi.spyOn(fs, "statSync").mockReturnValue({ isFile: () => true } as any);
-        vi.spyOn(fs, "readFileSync").mockReturnValue(JSON.stringify({ steps: [] }));
         vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined);
+        vi.spyOn(fs, "statSync").mockReturnValue({ isFile: () => true } as any);
+        vi.spyOn(fs, "readFileSync").mockReturnValue("{}");
 
-        // Setup registry mock
-        (requireExecutableRole as any).mockReturnValue({
-            runner: "mock-runner",
-            script: "mock-script.ts",
+        // Role registry setup
+        (requireExecutableRole as Mock).mockReturnValue({ runner: "mock-runner", script: "mock.ts" });
+
+        // Legacy/Core Setup
+        (Legacy.ensureRunAndInputs as Mock).mockReturnValue({
+            status: "ok",
+            inputs: { context_ref: "c.md", request_ref: "r.md", artifacts_in: [] }
         });
+        (Legacy.readFirstLines as Mock).mockReturnValue("mock excerpt");
+        (Legacy.readFileText as Mock).mockReturnValue("mock text");
+        (Legacy.buildNotes as Mock).mockReturnValue("mock notes");
+        (Legacy.classifyFlow as Mock).mockReturnValue({
+            signals: [],
+            pack: { steps: [{ id: "s1", agent: "planner", depends_on: [] }], flow_type: "mock-flow" }
+        });
+
+        (Core.getCanonicalOutputs as Mock).mockReturnValue({ result: "out.json", notes: "notes.md" });
+
+        // Runners Setup
+        (Runners.runTechnicalWriter as Mock).mockReturnValue({ status: "done", summary: "mock-execution" });
     });
 
-    afterEach(() => {
-        vi.restoreAllMocks();
+    it("executes planner happy path", async () => {
+        const result = await agents.runAgent("planner", mockRunId, "dry-run");
+        expect(result.agent).toBe("planner");
+        expect(result.status).toBe("done");
+        expect(Legacy.writeJsonFile).toHaveBeenCalled();
     });
 
-    it.skip("executes happy path for planner (skipped runner logic)", async () => {
-        try {
-            const result = await agents.runAgent("planner", mockRunId, "dry-run");
-            expect(result).toBeDefined();
-            expect(result.agent).toBe("planner");
-        } catch (e) {
-            console.error("FAIL: planner run", e);
-            throw e;
-        }
-    });
-
-    it.skip("executes technical-writer flow (invokes runner)", async () => {
-        try {
-            const result = await agents.runAgent("technical-writer", mockRunId, "dry-run");
-            expect(result.agent).toBe("technical-writer");
-            expect(result.summary).toBe("mock summary");
-        } catch (e) {
-            console.error("FAIL: tech-writer run", e);
-            throw e;
-        }
-    });
-
-    it.skip("executes coordinator flow (classification)", async () => {
-        try {
-            const result = await agents.runAgent("coordinator", mockRunId, "dry-run");
-            expect(result.agent).toBe("coordinator");
-        } catch (e) {
-            console.error("FAIL: coordinator run", e);
-            throw e;
-        }
+    it("executes technical-writer happy path", async () => {
+        const result = await agents.runAgent("technical-writer", mockRunId, "dry-run");
+        expect(result.agent).toBe("technical-writer");
+        expect(result.status).toBe("done");
+        expect(Runners.runTechnicalWriter).toHaveBeenCalled();
     });
 });
