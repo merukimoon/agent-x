@@ -6,6 +6,8 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, "..", "..");
+const agenticCliEntry = path.join(repoRoot, "packages", "cli", "src", "index.ts");
+const agenticCliEntryRelative = path.relative(repoRoot, agenticCliEntry) || agenticCliEntry;
 
 function fail(message: string): never {
   console.error(`ERROR: ${message}`);
@@ -76,6 +78,19 @@ function runCommand(cmd: string, args: string[], opts?: { inherit?: boolean; env
   return res;
 }
 
+function spawnAgenticSync(
+  args: string[],
+  opts?: { cwd?: string; env?: NodeJS.ProcessEnv; stdio?: "pipe" | "inherit" }
+) {
+  const spawnOpts = {
+    cwd: opts?.cwd ?? repoRoot,
+    env: opts?.env ?? process.env,
+    stdio: opts?.stdio ?? "pipe",
+    encoding: "utf8" as const,
+  };
+  return spawnSync("node", ["--import", "tsx", agenticCliEntry, ...args], spawnOpts as any);
+}
+
 function writeJson(filePath: string, data: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n", "utf8");
@@ -115,9 +130,9 @@ function runPlannerOrFail(runId: string, runDir: string) {
   writeJson(statusPath, { status: "running", started_at: startedAt, agent: "planner", run_id: runId });
 
   try {
-    const args = ["exec", "agentic", "plan", "--run", runId];
-    const res = spawnPnpmSync(args, { stdio: "pipe" });
-    const attempted = `pnpm ${args.join(" ")}`;
+    const agenticArgs = ["plan", "--run", runId];
+    const res = spawnAgenticSync(agenticArgs, { stdio: "pipe" });
+    const attempted = `node --import tsx ${agenticCliEntryRelative} ${agenticArgs.join(" ")}`;
     if (res.stdout) {
       process.stdout.write(res.stdout);
     }
@@ -399,18 +414,18 @@ function main() {
   ensureInputsPresent(runDir);
 
   runPlannerOrFail(runId, runDir);
-  const statusArgs = ["exec", "agentic", "status", "--run", runId];
-  const agentArgs = ["exec", "agentic", "agent", "coordinator", "--run", runId, "--dry-run"];
-  const flowArgs = ["exec", "agentic", "flow", "--run", runId, "--dry-run"];
+  const statusArgs = ["status", "--run", runId];
+  const agentArgs = ["agent", "coordinator", "--run", runId, "--dry-run"];
+  const flowArgs = ["flow", "--run", runId, "--dry-run"];
   const steps: Array<{ name: string; args: string[] }> = [
     { name: "status", args: statusArgs },
     { name: "coordinator", args: agentArgs },
     { name: "flow", args: flowArgs },
   ];
   for (const step of steps) {
-    const res: SpawnSyncReturns<string> = spawnPnpmSync(step.args, { stdio: "inherit" });
+    const res: SpawnSyncReturns<string> = spawnAgenticSync(step.args, { stdio: "inherit" });
     if (res.status !== 0) {
-      fail(`Command failed: pnpm ${step.args.join(" ")}`);
+      fail(`Command failed: node --import tsx ${agenticCliEntryRelative} ${step.args.join(" ")}`);
     }
   }
 
