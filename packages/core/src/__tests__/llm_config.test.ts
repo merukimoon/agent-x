@@ -5,7 +5,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import {
   resolveLlmTarget,
   resetLlmConfigCacheForTests,
-} from "../../scripts/agentic/llm_config.ts";
+} from "../../../../scripts/agentic/llm_config";
 
 const ORIGINAL_ENV = { ...process.env };
 

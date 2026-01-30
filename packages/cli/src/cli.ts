@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import process from "process";
-import { Core, Legacy } from "./imports.ts";
+import { Core, Legacy } from "./imports";
 
 const { PLAN_VERSION, VALID_AGENTS, isAgentName } = Core;
 const { fail } = Legacy;
@@ -20,11 +20,11 @@ const { generatePlanFromLLM, validatePlannerOutput, CAPABILITIES, cleanJsonOutpu
 import {
   isAllowedStatusTransition,
   applyStatusTransition as applyStatusTransitionInternal,
-} from "./status.ts";
-import { buildStatusView } from "./status_view.ts";
-import { renderStatusView } from "./status_render.ts";
-import { detectGate } from "./gate_check.ts";
-import { readJson } from "./step_persistence.ts";
+} from "./status";
+import { buildStatusView } from "./status_view";
+import { renderStatusView } from "./status_render";
+import { detectGate } from "./gate_check";
+import { readJson } from "./step_persistence";
 
 import {
   runAgent,
@@ -33,7 +33,7 @@ import {
   getCanonicalOutputs,
   validateCanonicalOutputs,
   ensureSkippedArtifactsForPlan,
-} from "./agents.ts";
+} from "./agents";
 import type {
   AgentName,
   AgentStatus,
@@ -42,8 +42,8 @@ import type {
   RunId,
   PlanStep,
   Plan,
-} from "./imports.ts"; // We can't use named 'type' import from default export effectively?
-import type { SkipReasonCode } from "../../contracts/src/index.ts";
+} from "./imports"; // We can't use named 'type' import from default export effectively?
+import type { SkipReasonCode } from "../../contracts/src/index";
 
 const ALLOWED_SKIP_REASON_CODES: SkipReasonCode[] = ["dry_run", "not_applicable", "precondition_unmet", "policy_disabled"];
 const SKIP_POLICY: Record<string, { codes: Set<SkipReasonCode>; requireMode?: string }> = {
@@ -152,7 +152,7 @@ function isSkipPolicyAllowed(step: PlanStep, reasonCode: SkipReasonCode, mode: s
 // We should import types from the source or via Core.<Type> in JSDoc.
 // For typescript 'import type' it needs to resolve to a type definition.
 // "./imports.ts" exports Core which exports * from core.ts.
-// So import type { Plan } from "./imports.ts"; might fail if imports.ts is not re-exporting types by name?
+// So import type { Plan } from "./imports"; might fail if imports.ts is not re-exporting types by name?
 // 'export * as Core' in imports.ts makes Core a value.
 // We need to check if 'export * from ...' preserves types.
 // The imports.ts does: 'import * as _Core ... export const Core = _Core'. This LOSES types.

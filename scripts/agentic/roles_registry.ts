@@ -2,7 +2,7 @@
 
 import fs from "fs";
 import path from "path";
-import { isAgentName } from "./core.ts";
+import { isAgentName } from "./core";
 
 type RunnerType = "llm" | "rule" | "human_gate";
 

@@ -3,10 +3,10 @@
 
 $(call register_target,verify-fast,VERIFY,Quick verification (typecheck + verify-esm, no tests).,make verify-fast)
 .PHONY: verify-fast
+.PHONY: verify-fast
 verify-fast:
-	@set -eu; \
-	echo "Running verify-fast (typecheck, verify-esm)..."; \
-	$(PNPM) run typecheck; \
+	@echo "Running verify-fast (typecheck, verify-esm)..."
+	$(PNPM) run typecheck
 	$(PNPM) run verify:esm
 
 $(call register_target,verify,VERIFY,Full verification (verify-fast + tests).,make verify)

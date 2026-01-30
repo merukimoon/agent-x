@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderTopLevelHelp, renderCommandHelp } from "../../packages/cli/src/index.ts";
+import { renderTopLevelHelp, renderCommandHelp } from "../index";
 
 describe("CLI contract help", () => {
   it("renders top-level help with command groups and exit codes", () => {

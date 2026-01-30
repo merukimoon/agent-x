@@ -57,6 +57,31 @@ Exit codes are meaningful:
 
 To automate this sequence, use `make verify-flows`.
 
+### Unit Tests
+Default unit tests (per package) are fast and deterministic.
+```bash
+pnpm run test        # Run all unit tests
+pnpm run test:mcp    # Run MCP unit tests
+pnpm run test:cli    # Run CLI unit tests
+```
+
+### Integration Tests
+Integration tests run across components (e.g. orchestrator policy, smoke tests).
+```bash
+pnpm run test:integration
+```
+These live in `tests/integration/`.
+
+### Stress Tests
+Tests marked as `*.stress.test.ts` (e.g. MCP Async HTTP) are **non-blocking** and isolated from the main suite. They verify behavior under load or flaky network conditions.
+
+Run them explicitly:
+```bash
+pnpm run test:mcp-stress
+pnpm run test:mcp-protections
+```
+If these fail, create an issue for triage. They should not block PR merges unless steady-state reliability is compromised.
+
 ### Command sequence
 
 Base flow verification:

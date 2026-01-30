@@ -4,8 +4,8 @@ import {
   FLOW_ARCH_CHANGE,
   RULES_DIR,
   isAgentName,
-} from "./core.ts";
-import { fail } from "./errors.ts";
+} from "./core";
+import { fail } from "./errors";
 
 /**
  * Find matching keywords in text.

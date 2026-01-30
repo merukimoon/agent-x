@@ -10,8 +10,8 @@ import { copyDir, runCli } from "./_utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const REPO_ROOT = path.resolve(__dirname, "..", "..");
-const fixtureDir = path.join(REPO_ROOT, "tests", "agentic", "fixtures", "minimal-project");
+const REPO_ROOT = path.resolve(__dirname, "..", "..", "..", "..");
+const fixtureDir = path.join(__dirname, "fixtures", "minimal-project");
 const scriptsDir = path.join(REPO_ROOT, "scripts");
 
 function setupWorkdir(prefix) {

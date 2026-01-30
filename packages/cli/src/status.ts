@@ -1,4 +1,4 @@
-import { Legacy } from "./imports.ts";
+import { Legacy } from "./imports";
 const { fail } = Legacy;
 
 /**

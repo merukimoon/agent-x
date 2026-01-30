@@ -274,11 +274,31 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
       contextPath,
       mode,
     });
-    status = runnerOutput.status as AgentStatus;
-    resultSummary = runnerOutput.summary;
-    result.status = status;
-    result.summary = resultSummary;
-    outputsWritten = true;
+    const transport = createInprocessTransport(mcpServer);
+    const mcpResponse = transport.send({
+      id: `${runId}:${agentName}`,
+      run_id: runId,
+      from: "agent.runner",
+      to: agentName,
+      method: "runner.technical-writer",
+      payload: { runId, outputsDir, requestPath, contextPath, mode },
+      trace_id: runId,
+      parent_id: stepId,
+    });
+    if (mcpResponse.ok && mcpResponse.result) {
+      const runnerOutput = mcpResponse.result as { status: string; summary: string };
+      status = runnerOutput.status as AgentStatus;
+      resultSummary = runnerOutput.summary;
+      result.status = status;
+      result.summary = resultSummary;
+      outputsWritten = true;
+    } else {
+      status = "failed";
+      result.status = status;
+      resultSummary = mcpResponse.error?.message ?? "MCP request failed";
+      result.summary = resultSummary;
+      writeJsonFile(resultPath, result);
+    }
   } else {
     Legacy.writeJsonFile(resultPath, result);
   }

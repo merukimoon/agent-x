@@ -17,7 +17,7 @@
 - Stages and responsibilities:
   - Typecheck (`tsc`): validate TypeScript types.
   - ESM verification: enforce ESM import rules.
-  - Tests (`vitest run`): execute unit/integration tests.
+  - Tests (`pnpm run test`): execute unit/integration tests.
   - `verify-flow`: scaffold a run, execute planner/coordinator/review steps, and generate artifacts.
   - `validate-run`/`verify-run`: confirm run artifacts match contracts (layout, references, statuses).
   - `orchestrator-validate`: run orchestrator flow (planner+architect) and validate resulting run with immutability checks.

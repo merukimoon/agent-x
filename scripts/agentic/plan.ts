@@ -7,11 +7,11 @@ import {
   isAgentName,
   isStepStatus,
   getCanonicalOutputs,
-} from "./core.ts";
-import { fail } from "./errors.ts";
-import { writeJsonFile } from "./fs.ts";
-import { loadRolesRegistry } from "./roles_registry.ts";
-// import { getCanonicalOutputs } from "./agents.ts"; // Moved to core
+} from "./core";
+import { fail } from "./errors";
+import { writeJsonFile } from "./fs";
+import { loadRolesRegistry } from "./roles_registry";
+// import { getCanonicalOutputs } from "./agents"; // Moved to core
 
 /**
  * Validate a parsed plan object and return it if valid.

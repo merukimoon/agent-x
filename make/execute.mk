@@ -10,8 +10,7 @@ $(call register_target,e2e-plan-flow,VERIFY,Run planner with fresh inputs and fu
 
 .PHONY: verify-flow
 verify-flow:
-	@set -eu; \
-	echo "Running verify-flow..."; \
+	@echo "Running verify-flow..."
 	node --import tsx scripts/smoke/verify-flow.ts
 
 .PHONY: orchestrator-validate
@@ -114,7 +113,7 @@ e2e-plan-flow:
 	echo "Running verification gates..."; \
 	$(PNPM) run typecheck; \
 	$(PNPM) run verify:esm; \
-	TMPDIR_RESOLVED="$${TMPDIR:-/tmp}"; mkdir -p "$$TMPDIR_RESOLVED"; TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) run test; \
+	$(MAKE) test TEST_TMPDIR=/tmp; \
 	$(MAKE) verify-flow; \
 	$(MAKE) validate-run RUN="$$RUN_ID"; \
 	$(MAKE) orchestrator-validate GOAL="verify" CONTEXT="verify"; \

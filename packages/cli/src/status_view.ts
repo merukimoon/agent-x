@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { StepsIndex, StepsIndexEntry } from "../../core/src/index.ts";
+import type { StepsIndex, StepsIndexEntry } from "../../core/src/index";
 
 export interface StatusViewDeps {
     fs: {

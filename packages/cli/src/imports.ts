@@ -12,20 +12,20 @@ export const Core = _CoreValues;
 export const Legacy = _LegacyValues;
 export const Runners = { runTechnicalWriter };
 
-// Also re-export types directly so "import type { Plan } from './imports.ts'" works?
+// Also re-export types directly so "import type { Plan } from './imports'" works?
 // No, that would require `export type { Plan } from ...`
 // Since we want strict boundaries, let's just use `Core.Plan` in JSDoc 
-// and `import type { Plan } from "../../core/src/index.ts"` for direct type imports if needed.
+// and `import type { Plan } from "../../core/src/index"` for direct type imports if needed.
 // actually, let's just make `packages/cli/src/imports.ts` fully transparent for types.
 
-export * from "../../core/src/index.ts";
+export * from "../../core/src/index";
 // ^ likely collision if Core exports same names as Legacy? 
 // Legacy exports errors, lock, plan... Core exports core types. They should be distinct.
 
 // But wait, if I export * from core, I might pollute the namespace.
 // Let's stick to: Values via `Core.*` / `Legacy.*`
 // Types: Import them directly from `imports.ts` by re-exporting them manually or trusting the user to import from `imports.ts`.
-// To support `import type { Plan } from './imports.ts'`, we need to export it.
+// To support `import type { Plan } from './imports'`, we need to export it.
 
 export type {
     Plan,
@@ -36,4 +36,4 @@ export type {
     ExecutionMode,
     RunId,
     AgentResult
-} from "../../core/src/index.ts";
+} from "../../core/src/index";
