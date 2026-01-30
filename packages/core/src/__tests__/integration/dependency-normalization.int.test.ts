@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { normalizeDepends } from "../../../cli/src/agents";
-import { runFlow } from "../../../cli/src/cli";
+import { normalizeDepends } from "../../../../cli/src/agents";
+import { runFlow } from "../../../../cli/src/cli";
 import fs from "fs";
 import os from "os";
 import path from "path";
