@@ -8,7 +8,7 @@ test:
 	@set -eu; \
 	TMPDIR_RESOLVED="$${TEST_TMPDIR:-$${TMPDIR:-/tmp}}"; \
 	mkdir -p "$$TMPDIR_RESOLVED"; \
-	TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) run test:all
+	TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) exec vitest run --config vitest.config.js
 
 # Unit tests only (packages/**/src/__tests__/**)
 $(call register_target,test-unit,TEST,Run unit tests only (deterministic isolated tests in packages/).,make test-unit)
@@ -17,16 +17,16 @@ test-unit:
 	@set -eu; \
 	TMPDIR_RESOLVED="$${TEST_TMPDIR:-$${TMPDIR:-/tmp}}"; \
 	mkdir -p "$$TMPDIR_RESOLVED"; \
-	TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) run test:unit
+	TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) exec vitest run --config vitest.unit.config.js
 
 # Unit tests with coverage enforcement (thresholds: 80/75/80/80)
-$(call register_target,test-unit-coverage,TEST,Run unit tests with enforced coverage (80% lines 75% branches).,make test-unit-coverage)
+$(call register_target,test-unit-coverage,TEST,Run unit tests with enforced coverage (80%% lines 75%% branches).,make test-unit-coverage)
 .PHONY: test-unit-coverage
 test-unit-coverage:
 	@set -eu; \
 	TMPDIR_RESOLVED="$${TEST_TMPDIR:-$${TMPDIR:-/tmp}}"; \
 	mkdir -p "$$TMPDIR_RESOLVED"; \
-	TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) run test:unit:coverage
+	TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) exec vitest run --config vitest.unit.config.js --coverage
 
 # Integration tests only (tests/**)
 $(call register_target,test-integration,TEST,Run integration tests only (e2e workflows in tests/).,make test-integration)
@@ -35,7 +35,7 @@ test-integration:
 	@set -eu; \
 	TMPDIR_RESOLVED="$${TEST_TMPDIR:-$${TMPDIR:-/tmp}}"; \
 	mkdir -p "$$TMPDIR_RESOLVED"; \
-	TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) run test:integration
+	TMPDIR="$$TMPDIR_RESOLVED" $(PNPM) exec vitest run --config vitest.integration.config.js
 
 # Legacy coverage target - now points to unit coverage
 $(call register_target,test-coverage,TEST,Run unit tests with coverage (alias for test-unit-coverage).,make test-coverage)
@@ -46,5 +46,6 @@ test-coverage: test-unit-coverage
 $(call register_target,test-watch,TEST,Run all tests in watch mode.,make test-watch)
 .PHONY: test-watch
 test-watch:
-	@$(PNPM) run test:watch
+	@$(PNPM) exec vitest --config vitest.config.js
+
 

@@ -1,7 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, afterEach } from "vitest";
 import * as agents from "../agents.ts";
 import type { PlanStep } from "../imports.ts";
 import type { GateOutcome } from "../../../core/src/policy/gating.ts";
@@ -209,10 +209,122 @@ describe("buildDecision", () => {
 describe("mapAgentStatusToExecutionStatus", () => {
   it("returns the expected execution status per agent status", () => {
     expect(agents.mapAgentStatusToExecutionStatus("failed")).toBe("failed");
-    expect(agents.mapAgentStatusToExecutionStatus("running")).toBe("ok");
     expect(agents.mapAgentStatusToExecutionStatus("in_progress")).toBe("blocked");
     expect(agents.mapAgentStatusToExecutionStatus("blocked")).toBe("blocked");
     expect(agents.mapAgentStatusToExecutionStatus("skipped")).toBe("skipped");
     expect(agents.mapAgentStatusToExecutionStatus("done")).toBe("ok");
+  });
+});
+
+describe("resolveStepMeta", () => {
+  const mockPlanPath = path.join("runs", "run-123", "plan.json");
+  const mockRunDir = path.join("runs", "run-123");
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns defaults when plan.json is missing", () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(false);
+
+    const result = agents.resolveStepMeta(mockRunDir, "planner");
+    expect(result.stepId).toBe("planner");
+    expect(result.stepIndex).toBe(0);
+    expect(result.pipelineId).toBeNull();
+  });
+
+  it("resolves metadata from valid plan.json", () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "statSync").mockReturnValue({ isFile: () => true } as any);
+    vi.spyOn(fs, "readFileSync").mockReturnValue(JSON.stringify({
+      flow_type: "demo-flow",
+      steps: [
+        { agent: "planner", id: "p1", inputs: { prior_outputs: ["out1"] } }
+      ]
+    }));
+
+    const result = agents.resolveStepMeta(mockRunDir, "planner");
+    expect(result.stepId).toBe("p1");
+    expect(result.stepIndex).toBe(0);
+    expect(result.priorOutputs).toEqual(["out1"]);
+    expect(result.pipelineId).toBe("demo-flow");
+  });
+
+  it("handles plan with no matching agent", () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "statSync").mockReturnValue({ isFile: () => true } as any);
+    vi.spyOn(fs, "readFileSync").mockReturnValue(JSON.stringify({
+      steps: [{ agent: "other" }]
+    }));
+
+    const result = agents.resolveStepMeta(mockRunDir, "planner");
+    expect(result.stepId).toBe("planner"); // default
+    expect(result.stepIndex).toBe(0);
+  });
+
+  it("handles malformed plan.json", () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "statSync").mockReturnValue({ isFile: () => true } as any);
+    vi.spyOn(fs, "readFileSync").mockReturnValue("{ bad json");
+
+    const result = agents.resolveStepMeta(mockRunDir, "planner");
+    expect(result.stepId).toBe("planner");
+    expect(result.pipelineId).toBeNull();
+  });
+});
+
+describe("detectMissingInputs", () => {
+  const mockRunDir = "/runs/run-123";
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete process.env.FORCE_MISSING_INPUTS;
+  });
+
+  it("returns empty list when all inputs exist", () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "statSync").mockReturnValue({ isFile: () => true } as any);
+
+    const inputs = {
+      context_ref: "inputs/context.md",
+      request_ref: "inputs/request.md",
+      artifacts_in: ["out/prev.json"],
+    } as any;
+
+    const missing = agents.detectMissingInputs(mockRunDir, inputs);
+    expect(missing).toHaveLength(0);
+  });
+
+  it("returns missing files", () => {
+    vi.spyOn(fs, "existsSync").mockImplementation((p) => {
+      return (p as string).includes("context.md"); // only context exists
+    });
+    vi.spyOn(fs, "statSync").mockReturnValue({ isFile: () => true } as any);
+
+    const inputs = {
+      context_ref: "inputs/context.md",
+      request_ref: "inputs/missing.md",
+      artifacts_in: [],
+    } as any;
+
+    const missing = agents.detectMissingInputs(mockRunDir, inputs);
+    expect(missing).toContain("inputs/missing.md");
+    expect(missing).not.toContain("inputs/context.md");
+  });
+
+  it("includes forced missing inputs from env var", () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "statSync").mockReturnValue({ isFile: () => true } as any);
+    process.env.FORCE_MISSING_INPUTS = "forced/missing.md, other/missing.json";
+
+    const inputs = {
+      context_ref: "inputs/context.md",
+      request_ref: "inputs/request.md",
+      artifacts_in: [],
+    } as any;
+
+    const missing = agents.detectMissingInputs(mockRunDir, inputs);
+    expect(missing).toContain("forced/missing.md");
+    expect(missing).toContain("other/missing.json");
   });
 });

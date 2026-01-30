@@ -9,24 +9,7 @@ import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy
 import { requireExecutableRole } from "../../../scripts/agentic/roles_registry.ts";
 import { runTechnicalWriter } from "../../../scripts/agentic/runners.ts";
 
-// Deconstruct from Legacy where helpful for cleaner code, or use Legacy.*
-const {
-  readFirstLines,
-  readFileText,
-  ensureRunAndInputs,
-  buildNotes,
-  writeJsonFile,
-  writeFileAtomic,
-} = Legacy;
 
-const {
-  PLAN_VERSION,
-  isAgentName,
-  getStepDir,
-} = Core;
-
-
-const { classifyFlow } = Legacy;
 
 /**
  * @typedef {import("./imports.ts").Core.AgentName} AgentName
@@ -184,7 +167,7 @@ export function ensureDependencies(step, runDir, idToAgent) {
  */
 export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   const runDir = path.join(process.cwd(), "runs", runId);
-  ensureRunAndInputs(runDir);
+  Legacy.ensureRunAndInputs(runDir);
   const registryEntry = requireExecutableRole(agentName);
   const { stepId, stepIndex, priorOutputs, pipelineId } = resolveStepMeta(runDir, agentName);
   const startedAt = new Date();
@@ -236,8 +219,8 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   const requestPath = path.join(runDir, "inputs", "request.md");
   const contextPath = contextOverridePath ? path.resolve(contextOverridePath) : path.join(runDir, "inputs", "context.md");
 
-  const requestExcerpt = readFirstLines(requestPath, 20);
-  const contextExcerpt = readFirstLines(contextPath, 20);
+  const requestExcerpt = Legacy.readFirstLines(requestPath, 20);
+  const contextExcerpt = Legacy.readFirstLines(contextPath, 20);
   const createdAtUtc = new Date().toISOString();
   const summary = `${mode === "dry-run" ? "Dry run" : "Run"
     } completed for ${agentName} on run ${runId}.`;
@@ -297,7 +280,7 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     result.summary = resultSummary;
     outputsWritten = true;
   } else {
-    writeJsonFile(resultPath, result);
+    Legacy.writeJsonFile(resultPath, result);
   }
 
   const notesPath = path.join(outputsDir, "notes.md");
@@ -309,7 +292,7 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
       `Inspect prompt: steps/${stepId}/human_prompt.md`,
     ].join("\n")
     : null;
-  const notes = gateNote ?? buildNotes({
+  const notes = gateNote ?? Legacy.buildNotes({
     agentName,
     runId,
     createdAtUtc,
@@ -320,11 +303,11 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     contextExcerpt,
   });
   if (!outputsWritten) {
-    writeFileAtomic(notesPath, notes);
+    Legacy.writeFileAtomic(notesPath, notes);
   }
   const statusPath = path.join(outputsDir, "status.json");
   if (!outputsWritten) {
-    writeJsonFile(statusPath, {
+    Legacy.writeJsonFile(statusPath, {
       agent: agentName,
       run_id: runId,
       status,
@@ -336,9 +319,9 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
 
   if (agentName === "coordinator") {
     const planPath = path.join(runDir, "plan.json");
-    const requestText = readFileText(requestPath);
-    const contextText = readFileText(contextPath);
-    const classification = classifyFlow(requestText, contextText);
+    const requestText = Legacy.readFileText(requestPath);
+    const contextText = Legacy.readFileText(contextPath);
+    const classification = Legacy.classifyFlow(requestText, contextText);
     /** @type {PlanStep[]} */
     const steps = [];
     const matchedSet = new Set(classification.signals.map((s) => s.replace(/^keyword:/, "")));
@@ -447,14 +430,14 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
     const plan = {
       run_id: runId,
       created_at_utc: createdAtUtc,
-      version: PLAN_VERSION,
+      version: Core.PLAN_VERSION,
       flow_type: classification.pack.flow_type,
       rationale,
       signals: classification.signals,
       confidence: classification.confidence,
       steps,
     };
-    writeJsonFile(planPath, plan);
+    Legacy.writeJsonFile(planPath, plan);
   }
 
   const modeLabel = mode === "dry-run" ? "Dry run" : "Run";
@@ -550,7 +533,7 @@ export function buildDecision(params: {
   }
 
   const humanPromptRef = (action === "require_human" || action === "request_clarification")
-    ? path.join(getStepDir(runId, stepId), "human_prompt.md")
+    ? path.join(Core.getStepDir(runId, stepId), "human_prompt.md")
     : null;
   if (humanPromptRef) {
     writeHumanPrompt(runId, stepId, { action, reason, required_inputs });
@@ -638,7 +621,7 @@ export function detectMissingInputs(runDir: string, inputs: StepResult["inputs"]
 }
 
 function writeHumanPrompt(runId: string, stepId: string, params: { action: DecisionAfterStep["decision"]["action"]; reason: string; required_inputs: string[]; }) {
-  const stepDir = getStepDir(runId, stepId);
+  const stepDir = Core.getStepDir(runId, stepId);
   const promptPath = path.join(stepDir, "human_prompt.md");
   const lines = [
     `# Human decision needed for ${stepId}`,
@@ -651,6 +634,6 @@ function writeHumanPrompt(runId: string, stepId: string, params: { action: Decis
     "",
     "Provide the missing inputs and re-run the step.",
   ].join("\n");
-  writeFileAtomic(promptPath, lines);
+  Legacy.writeFileAtomic(promptPath, lines);
   return promptPath;
 }

@@ -2,6 +2,22 @@ import fs from "fs";
 import path from "path";
 import type { StepsIndex, StepsIndexEntry } from "../../core/src/index.ts";
 
+export interface StatusViewDeps {
+    fs: {
+        existsSync(path: string): boolean;
+        statSync(path: string): { isFile(): boolean };
+        readFileSync(path: string, encoding: "utf8"): string;
+    };
+}
+
+const defaultDeps: StatusViewDeps = {
+    fs: {
+        existsSync: (p) => fs.existsSync(p),
+        statSync: (p) => fs.statSync(p),
+        readFileSync: (p, e) => fs.readFileSync(p, e),
+    },
+};
+
 type DecisionFile = {
     decision: { action: string; reason: string };
     requirements?: { required_inputs?: string[]; human_prompt_ref?: string | null };
@@ -41,23 +57,24 @@ function normalize(raw: string | undefined): string {
     return r || "unknown";
 }
 
-export function readStepsIndex(runDir: string): StepsIndex | null {
+export function readStepsIndex(runDir: string, deps: StatusViewDeps = defaultDeps): StepsIndex | null {
     const indexPath = path.join(runDir, "steps", "index.json");
-    if (!fs.existsSync(indexPath) || !fs.statSync(indexPath).isFile()) return null;
+    if (!deps.fs.existsSync(indexPath) || !deps.fs.statSync(indexPath).isFile()) return null;
     try {
-        const raw = fs.readFileSync(indexPath, "utf8");
+        const raw = deps.fs.readFileSync(indexPath, "utf8");
         return JSON.parse(raw) as StepsIndex;
     } catch {
         return null;
     }
 }
 
-function pickDecisionAction(runDir: string, stepId: string): { action: string; reason: string; required_inputs: string[]; paths: string[] } {
+function pickDecisionAction(runDir: string, stepId: string, deps: StatusViewDeps): { action: string; reason: string; required_inputs: string[]; paths: string[] } {
     const stepDir = path.join(runDir, "steps", stepId);
     const effectivePath = path.join(stepDir, "effective_decision.json");
     const basePath = path.join(stepDir, "decision_after_step.json");
     const humanPrompt = path.join(stepDir, "human_prompt.md");
     const resultPath = path.join(stepDir, "step_result.json");
+    const { fs } = deps;
 
     const paths: string[] = [];
     let required_inputs: string[] = [];
@@ -100,7 +117,8 @@ function pickDecisionAction(runDir: string, stepId: string): { action: string; r
     return { action, reason, required_inputs, paths };
 }
 
-export function buildStatusView(runDir: string): NormalizedStatus | null {
+export function buildStatusView(runDir: string, deps: StatusViewDeps = defaultDeps): NormalizedStatus | null {
+    const { fs } = deps;
     const runJsonPath = path.join(runDir, "run.json");
     /** @type {{ status?: string; exit_code?: number; run_id?: string; id?: string } | null} */
     let runJson: any = null;
@@ -116,7 +134,7 @@ export function buildStatusView(runDir: string): NormalizedStatus | null {
         errors.push("MISSING run.json");
     }
 
-    const index = readStepsIndex(runDir);
+    const index = readStepsIndex(runDir, deps);
     const stepsFromIndex = index ? [...index.steps].sort((a, b) => a.step_index - b.step_index) : [];
     if (!index) {
         errors.push("MISSING steps/index.json");
@@ -131,7 +149,7 @@ export function buildStatusView(runDir: string): NormalizedStatus | null {
 
     stepsFromIndex.forEach((entry: StepsIndexEntry) => {
         if (is_blocked) return;
-        const decisionInfo = pickDecisionAction(runDir, entry.step_id);
+        const decisionInfo = pickDecisionAction(runDir, entry.step_id, deps);
         if (entry.status === "blocked" || decisionInfo.action === "require_human" || decisionInfo.action === "request_clarification") {
             is_blocked = true;
             blocked_reason = decisionInfo.reason || `decision: ${decisionInfo.action}`;

@@ -1,6 +1,20 @@
 # Testing Guide
 
-This document defines the testing strategy for the AgentX repository, includingthe separation between unit and integration tests, folder structure, and commands.
+This document defines the testing strategy for the AgentX repository, including the separation between unit and integration tests, folder structure, and commands.
+
+## Package Manager: pnpm-first
+
+**This repository uses pnpm as the primary package manager.**
+
+- `packageManager`: "pnpm@9.12.3" (defined in package.json)
+- Vitest is installed as a **devDependency**, not globally
+- All test commands use `pnpm exec vitest` for Windows compatibility
+- **Never call `vitest` directly** - it may not be in PATH on Windows
+
+**Why `pnpm exec vitest`?**
+- Ensures vitest is found in node_modules/.bin on all platforms
+- Works reliably in PowerShell, cmd.exe, and bash/zsh
+- Matches pnpm best practices for monorepo tooling
 
 ## Test Taxonomy (Milestone 1)
 
@@ -16,11 +30,13 @@ This document defines the testing strategy for the AgentX repository, includingt
 - **Mocked**: All dependencies must be mocked (fs, env, Date.now, process)
 - **Factory-based DI**: Use dependency injection patterns (see `step_persistence.ts`, `gating_runtime.ts`)
 
-**Coverage Thresholds (Enforced):**
-- Lines: ≥ 80%
-- Branches: ≥ 75%
-- Statements: ≥ 80%
-- Functions: ≥ 80%
+**Coverage Thresholds (Enforced but not yet met):**
+- Lines: ≥ 80% (current: ~56%)
+- Branches: ≥ 75% (current: ~90% ✅)
+- Statements: ≥ 80% (current: ~56%)
+- Functions: ≥ 80% (current: ~75%)
+
+> **Note**: Coverage thresholds are enforced in `vitest.unit.config.js` but are not yet fully met. The `test:unit:coverage` command will currently fail with coverage errors. This is intentional - thresholds drive incremental improvement.
 
 **Examples:**
 ```typescript
@@ -126,26 +142,34 @@ describe("runAgent CLI", () => {
 
 ### npm/pnpm Scripts
 
-```bash
-# Unit tests only (with coverage enforcement)
-pnpm run test:unit:coverage
+**All scripts use `pnpm exec vitest` internally for Windows compatibility.**
 
-# Unit tests without coverage
+```bash
+# Unit tests only (will PASS - 58 tests)
 pnpm run test:unit
 
-# Integration tests only
+# Unit tests with coverage enforcement (will FAIL on coverage thresholds)
+pnpm run test:unit:coverage
+
+# Integration tests only (will PASS - 74 tests)
 pnpm run test:integration
 
-# All tests (unit + integration)
+# All tests (unit + integration) (will PASS - 132 tests)
 pnpm run test:all
 pnpm run test  # alias for test:all
 
-# Default coverage (unit tests only)
+# Coverage (same as test:unit:coverage - thresholds enforced)
 pnpm run test:coverage
 
 # Watch mode (all tests)
 pnpm run test:watch
 ```
+
+**Current Test Status:**
+- ✅ All 58 unit tests pass
+- ✅ All 74 integration tests pass  
+- ✅ All 132 total tests pass
+- ⚠️ Unit coverage thresholds not yet met (lines 56%, need 80%)
 
 ### Make Targets
 
@@ -168,19 +192,30 @@ make test-coverage
 
 ## CI/CD Integration
 
-**Recommended pipeline:**
+**Recommended pipeline (when coverage thresholds are met):**
 ```yaml
 test:
   stage: test
   script:
-    - npm run typecheck          # Type safety
-    - make test-unit-coverage    # Unit tests with enforced thresholds
-    - make test-integration      # Integration tests (must pass)
+    - pnpm run typecheck         # Type safety
+    - pnpm run test:unit:coverage # Unit tests with enforced thresholds
+    - pnpm run test:integration  # Integration tests (must pass)
+```
+
+**Current interim pipeline (while coverage is being improved):**
+```yaml
+test:
+  stage: test
+  script:
+    - pnpm run typecheck         # Type safety
+    - pnpm run test:unit         # Unit tests (must pass, no coverage gating yet)
+    - pnpm run test:integration  # Integration tests (must pass)
 ```
 
 **Coverage enforcement:**
-- Only **unit test coverage** is gating in CI
+- Only **unit test coverage** will be gating in CI (once thresholds are met)
 - Integration tests **must pass** but don't contribute to coverage metrics
+- Use `pnpm` commands, not `npm`, to respect packageManager field
 
 ## Configuration Files
 
