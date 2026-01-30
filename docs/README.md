@@ -4,6 +4,8 @@ Start here if you’re new to the project.
 
 Package manager: pnpm (pinned via Corepack). Make targets are contributor convenience only; the supported surface is ADX (the `agentic` CLI). From this repo, invoke it via `pnpm exec agentic ...`. See `docs/adr/ADR-003-package-manager-and-contracts.md` for the canonical decision.
 
+Developer setup (supported Node LTS + Corepack/pnpm): `docs/setup.md`.
+
 ## What to read
 
 - [`docs/concepts.md`](concepts.md) Terminology and mental model

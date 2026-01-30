@@ -4,10 +4,15 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=20.0.0 <21.0.0 || >=22.0.0 <23.0.0",
+    "pnpm": ">=9.12.3 <10.0.0"
+  },
   "bin": {
     "agentic": "./bin/agentic.js"
   },
   "scripts": {
+    "preinstall": "node scripts/check-node-version.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "test": "pnpm exec vitest run --config vitest.config.js",
     "test:unit": "pnpm exec vitest run --config vitest.unit.config.js",
