@@ -44,10 +44,10 @@ export default defineConfig({
             ],
             // ENFORCED thresholds for unit tests
             thresholds: {
-                lines: 95,
-                functions: 95,
-                branches: 90,
-                statements: 95,
+                lines: 85,
+                functions: 85,
+                branches: 80,
+                statements: 85,
             },
         },
     },

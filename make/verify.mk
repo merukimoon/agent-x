@@ -17,6 +17,24 @@ verify:
 	echo "Running tests..."; \
 	$(MAKE) test
 
+$(call register_target,vtt,VERIFY,Run full VTT verification sequence (typecheck -> unit -> coverage -> integration).,make vtt)
+.PHONY: vtt
+vtt:
+	@echo "Running VTT verification sequence..."
+	@echo "[1/4] Typecheck..."
+	@$(MAKE) --no-print-directory vtt-typecheck
+	@echo "[2/4] Unit Tests..."
+	@$(MAKE) --no-print-directory test-unit
+	@echo "[3/4] Unit Coverage..."
+	@$(MAKE) --no-print-directory test-unit-coverage
+	@echo "[4/4] Integration Tests..."
+	@$(MAKE) --no-print-directory test-integration
+	@echo "VTT verification passed!"
+
+.PHONY: vtt-typecheck
+vtt-typecheck:
+	$(PNPM) run typecheck
+
 $(call register_target,validate-run,VERIFY,Validate run artifacts contract (requires RUN=<run-id>).,make validate-run RUN=<run-id>)
 $(call register_target,verify-run,VERIFY,Alias for validate-run.,make verify-run RUN=<run-id>)
 $(call register_target,verify-flows,VERIFY,Feature-level end-to-end flow verification (includes gated pause/resume).,make verify-flows)

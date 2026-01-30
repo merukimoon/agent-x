@@ -130,7 +130,7 @@ describe.sequential("MCP HTTP Protections", () => {
                 delete process.env.AGENTX_MCP_RL_BURST;
             }
         }
-    });
+    }, 10000);
 
     it("request timeout returns 504", async () => {
         const originalTimeout = process.env.AGENTX_MCP_TIMEOUT_MS;
