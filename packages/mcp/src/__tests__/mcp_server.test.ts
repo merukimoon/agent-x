@@ -50,6 +50,7 @@ describe("MCP CreateServer", () => {
     describe("HTTP transport - unknown method", () => {
         it("returns error for unknown method in HTTP transport", async () => {
             const policy = loadPolicy("http");
+            policy.allow.push({ method: "nonexistent.method" });
             const server = createServer({ policy, authorize, transport: "http" });
 
             const request: MCPRequest = {

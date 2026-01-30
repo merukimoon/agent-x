@@ -164,22 +164,54 @@ function readBodyWithLimit(req: http.IncomingMessage, maxBytes: number): Promise
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let totalSize = 0;
+    let settled = false;
 
-    req.on("data", (chunk) => {
+    const cleanup = () => {
+      req.off("data", onData);
+      req.off("end", onEnd);
+      req.off("error", onError);
+      req.off("aborted", onAborted);
+      req.off("close", onClose);
+    };
+
+    const settle = (fn: (value: any) => void, value: any) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      fn(value);
+    };
+
+    const onData = (chunk: Buffer | string) => {
       const buffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
       totalSize += buffer.length;
 
       if (totalSize > maxBytes) {
         req.destroy();
-        reject(new Error("Body too large"));
+        settle(reject, new Error("Body too large"));
         return;
       }
 
       chunks.push(buffer);
-    });
+    };
 
-    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
-    req.on("error", (err) => reject(err));
+    const onEnd = () => settle(resolve, Buffer.concat(chunks).toString("utf8"));
+    const onError = (err: unknown) => settle(reject, err);
+    const onAborted = () => settle(reject, new Error("Request aborted"));
+
+    // If the socket closes before "end", treat it as a read error.
+    const onClose = () => {
+      if (!settled) {
+        settle(reject, new Error("Request closed"));
+      }
+    };
+
+    req.on("data", onData);
+    req.on("end", onEnd);
+    req.on("error", onError);
+    req.on("aborted", onAborted);
+    req.on("close", onClose);
   });
 }
 

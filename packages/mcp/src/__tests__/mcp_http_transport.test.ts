@@ -108,31 +108,44 @@ describe.sequential("MCP HTTP Transport Edge Cases", () => {
         let httpServer: import("http").Server | null = null;
 
         try {
-            const policy = loadPolicy("http");
-            const server = createServer({ policy, authorize, transport: "http" });
+            const server = createServer();
             httpServer = startHttpServer(server, { port: 0, apiKey: "test-key", logger: silenceLogger() });
             const address = await waitForServer(httpServer);
 
-            // Create a direct connection and send incomplete request to trigger read error
-            const http = await import("http");
-            const options = {
-                host: "127.0.0.1",
-                port: address.port,
-                path: "/mcp",
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-agentx-api-key": "test-key",
-                },
-            };
+            const net = await import("net");
 
-            const req = http.request(options, (res) => {
-                expect(res.statusCode).toBe(400);
+            const responseText = await new Promise<string>((resolve, reject) => {
+                const socket = net.connect(address.port, "127.0.0.1");
+                let data = "";
+
+                socket.setTimeout(2000, () => {
+                    socket.destroy(new Error("Timeout waiting for response"));
+                });
+
+                socket.on("data", (chunk) => {
+                    data += chunk.toString("utf8");
+                });
+
+                socket.on("end", () => resolve(data));
+                socket.on("error", reject);
+
+                const headers = [
+                    "POST /mcp HTTP/1.1",
+                    `Host: 127.0.0.1:${address.port}`,
+                    "Content-Type: application/json",
+                    "x-agentx-api-key: test-key",
+                    "Content-Length: 100",
+                    "Connection: close",
+                    "",
+                    "",
+                ].join("\r\n");
+
+                // Send fewer bytes than Content-Length then half-close to trigger aborted body read.
+                socket.write(headers);
+                socket.end("partial");
             });
 
-            // Write partial data then destroy to trigger error
-            req.write("partial");
-            req.destroy();
+            expect(responseText).toMatch(/^HTTP\/1\.1 400\b/m);
         } finally {
             if (httpServer) {
                 await closeServer(httpServer);
@@ -201,6 +214,7 @@ describe.sequential("MCP HTTP Transport Edge Cases", () => {
 
         try {
             const policy = loadPolicy("http");
+            policy.allow.push({ method: "nonexistent.method" });
             const server = createServer({ policy, authorize, transport: "http" });
             httpServer = startHttpServer(server, { port: 0, apiKey: "test-key", logger: silenceLogger() });
             const address = await waitForServer(httpServer);
