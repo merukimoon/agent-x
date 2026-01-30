@@ -449,6 +449,19 @@ describe("ensureSkippedArtifactsForPlan", () => {
     const call = calls.find(c => c[0].agentName === "skipper");
     expect(call?.[0]?.reason?.message).toContain("Policy said no");
   });
+
+  it("handles corrupt status.json", () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "readFileSync").mockReturnValue("{ bad json");
+
+    agents.ensureSkippedArtifactsForPlan(mockRunId, mockPlan, "live");
+
+    expect(stepPersistence.writeSkippedStepArtifacts).toHaveBeenCalled();
+    const calls = vi.mocked(stepPersistence.writeSkippedStepArtifacts).mock.calls;
+    const call = calls.find(c => c[0].agentName === "skipper");
+    // Fallback behavior (derived reason)
+    expect(call?.[0]?.reason?.message).toContain("Manually skipped");
+  });
 });
 
 describe("runAgent", () => {
@@ -599,5 +612,55 @@ describe("runAgent", () => {
     // loops over pack steps.
     // If pack has "planner", duplicate?
     // The code maps ids.
+  });
+
+  it("skips step if enabled_if_keywords mismatch", () => {
+    vi.mocked(rolesRegistry.requireExecutableRole).mockReturnValue({
+      id: "coordinator",
+      runner: "rule",
+      blocking: false,
+      required_artifacts: []
+    });
+    vi.spyOn(Legacy, "classifyFlow").mockReturnValue({
+      pack: {
+        flow_type: "secure-flow",
+        keywords: [],
+        steps: [
+          { id: "s1", agent: "ciso", depends_on: [], enabled_if_keywords: ["secret"] }
+        ]
+      },
+      signals: ["keyword:public"],
+      confidence: "high"
+    });
+
+    const result = agents.runAgent("coordinator", runId, "live");
+    const planPath = path.join(runDir, "plan.json");
+    const plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
+    const cisoStep = plan.steps.find((s: any) => s.id === "s1");
+    expect(cisoStep.status).toBe("skipped");
+    expect(cisoStep.last_error).toContain("no security signals");
+  });
+
+  it("uses simple rationale if signals empty", () => {
+    vi.mocked(rolesRegistry.requireExecutableRole).mockReturnValue({
+      id: "coordinator",
+      runner: "rule",
+      blocking: false,
+      required_artifacts: []
+    });
+    vi.spyOn(Legacy, "classifyFlow").mockReturnValue({
+      pack: {
+        flow_type: "basic",
+        keywords: [],
+        steps: []
+      },
+      signals: [],
+      confidence: "high"
+    });
+
+    agents.runAgent("coordinator", runId, "live");
+    const planPath = path.join(runDir, "plan.json");
+    const plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
+    expect(plan.rationale).toBe("Selected basic.");
   });
 });

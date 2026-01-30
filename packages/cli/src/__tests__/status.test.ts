@@ -39,9 +39,9 @@ describe("status helpers", () => {
   it("persists plan when transition succeeds", () => {
     const plan = buildPlan("pending");
     const persisted: Array<[string, Plan]> = [];
-    applyStatusTransition(plan, "step-1", "running", "plan.json", (planPath, updated) => {
+    applyStatusTransition(plan, "step-1", "running", "plan.json", (planPath: string, updated: Plan) => {
       persisted.push([planPath, { ...updated }]);
-    }, (step) => {
+    }, (step: PlanStep) => {
       step.last_error = "mutated";
     });
     expect(plan.steps[0].status).toBe("running");
@@ -51,11 +51,15 @@ describe("status helpers", () => {
 
   it("throws when transition is disallowed", () => {
     const plan = buildPlan("done");
-    expect(() => applyStatusTransition(plan, "step-1", "pending", "plan.json", () => {}, () => {})).toThrow(/Invalid status transition/);
+    expect(() => applyStatusTransition(plan, "step-1", "pending", "plan.json", () => { }, undefined)).toThrow(/Invalid status transition/);
   });
 
   it("throws when step missing", () => {
     const plan = buildPlan("pending");
-    expect(() => applyStatusTransition(plan, "missing", "running", "plan.json", () => {})).toThrow(/Step missing/);
+    expect(() => applyStatusTransition(plan, "missing", "running", "plan.json", () => { }, undefined)).toThrow(/Step missing/);
+  });
+
+  it("returns false for unknown status transition", () => {
+    expect(isAllowedStatusTransition("unknown" as any, "pending")).toBe(false);
   });
 });

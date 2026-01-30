@@ -4,33 +4,33 @@ import type { StepResult } from "../../../../contracts/src/index.ts";
 
 describe("resolveStrictness", () => {
   const policy = {
-    schema_version: "gating-policy.v1",
-    system_default: { strictness: "soft" },
+    schema_version: "gating-policy.v1" as const,
+    system_default: { strictness: "soft" as const },
     pipelines: {
-      green: { strictness: "hard" },
+      green: { strictness: "hard" as const },
     },
     agents: {
-      "decision-maker": { strictness: "soft" },
+      "decision-maker": { strictness: "soft" as const },
     },
     steps: {
-      "step-1": { strictness: "hard" },
+      "step-1": { strictness: "hard" as const },
     },
   };
 
   it("prefers step override", () => {
-    expect(resolveStrictness(policy, { step_id: "step-1", agent_name: "decision-maker", pipeline_id: "green" })).toBe("hard");
+    expect(resolveStrictness(policy as any, { step_id: "step-1", agent_name: "decision-maker", pipeline_id: "green" })).toBe("hard");
   });
 
   it("falls back to agent override", () => {
-    expect(resolveStrictness(policy, { agent_name: "decision-maker", pipeline_id: "green" })).toBe("soft");
+    expect(resolveStrictness(policy as any, { agent_name: "decision-maker", pipeline_id: "green" })).toBe("soft");
   });
 
   it("falls back to pipeline override", () => {
-    expect(resolveStrictness(policy, { pipeline_id: "green" })).toBe("hard");
+    expect(resolveStrictness(policy as any, { pipeline_id: "green" })).toBe("hard");
   });
 
   it("uses system default last", () => {
-    expect(resolveStrictness(policy, {})).toBe("soft");
+    expect(resolveStrictness(policy as any, {})).toBe("soft");
   });
 });
 
@@ -54,7 +54,7 @@ describe("evaluateGates", () => {
   it("reports hard_fail when any hard check fails", () => {
     const result = {
       ...baseResult,
-      validation: { hard_checks: [{ id: "hard", ok: false }], soft_checks: [] },
+      validation: { hard_checks: [{ id: "hard", ok: false, message: "fail" }], soft_checks: [] },
     };
     const outcome = evaluateGates(result, "hard");
     expect(outcome.gate_status).toBe("hard_fail");
@@ -64,7 +64,7 @@ describe("evaluateGates", () => {
   it("reports soft_fail when only soft checks fail", () => {
     const result = {
       ...baseResult,
-      validation: { hard_checks: [], soft_checks: [{ id: "soft", ok: false }] },
+      validation: { hard_checks: [], soft_checks: [{ id: "soft", ok: false, message: "fail" }] },
     };
     const outcome = evaluateGates(result, "soft");
     expect(outcome.gate_status).toBe("soft_fail");
@@ -76,5 +76,15 @@ describe("evaluateGates", () => {
     expect(outcome.gate_status).toBe("pass");
     expect(outcome.hard_failed_ids).toEqual([]);
     expect(outcome.soft_failed_ids).toEqual([]);
+  });
+
+  it("handles missing validation checks gracefully", () => {
+    const result = {
+      ...baseResult,
+      validation: { hard_checks: undefined, soft_checks: null }
+    } as any;
+    const outcome = evaluateGates(result, "hard");
+    expect(outcome.gate_status).toBe("pass");
+    expect(outcome.hard_failed_ids).toEqual([]);
   });
 });

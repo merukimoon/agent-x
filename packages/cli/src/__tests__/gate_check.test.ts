@@ -84,4 +84,29 @@ describe("detectGate", () => {
         const result = detectGate("/non-existent/path");
         expect(result).toBeNull();
     });
+
+    it("handles missing run_id and required_inputs", () => {
+        const files = {
+            [path.join(mockRunDir, "steps", "index.json")]: JSON.stringify({
+                steps: [
+                    { step_index: 0, step_id: "s1", decision_action: "require_human", agent_name: "a1" }
+                ],
+            }),
+            [path.join(mockRunDir, "steps", "s1", "human_prompt.md")]: "prompt",
+        };
+        const deps = createMockDeps(files);
+        const info = detectGate(mockRunDir, deps);
+        expect(info?.run_id).toBe("run");
+        expect(info?.required_inputs).toEqual([]);
+    });
+
+    it("handles malformed steps array", () => {
+        const files = {
+            [path.join(mockRunDir, "steps", "index.json")]: JSON.stringify({
+                steps: "not-an-array"
+            }),
+        };
+        const deps = createMockDeps(files);
+        expect(detectGate(mockRunDir, deps)).toBeNull();
+    });
 });

@@ -194,6 +194,7 @@ describe("renderStatusView (unit)", () => {
                 blocked_reason: "waiting",
                 next_action: "provide_inputs",
                 required_inputs: ["input1"],
+                paths: ["doc.md"]
             }
         };
         const output = renderStatusView(blockedView);
@@ -202,6 +203,8 @@ describe("renderStatusView (unit)", () => {
         expect(output).toContain("Reason: waiting");
         expect(output).toContain("Required inputs:");
         expect(output).toContain("- input1");
+        expect(output).toContain("Relevant files:");
+        expect(output).toContain("- doc.md");
     });
 
     it("renders errors if present", () => {
