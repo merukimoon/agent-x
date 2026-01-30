@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { validatePlannerOutput, cleanJsonOutput } from '../../../../scripts/agentic/llm-planner';
+import { validatePlannerOutput, cleanJsonOutput } from '../../../../../scripts/agentic/llm-planner';
 
 const CAPABILITIES = ["create_file", "read_file"];
 

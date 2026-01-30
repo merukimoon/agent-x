@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import path from "path";
-import { detectGate, type GateCheckDeps } from "../gate_check.ts";
+import { detectGate, type GateCheckDeps } from "../../gate_check.ts";
 
 function createMockDeps(files: Record<string, string> = {}): GateCheckDeps {
     return {

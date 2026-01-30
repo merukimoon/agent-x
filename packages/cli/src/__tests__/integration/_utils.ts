@@ -10,23 +10,33 @@ import { pathToFileURL } from 'url';
 const require = createRequire(import.meta.url);
 const TSX_IMPORT = pathToFileURL(require.resolve('tsx')).href;
 
-/**
- * Spawn the CLI with given args.
- */
-export function runCli({
-  cwd,
-  args,
-  useTsx = false,
-}: {
+export interface RunCliDeps {
+  env?: NodeJS.ProcessEnv;
+  spawnSync?: typeof spawnSync;
+}
+
+export interface RunCliOptions {
   cwd: string;
   args: string[];
   useTsx?: boolean;
-}) {
+  deps?: RunCliDeps;
+}
+
+/**
+ * Spawn the CLI with given args.
+ */
+export function runCli({ cwd, args, useTsx = false, deps }: RunCliOptions) {
   const finalArgs = useTsx ? ['--import', TSX_IMPORT, ...args] : args;
-  const result = spawnSync('node', finalArgs, {
+  const spawn = deps?.spawnSync ?? spawnSync;
+  const env = {
+    ...process.env,
+    ...(deps?.env ?? {}),
+    TZ: deps?.env?.TZ ?? 'UTC',
+  };
+  const result = spawn('node', finalArgs, {
     cwd,
     encoding: 'utf8',
-    env: { ...process.env, TZ: 'UTC' },
+    env,
   });
   return {
     stdout: result.stdout ?? '',

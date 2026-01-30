@@ -5,9 +5,9 @@ import os from "os";
 import path from "path";
 import { mkdtempSync } from "fs";
 import { describe, expect, it } from "vitest";
-import { runCli, copyDir } from "./_utils";
+import { runCli, copyDir } from "./_utils.js";
 
-const REPO_ROOT = path.resolve(path.join(__dirname, "..", "..", "..", ".."));
+const REPO_ROOT = path.resolve(path.join(__dirname, "..", "..", "..", "..", ".."));
 const scriptsDir = path.join(REPO_ROOT, "scripts");
 const packagesDir = path.join(REPO_ROOT, "packages");
 const domainDir = path.join(REPO_ROOT, "domain");

@@ -14,9 +14,8 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
     test: {
         environment: "node",
-        // ONLY include MCP unit test patterns
         include: [
-            "packages/mcp/src/__tests__/unit/**/*.unit.test.{js,ts,tsx}",
+            "packages/**/src/__tests__/unit/**/*.unit.test.{js,ts,tsx}",
         ],
         exclude: [
             "**/node_modules/**",

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("../step_persistence.ts", () => ({
+vi.mock("../../step_persistence.ts", () => ({
     writeJsonAtomic: vi.fn(),
 }));
-import { writeJsonAtomic } from "../step_persistence.ts";
-import { createGatingRuntime, defaultDeps, loadGatingPolicy, determineStrictness, evaluateStepGates, writeEffectiveDecision, readOverride, applyOverride, type GatingRuntimeDeps } from "../gating_runtime.ts";
-import type { DecisionAfterStep, StepOverride } from "../../../contracts/src/index.ts";
-import type { GatingPolicy, GateOutcome } from "../../../core/src/policy/gating.ts";
+import { writeJsonAtomic } from "../../step_persistence.ts";
+import { createGatingRuntime, defaultDeps, loadGatingPolicy, determineStrictness, evaluateStepGates, writeEffectiveDecision, readOverride, applyOverride, type GatingRuntimeDeps } from "../../gating_runtime.ts";
+import type { DecisionAfterStep, StepOverride } from "../../../../../contracts/src/index.ts";
+import type { GatingPolicy, GateOutcome } from "../../../../core/src/policy/gating.ts";
 
 describe("gating_runtime", () => {
     describe("loadGatingPolicy", () => {

@@ -2,15 +2,15 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
-import * as agents from "../agents.ts";
-import { Legacy } from "../imports.ts";
-import type { PlanStep } from "../imports.ts";
-import type { GateOutcome } from "../../../core/src/policy/gating.ts";
-import * as stepPersistence from "../step_persistence.ts";
-import * as rolesRegistry from "../../../../scripts/agentic/roles_registry.ts";
-import * as gatingRuntime from "../gating_runtime.ts";
+import * as agents from "../../agents.ts";
+import { Legacy } from "../../imports.ts";
+import type { PlanStep } from "../../imports.ts";
+import type { GateOutcome } from "../../../../core/src/policy/gating.ts";
+import * as stepPersistence from "../../step_persistence.ts";
+import * as rolesRegistry from "../../../../../scripts/agentic/roles_registry.ts";
+import * as gatingRuntime from "../../gating_runtime.ts";
 
-vi.mock("../step_persistence.ts", async (importOriginal) => {
+vi.mock("../../step_persistence.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../step_persistence.ts")>();
   return {
     ...actual,
@@ -22,7 +22,7 @@ vi.mock("../step_persistence.ts", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../../scripts/agentic/roles_registry.ts", () => ({
+vi.mock("../../../../../scripts/agentic/roles_registry.ts", () => ({
   requireExecutableRole: vi.fn().mockReturnValue({
     id: "mock-agent",
     runner: "llm",
@@ -31,7 +31,7 @@ vi.mock("../../../../scripts/agentic/roles_registry.ts", () => ({
   }),
 }));
 
-vi.mock("../gating_runtime.ts", () => ({
+vi.mock("../../gating_runtime.ts", () => ({
   readOverride: vi.fn(),
   determineStrictness: vi.fn().mockReturnValue("soft"),
   evaluateStepGates: vi.fn().mockReturnValue({ gate_status: "pass", hard_failed_ids: [], soft_failed_ids: [], notes: [] }),

@@ -2,8 +2,8 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { describe, it, expect, vi } from "vitest";
-import { createStepPersistence, type StepPersistenceDeps } from "../step_persistence.ts";
-import type { DecisionAfterStep, SkipReason, StepResult } from "../../../contracts/src/index.ts";
+import { createStepPersistence, type StepPersistenceDeps } from "../../step_persistence.ts";
+import type { DecisionAfterStep, SkipReason, StepResult } from "../../../../../contracts/src/index.ts";
 
 describe("step_persistence", () => {
     describe("readJson", () => {

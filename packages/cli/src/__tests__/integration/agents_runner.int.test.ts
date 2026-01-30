@@ -1,31 +1,31 @@
 import { describe, expect, it, vi, beforeEach, type Mock } from "vitest";
 import path from "path";
 import fs from "fs";
-import { requireExecutableRole } from "../../../../scripts/agentic/roles_registry.ts";
-import { Legacy, Core, Runners } from "../imports.ts";
-import * as agents from "../agents.ts";
+import { requireExecutableRole } from "../../../../../scripts/agentic/roles_registry.ts";
+import { Legacy, Core, Runners } from "../../imports.ts";
+import * as agents from "../../agents.ts";
 
 vi.mock("fs");
-vi.mock("../../../../scripts/agentic/roles_registry.ts");
+vi.mock("../../../../../scripts/agentic/roles_registry.ts");
 
 // Explicit mock for step_persistence
-vi.mock("../step_persistence.ts", () => ({
+vi.mock("../../step_persistence.ts", () => ({
     writeStepResult: vi.fn(),
     writeDecision: vi.fn(),
     writeEffectiveDecision: vi.fn(),
     updateStepsIndex: vi.fn(),
 }));
 
-vi.mock("../gating_runtime.ts", () => ({
+vi.mock("../../gating_runtime.ts", () => ({
     loadGatingPolicy: vi.fn(),
     determineStrictness: vi.fn().mockReturnValue("soft"),
     applyOverride: vi.fn().mockReturnValue({ decision: { action: "continue", reason: "mock-reason" } }),
     readOverride: vi.fn().mockReturnValue(null),
     evaluateStepGates: vi.fn().mockReturnValue({ gate_status: "pass", hard_failed_ids: [], soft_failed_ids: [], notes: [] }),
 }));
-vi.mock("../../../../scripts/agentic/runners.ts");
+vi.mock("../../../../../scripts/agentic/runners.ts");
 
-vi.mock("../imports.ts", () => {
+vi.mock("../../imports.ts", () => {
     const path = require("path");
     return {
         Legacy: {

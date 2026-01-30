@@ -16,7 +16,7 @@ export default defineConfig({
     test: {
         environment: "node",
         include: [
-            "packages/mcp/src/__tests__/integration/**/*.int.test.{js,ts,tsx}",
+            "packages/**/src/__tests__/integration/**/*.int.test.{js,ts,tsx}",
         ],
         exclude: [
             "**/node_modules/**",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { applyStatusTransition, isAllowedStatusTransition } from "../status.ts";
-import type { Plan, PlanStep, StepStatus } from "../imports.ts";
+import { applyStatusTransition, isAllowedStatusTransition } from "../../status.ts";
+import type { Plan, PlanStep, StepStatus } from "../../imports.ts";
 
 describe("status helpers", () => {
   const baseStep: PlanStep = {

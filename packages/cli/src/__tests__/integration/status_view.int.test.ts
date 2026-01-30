@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import path from "path";
-import { buildStatusView, type StatusViewDeps } from "../status_view.ts";
-import { renderStatusView } from "../status_render.ts";
-import type { NormalizedStatus } from "../status_view.ts";
+import { buildStatusView, type StatusViewDeps } from "../../status_view.ts";
+import { renderStatusView } from "../../status_render.ts";
+import type { NormalizedStatus } from "../../status_view.ts";
 
 describe("buildStatusView (unit)", () => {
     const mockRunId = "run-unit-test";

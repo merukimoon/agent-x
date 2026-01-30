@@ -3,7 +3,7 @@ import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import { describe, expect, it } from "vitest";
-import { normalizeOutput, runCli } from "../../../packages/cli/src/__tests__/_utils.js";
+import { normalizeOutput, runCli } from "../../../packages/cli/src/__tests__/integration/_utils.js";
 import { resolveRunRequest, spawnPnpmSync } from "../../../scripts/smoke/verify-flow";
 import { selectArtifactPath } from "../../../packages/cli/src/cli";
 
