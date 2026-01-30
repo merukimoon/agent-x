@@ -1,10 +1,43 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
 import * as agents from "../agents.ts";
+import { Legacy } from "../imports.ts";
 import type { PlanStep } from "../imports.ts";
 import type { GateOutcome } from "../../../core/src/policy/gating.ts";
+import * as stepPersistence from "../step_persistence.ts";
+import * as rolesRegistry from "../../../../scripts/agentic/roles_registry.ts";
+import * as gatingRuntime from "../gating_runtime.ts";
+
+vi.mock("../step_persistence.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../step_persistence.ts")>();
+  return {
+    ...actual,
+    writeSkippedStepArtifacts: vi.fn(),
+    writeStepResult: vi.fn(),
+    writeDecision: vi.fn(),
+    writeEffectiveDecision: vi.fn(),
+    updateStepsIndex: vi.fn(),
+  };
+});
+
+vi.mock("../../../../scripts/agentic/roles_registry.ts", () => ({
+  requireExecutableRole: vi.fn().mockReturnValue({
+    id: "mock-agent",
+    runner: "llm",
+    blocking: false,
+    required_artifacts: []
+  }),
+}));
+
+vi.mock("../gating_runtime.ts", () => ({
+  readOverride: vi.fn(),
+  determineStrictness: vi.fn().mockReturnValue("soft"),
+  evaluateStepGates: vi.fn().mockReturnValue({ gate_status: "pass", hard_failed_ids: [], soft_failed_ids: [], notes: [] }),
+  loadGatingPolicy: vi.fn(),
+  applyOverride: vi.fn().mockImplementation((args) => args.baseDecision),
+}));
 
 describe("normalizeStatusLocal", () => {
   it("normalizes to lower-case keywords", () => {
@@ -81,6 +114,11 @@ describe("dependency helpers", () => {
       "decision-maker": "step-1",
     });
     expect(normalized).toEqual(["coordinator", "step-1"]);
+  });
+
+  it("throws for unknown dependency", () => {
+    expect(() => agents.normalizeDepends(["unknown-dep"], { planner: "planner" }))
+      .toThrow('Unknown dependency "unknown-dep"');
   });
 
   it("identifies satisfied dependencies", () => {
@@ -278,6 +316,7 @@ describe("detectMissingInputs", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.clearAllMocks();
     delete process.env.FORCE_MISSING_INPUTS;
   });
 
@@ -326,5 +365,239 @@ describe("detectMissingInputs", () => {
     const missing = agents.detectMissingInputs(mockRunDir, inputs);
     expect(missing).toContain("forced/missing.md");
     expect(missing).toContain("other/missing.json");
+  });
+});
+
+
+describe("readDependencyStatus", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "agents-status-"));
+  const runDir = path.join(tmpDir, "runs", "test-run");
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns error when file missing", () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(false);
+    const status = agents.readDependencyStatus("planner", runDir);
+    expect(status.ok).toBe(false);
+    expect(status.message).toContain("Dependency result missing");
+  });
+
+  it("returns error on parse failure", () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "statSync").mockReturnValue({ isFile: () => true } as any);
+    vi.spyOn(fs, "readFileSync").mockReturnValue("{ invalid json");
+
+    const status = agents.readDependencyStatus("planner", runDir);
+    expect(status.ok).toBe(false);
+    expect(status.message).toContain("parse failed");
+  });
+});
+
+describe("ensureSkippedArtifactsForPlan", () => {
+  const mockRunId = "run-skipped";
+  const mockPlan = {
+    steps: [
+      {
+        id: "s1",
+        agent: "skipper",
+        status: "skipped",
+        last_error: "Manually skipped",
+      },
+      {
+        id: "s2",
+        agent: "runner",
+        status: "pending", // should be ignored
+      }
+    ]
+  } as any;
+
+
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("writes artifacts for skipped steps", () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(false);
+
+    agents.ensureSkippedArtifactsForPlan(mockRunId, mockPlan, "live");
+
+    expect(stepPersistence.writeSkippedStepArtifacts).toHaveBeenCalled();
+    const calls = vi.mocked(stepPersistence.writeSkippedStepArtifacts).mock.calls;
+    // We expect one call for the skipped step
+    const call = calls.find(c => c[0].agentName === "skipper");
+    expect(call).toBeDefined();
+    expect(call?.[0]?.reason?.message).toContain("Manually skipped");
+  });
+
+  it("preserves existing skip reason from status.json", () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    // Mock fs.readFileSync to return the status.json content
+    vi.spyOn(fs, "readFileSync").mockReturnValue(JSON.stringify({
+      reason: { code: "policy_disabled", message: "Policy said no" }
+    }));
+    // We also need to mock statSync if used by checks?
+    // In agents.ts:62 `if (fs.existsSync(statusPath))` - check only.
+    // But verify behavior.
+
+    agents.ensureSkippedArtifactsForPlan(mockRunId, mockPlan, "live");
+
+    expect(stepPersistence.writeSkippedStepArtifacts).toHaveBeenCalled();
+    const calls = vi.mocked(stepPersistence.writeSkippedStepArtifacts).mock.calls;
+    const call = calls.find(c => c[0].agentName === "skipper");
+    expect(call?.[0]?.reason?.message).toContain("Policy said no");
+  });
+});
+
+describe("runAgent", () => {
+  let tmpDir: string;
+  let runDir: string;
+  const runId = "test-run";
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "agent-test-"));
+    runDir = path.join(tmpDir, "runs", runId);
+    fs.mkdirSync(runDir, { recursive: true });
+    vi.spyOn(process, "cwd").mockReturnValue(tmpDir);
+    // Ensure inputs dir exists as Legacy.ensureRunAndInputs might try to create it or read from it
+    fs.mkdirSync(path.join(runDir, "inputs"), { recursive: true });
+    fs.writeFileSync(path.join(runDir, "inputs", "request.md"), "req");
+    fs.writeFileSync(path.join(runDir, "inputs", "context.md"), "ctx");
+
+    // Reset default mocks
+    vi.mocked(rolesRegistry.requireExecutableRole).mockReturnValue({
+      id: "mock-agent",
+      runner: "llm",
+      blocking: false,
+      required_artifacts: []
+    });
+
+    vi.mocked(gatingRuntime.evaluateStepGates).mockReturnValue({
+      gate_status: "pass",
+      hard_failed_ids: [],
+      soft_failed_ids: [],
+      notes: []
+    });
+    vi.mocked(gatingRuntime.determineStrictness).mockReturnValue("soft");
+    vi.mocked(gatingRuntime.readOverride).mockReturnValue(null);
+    vi.mocked(gatingRuntime.applyOverride).mockImplementation((args) => args.baseDecision);
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("reads planner target info from file", () => {
+    const targetInfo = { model: "gpt-4-turbo", provider: "openai" };
+    fs.writeFileSync(
+      path.join(runDir, "planner_llm_target.json"),
+      JSON.stringify(targetInfo)
+    );
+
+    // We need to spy on writeStepResult to check the modelRef passed to it
+    // agents.ts calls writeStepResult(runId, stepId, initialStepResult)
+    // We can import writeStepResult from step_persistence and spy on it?
+    // step_persistence is mocked above, but writeStepResult was NOT mocked (via ...actual).
+    // So it uses real implementation which writes files.
+    // We can verify the written file?
+
+    // runAgent returns AgentResult. But modelRef is in StepResult/StepsIndex.
+    // runAgent calls updateStepsIndex at the end.
+
+    // We can spy on agents.writeStepResult? No, it imports it.
+    // We can spy on defaultInstance.writeStepResult in step_persistence if we exported it?
+    // agents.ts uses named import `writeStepResult`.
+    // In the mock, we returned `...actual`.
+    // We can assume it writes to disk.
+
+    const result = agents.runAgent("planner", runId, "live");
+
+    // Check result.model/provider
+    expect(result.model).toBe("gpt-4-turbo");
+    expect(result.provider).toBe("openai");
+  });
+
+  it("handles planner target info parse error", () => {
+    fs.writeFileSync(
+      path.join(runDir, "planner_llm_target.json"),
+      "{ bad json"
+    );
+    // Should not throw, just ignore
+    const result = agents.runAgent("planner", runId, "live");
+    expect(result.model).toBeUndefined();
+  });
+
+  it("blocks human_gate when override missing", () => {
+    // Mock requireExecutableRole to return human_gate runner
+    vi.mocked(rolesRegistry.requireExecutableRole).mockReturnValue({
+      id: "human_gate",
+      runner: "human_gate",
+      blocking: true,
+      required_artifacts: []
+    });
+
+    // Gating runtime mock returns null for override (default)
+
+    const result = agents.runAgent("human_gate", runId, "live");
+
+    expect(result.status).toBe("blocked");
+    expect(result.summary).toContain("Awaiting human override");
+
+    // Check notes.md contains instructions
+    const notesPath = path.join(runDir, "outputs", "human_gate", "notes.md");
+    const notes = fs.readFileSync(notesPath, "utf8");
+    expect(notes).toContain("Create: outputs/human_gate/override.json");
+
+    // Check decision missing inputs
+    // decision is written to steps/human_gate/decision.json
+    const decisionPath = path.join(runDir, "steps", "human_gate", "decision.json");
+    // Check decision missing inputs by verifying writeDecision call
+    expect(stepPersistence.writeDecision).toHaveBeenCalled();
+    const decisionCall = vi.mocked(stepPersistence.writeDecision).mock.calls.find(c => c[0] === runId && c[1] === "human_gate");
+    expect(decisionCall).toBeDefined();
+    const decisionArg = decisionCall?.[2];
+    expect(decisionArg?.decision?.action).toBe("request_clarification");
+    expect(decisionArg?.requirements?.required_inputs).toEqual(expect.arrayContaining([expect.stringContaining("override.json")]));
+  });
+
+  it("coordinator generates plan", () => {
+    // Mock requireExecutableRole for coordinator
+    vi.mocked(rolesRegistry.requireExecutableRole).mockReturnValue({
+      id: "coordinator",
+      runner: "rule",
+      blocking: false,
+      required_artifacts: []
+    });
+
+    // Mock Legacy.classifyFlow
+    vi.spyOn(Legacy, "classifyFlow").mockReturnValue({
+      pack: {
+        flow_type: "test-flow",
+        keywords: [],
+        steps: [
+          { id: "step1", agent: "planner", depends_on: [] }
+          // planner is mapped to "planner", coordinator to "coordinator"
+        ]
+      },
+      signals: ["keyword:foo"],
+      confidence: "high"
+    });
+
+    const result = agents.runAgent("coordinator", runId, "live");
+
+    expect(result.status).toBe("done");
+
+    const planPath = path.join(runDir, "plan.json");
+    expect(fs.existsSync(planPath)).toBe(true);
+    const plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
+    expect(plan.flow_type).toBe("test-flow");
+    expect(plan.steps).toHaveLength(3); // coordinator + planner (explicit) + step1 (planner)
+    // agents.ts unshifts planner and coordinator?
+    // Lines 386-422: unshift coordinator, unshift planner.
+    // loops over pack steps.
+    // If pack has "planner", duplicate?
+    // The code maps ids.
   });
 });
