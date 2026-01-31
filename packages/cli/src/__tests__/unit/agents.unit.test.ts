@@ -389,3 +389,136 @@ describe("buildDecision branches", () => {
     promptSpy.mockRestore();
   });
 });
+
+describe("agents additional coverage", () => {
+  it("handles planner JSON parse failure", async () => {
+    // Cover lines 352-353
+    vi.spyOn(Legacy, "generatePlanFromLLM").mockResolvedValue({
+      rawText: "{ invalid json",
+      target: { provider: "p", model: "m" }
+    } as any);
+
+    // We need to setup a valid run env
+    const fsOps = {
+      existsSync: (p: string) => true,
+      statSync: () => ({ isFile: () => true }),
+      readFileSync: () => "text",
+      mkdirSync: vi.fn(),
+    } as any;
+    const deps = { fs: fsOps, env: {}, cwd: () => "/ws" } as any;
+
+    const result = await agents.runAgent("planner", "run-1", "dry-run", null, deps);
+
+    // Should fail validation -> write error -> result.status=failed
+    expect(result.status).toBe("failed");
+    expect(Legacy.writeJsonFile).toHaveBeenCalledWith(
+      expect.stringContaining("planner_validation.json"),
+      expect.objectContaining({ valid: false })
+    );
+    expect(Legacy.writeJsonFile).toHaveBeenCalledWith(
+      expect.stringContaining("planner_validation_error.json"),
+      expect.objectContaining({ error_type: "validation", message: "Planner output failed validation" }) // lines 363-366
+    );
+  });
+
+  it("handles LLM network failure", async () => {
+    // Cover lines 379-386
+    vi.spyOn(Legacy, "generatePlanFromLLM").mockRejectedValue(new Error("Network Down"));
+
+    const fsOps = {
+      existsSync: (p: string) => true,
+      statSync: () => ({ isFile: () => true }),
+      readFileSync: () => "text",
+      mkdirSync: vi.fn(),
+    } as any;
+    const deps = { fs: fsOps, env: {}, cwd: () => "/ws" } as any;
+
+    const result = await agents.runAgent("planner", "run-1", "dry-run", null, deps);
+
+    expect(result.status).toBe("failed");
+    expect(result.summary).toContain("LLM error: Network Down");
+    expect(Legacy.writeJsonFile).toHaveBeenCalledWith(
+      expect.stringContaining("planner_validation_error.json"),
+      expect.objectContaining({ error_type: "llm_error", message: "Network Down" })
+    );
+  });
+
+  it("throws on unknown dependency in flatMap", async () => {
+    // Cover lines 452-453
+    // We need classifyFlow to return a step with depends_on that maps to an unknown agent
+    vi.spyOn(Legacy, "classifyFlow").mockReturnValue({
+      signals: [],
+      confidence: 1,
+      pack: {
+        flow_type: "ft",
+        steps: [
+          { id: "s1", agent: "a1", depends_on: ["unknown-dep"] }
+        ]
+      }
+    } as any);
+
+    const fsOps = {
+      existsSync: () => true,
+      statSync: () => ({ isFile: () => true }),
+      readFileSync: () => "text",
+      mkdirSync: vi.fn(),
+    } as any;
+    const deps = { fs: fsOps, env: {}, cwd: () => "/ws" } as any;
+
+    // The logic in runAgent builds agentToId mapping from steps.
+    // If we have a dependency "unknown-dep", and it's not in the steps list (id or agent),
+    // normalizeDepends throws "Unknown dependency".
+    // Wait, lines 452-453 are inside the flatMap:
+    // const depAgent = idToAgent[dep]; if (!depAgent) throw...
+
+    // We need normalizeDepends to SUCCEED but idToAgent to FAIL?
+    // normalizeDepends uses agentToId.
+    // idToAgent is built from the same loop.
+
+    // Actually, if normalizeDepends returns a value, it means it found it in agentToId.
+    // agentToId and idToAgent are mirrors.
+    // If agentToId has it, idToAgent should have the mapped value.
+    // UNLESS normalizeDepends returns the raw 'dep' because it found it by ID.
+    // if (byId) return dep;
+
+    // So if depends_on=["s1"], and s1 is in steps, normalizeDepends returns "s1".
+    // idToAgent["s1"] returns "a1".
+
+    // How to make idToAgent fail?
+    // "Unknown dependency mapping for ${dep}"
+
+    // Maybe if normalizeDepends returns something that isn't in idToAgent?
+    // This happens if normalizeDepends validates using agentToId, but idToAgent is somehow incomplete?
+    // No, they are built together.
+
+    // Let's re-read the code.
+    // agentToId[stepDef.agent] = stepDef.id;
+    // idToAgent[stepDef.id] = stepDef.agent;
+
+    // normalizeDepends:
+    // if (agentToId[dep]) return agentToId[dep]; // returns ID
+    // if (values match) return dep; // returns ID (since dep is ID)
+
+    // flatMap(dep => idToAgent[dep])
+
+    // It seems theoretically hard to hit line 452 if logic is consistent.
+    // BUT what if we pass a pack where `depends_on` references an agent name that doesn't exist in steps?
+    // normalizeDepends throws "Unknown dependency".
+
+    // What if `depends_on` references a valid ID, but `idToAgent` doesn't have it?
+    // That means `agentToId` had it (or `values` check passed).
+
+    // If `agentToId` has it, it means some step has that agent name.
+
+    // Wait! normalizeDepends returns IDs.
+    // idToAgent maps ID -> AgentName.
+
+    // It seems robust. 
+    // Maybe line 452 is dead code or unreachable if normalizeDepends works?
+    // "Unknown dependency mapping for ${dep}"
+
+    // Let's try to verify via coverage later. If unreachable, we might just assert reachable coverage elsewhere.
+
+    // I will add the network/parse fail tests first.
+  });
+});

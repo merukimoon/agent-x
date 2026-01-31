@@ -64,4 +64,20 @@ describe('runners', () => {
             expect(CoreDeps.writeJsonFile).toHaveBeenCalled();
         });
     });
+
+    it('runs technical writer with context', () => {
+        (CoreDeps.readFirstLines as Mock).mockImplementation((p) => {
+            if (p === mockParams.contextPath) return ['Context line 1'];
+            return ['Request line 1'];
+        });
+
+        const result = runners.runTechnicalWriter(mockParams);
+
+        expect(result.status).toBe('done');
+        expect(CoreDeps.writeFileAtomic).toHaveBeenCalledWith(
+            expect.stringContaining('notes.md'),
+            expect.stringContaining('> Context line 1')
+        );
+    });
 });
+

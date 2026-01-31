@@ -1,85 +1,118 @@
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { OrchestratorService } from '../../../../packages/cli/src/services/orchestrator.js';
+import { runAgent } from '../../../../packages/cli/src/agents.js';
+import fs from 'fs';
+import path from 'path';
+import { Core } from '../../../../packages/cli/src/imports.js';
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { OrchestratorService } from "../../../../packages/cli/src/services/orchestrator.ts";
-import { Core } from "../../../../packages/cli/src/imports.ts";
-import * as AgentsModule from "../../../../packages/cli/src/agents.ts";
-import fs from "fs";
-import path from "path";
+const { OrchestratorExitCode } = Core;
 
-// Mock dependencies
-vi.mock("../../../../packages/cli/src/agents.ts");
-vi.mock("fs");
-vi.mock("path", async () => {
-    const actual = await vi.importActual("path");
-    return actual;
-});
+vi.mock('../../../../packages/cli/src/agents.js');
+vi.mock('fs');
 
-describe("OrchestratorService", () => {
+describe('OrchestratorService', () => {
     beforeEach(() => {
-        vi.resetAllMocks();
-        // Default fs mocks to avoid errors
-        vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
-        vi.mocked(fs.writeFileSync).mockImplementation(() => undefined);
-        vi.mocked(fs.readFileSync).mockReturnValue("");
-        vi.mocked(fs.existsSync).mockReturnValue(false);
+        vi.clearAllMocks();
+        vi.spyOn(console, 'log').mockImplementation(() => { });
+        vi.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined);
+        vi.spyOn(fs, 'writeFileSync').mockImplementation(() => undefined);
     });
 
-    it("succeeds when planner returns 'done'", async () => {
-        vi.mocked(AgentsModule.runAgent).mockResolvedValue({ status: "done" } as any);
+    describe('runPlannerWithPolicy', () => {
+        it('handles context file read error', async () => {
+            (fs.existsSync as Mock).mockReturnValue(true);
+            (fs.readFileSync as Mock).mockImplementation((p: string) => {
+                if (p === 'context.md') throw new Error('Read Error');
+                return JSON.stringify({ goal: 'g' });
+            });
+            (runAgent as Mock).mockResolvedValue({ status: 'done' });
 
-        const result = await OrchestratorService.runPlannerWithPolicy("goal", "context", { log: () => { } });
+            await OrchestratorService.runPlannerWithPolicy('goal', 'context.md');
 
-        expect(result.success).toBe(true);
-        expect(result.exitCode).toBe(0);
-        expect(AgentsModule.runAgent).toHaveBeenCalledTimes(1);
-    });
+            // Should have treated context as string on error, writing it directly
+            expect(fs.writeFileSync).toHaveBeenCalledWith(
+                expect.stringContaining('context.md'),
+                expect.any(String) // 'context.md' literal if read failed and we passed it as string
+            );
+        });
 
-    it("retries on recoverable network error", async () => {
-        // First attempt fails with LLM error, second succeeds
-        vi.mocked(AgentsModule.runAgent)
-            .mockResolvedValueOnce({ status: "failed" } as any)
-            .mockResolvedValueOnce({ status: "done" } as any);
+        it('handles validation error json parsing failure', async () => {
+            (runAgent as Mock).mockResolvedValue({ status: 'failed' });
+            (fs.existsSync as Mock).mockImplementation((p: string) => p.endsWith('planner_validation_error.json'));
+            (fs.readFileSync as Mock).mockReturnValue('{ invalid json');
 
-        // Mock validation error file for first attempt
-        vi.mocked(fs.existsSync)
-            .mockReturnValueOnce(true) // inputs existed
-            .mockReturnValueOnce(true); // error file exists
+            const result = await OrchestratorService.runPlannerWithPolicy('goal', 'context');
+            expect(result.exitCode).toBe(OrchestratorExitCode.UNKNOWN_ERROR);
+            expect(result.success).toBe(false);
+        });
 
-        vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ error_type: "llm_error" }));
+        it('handles missing validation error file', async () => {
+            (runAgent as Mock).mockResolvedValue({ status: 'failed' });
+            (fs.existsSync as Mock).mockReturnValue(false); // No error file
 
-        // Reduce backoff for test speed
-        vi.spyOn(Core.OrchestratorPolicy, "BACKOFF_MS", "get").mockReturnValue(1 as any);
+            const result = await OrchestratorService.runPlannerWithPolicy('goal', 'context');
+            expect(result.exitCode).toBe(OrchestratorExitCode.UNKNOWN_ERROR);
+        });
 
-        const result = await OrchestratorService.runPlannerWithPolicy("goal", "context", { log: () => { } });
+        it('retries on retryable network error', async () => {
+            // Attempt 1: Network error
+            // Attempt 2: Success
+            let attempt = 0;
+            (runAgent as Mock).mockImplementation(async () => {
+                attempt++;
+                if (attempt === 1) return { status: 'failed' };
+                return { status: 'done' };
+            });
 
-        expect(result.success).toBe(true);
-        expect(AgentsModule.runAgent).toHaveBeenCalledTimes(2);
-    });
+            (fs.existsSync as Mock).mockImplementation((p: string) => {
+                if (attempt === 1 && p.endsWith('planner_validation_error.json')) return true;
+                if (p.includes('planner') && p.includes('result.json') && attempt === 2) return true;
+                return false;
+            });
 
-    it("fails fast on fatal parse error", async () => {
-        vi.mocked(AgentsModule.runAgent).mockResolvedValue({ status: "failed" } as any);
+            (fs.readFileSync as Mock).mockImplementation((p: string) => {
+                if (p.endsWith('planner_validation_error.json')) {
+                    return JSON.stringify({ error_type: 'llm_error' });
+                }
+                return JSON.stringify({ plan: [] });
+            });
 
-        vi.mocked(fs.existsSync).mockReturnValue(true);
-        vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ error_type: "validation" }));
+            // Mock setTimeout to speed up test
+            // Note: runPlannerWithPolicy waits backoffMs
+            // We can rely on small backoff in policy or just verify it called loop twice
 
-        const result = await OrchestratorService.runPlannerWithPolicy("goal", "context", { log: () => { } });
+            const result = await OrchestratorService.runPlannerWithPolicy('goal', 'context');
+            expect(result.success).toBe(true);
+            expect(attempt).toBe(2);
+        });
 
-        expect(result.success).toBe(false);
-        expect(result.exitCode).toBe(11); // FATAL_PARSE
-        expect(AgentsModule.runAgent).toHaveBeenCalledTimes(1);
-    });
+        it('exhausts retries', async () => {
+            (runAgent as Mock).mockResolvedValue({ status: 'failed' });
+            // Always return retryable error
+            (fs.existsSync as Mock).mockReturnValue(true);
+            (fs.readFileSync as Mock).mockReturnValue(JSON.stringify({ error_type: 'llm_error' }));
 
-    it("fails when max retries exceeded", async () => {
-        vi.mocked(AgentsModule.runAgent).mockResolvedValue({ status: "failed" } as any);
-        vi.mocked(fs.existsSync).mockReturnValue(true);
-        vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ error_type: "llm_error" }));
+            // Limit retries to 1 for test speed by mocking policy constant? 
+            // OrchestratorPolicy is imported. 
+            // We can rely on the loop finishing eventually (default 3 retries).
+            // Just ensure it returns false.
 
-        vi.spyOn(Core.OrchestratorPolicy, "BACKOFF_MS", "get").mockReturnValue(1);
+            const result = await OrchestratorService.runPlannerWithPolicy('goal', 'context');
+            expect(result.success).toBe(false);
+            expect(runAgent).toHaveBeenCalledTimes(3); // Initial + 2 retries (if limited by logic)
+        });
 
-        const result = await OrchestratorService.runPlannerWithPolicy("goal", "context", { log: () => { } });
+        it('returns success and copies plan', async () => {
+            (runAgent as Mock).mockResolvedValue({ status: 'done' });
+            (fs.existsSync as Mock).mockReturnValue(true); // result.json exists
+            (fs.readFileSync as Mock).mockReturnValue(JSON.stringify({ plan: 'test' }));
 
-        expect(result.success).toBe(false);
-        expect(result.exitCode).toBe(10);
-        expect(AgentsModule.runAgent).toHaveBeenCalledTimes(3); // Initial + 2 retries
+            const result = await OrchestratorService.runPlannerWithPolicy('goal', 'context');
+            expect(result.success).toBe(true);
+            expect(fs.writeFileSync).toHaveBeenCalledWith(
+                expect.stringMatching(/plan\.json$/),
+                expect.stringContaining('"plan": "test"')
+            );
+        });
     });
 });

@@ -84,6 +84,17 @@ describe("gating runtime helpers", () => {
     expect(policy.system_default.strictness).toBe("soft");
   });
 
+  it("returns default policy when policy file has invalid JSON", () => {
+    // Tests the catch block in loadGatingPolicy
+    const policyPath = normalizePath(path.join(context.deps.cwd(), "config", "gating_policy.json"));
+    // exists=true, but read returns invalid json
+    context.files[policyPath] = "{ invalid json ";
+
+    const runtime = createGatingRuntime(context.deps);
+    const policy = runtime.loadGatingPolicy();
+    expect(policy.system_default.strictness).toBe("soft");
+  });
+
   it("handles broken json in readOverride", () => {
     const runtime = createGatingRuntime(context.deps);
     const stepPath = normalizePath(path.join("runs", "run-1", "steps", "step-1", "override.json"));

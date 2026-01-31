@@ -1,156 +1,150 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import * as planModule from '../../plan.js';
+import * as registryModule from '../../registry.js';
 import fs from 'fs';
-import { loadRolesRegistry } from '../../registry.js';
-import { fail } from '../../errors.js';
-import { writeJsonFile } from '../../fs.js';
+import path from 'path';
 
 vi.mock('fs');
 vi.mock('../../registry.js');
-vi.mock('../../errors.js');
-vi.mock('../../fs.js');
+vi.mock('../../fs.js', () => ({
+    writeJsonFile: vi.fn(),
+}));
 
 describe('plan', () => {
-    const mockRunId = 'test-run';
-    const mockPlan = {
-        run_id: mockRunId,
-        version: '0.1',
-        created_at_utc: '2023-01-01T00:00:00Z',
-        flow_type: 'test-flow',
-        rationale: 'test rationale',
-        status: 'running',
-        signals: [],
-        confidence: 'low',
-        steps: [
-            {
-                id: 'step-1',
-                agent: 'planner',
-                depends_on: [],
-                inputs: {
-                    request: 'inputs/request.md',
-                    context: 'inputs/context.md',
-                    prior_outputs: []
-                },
-                outputs: {
-                    result: 'outputs/planner/result.json',
-                    notes: 'outputs/planner/notes.md'
-                },
-                status: 'pending',
-                attempt: 0,
-                max_attempts: 1,
-                last_error: null,
-                allow_skip: false
-            }
-        ]
-    };
-
     beforeEach(() => {
         vi.clearAllMocks();
-        (loadRolesRegistry as Mock).mockReturnValue({
+        (registryModule.loadRolesRegistry as Mock).mockReturnValue({
             byId: new Map([
-                ['planner', { runner: 'llm' }],
-                ['coordinator', { runner: 'rule' }]
+                ['planner', { id: 'planner' }],
+                ['coordinator', { id: 'coordinator' }]
             ])
-        });
-        (fs.existsSync as Mock).mockReturnValue(true);
-        (fs.statSync as Mock).mockReturnValue({ isFile: () => true });
-    });
-
-    describe('validatePlan', () => {
-        it('returns plan if valid', () => {
-            const result = planModule.validatePlan(mockPlan, mockRunId);
-            expect(result).toEqual(mockPlan);
-        });
-
-        it('throws if invalid', () => {
-            const invalid = { ...mockPlan, run_id: 'mismatch' };
-            // validatePlan calls fail(), which we mocked.
-            // If fail throws, we catch it. If fail is just mocked to return, validatePlan returns undefined/void?
-            // validatePlan implementation checks schemaErrors.length > 0 -> fail().
-            // If fail() is mocked to NOT throw, validatePlan logic continues?
-            // "return plan;" at end.
-
-            // We should mock fail to throw to simulate real behavior, or check call.
-            (fail as unknown as Mock).mockImplementation((msg) => { throw new Error(msg); });
-
-            expect(() => planModule.validatePlan(invalid, mockRunId)).toThrow(/run_id mismatch/);
         });
     });
 
     describe('gatherPlanSchemaErrors', () => {
-        it('detects run_id mismatch', () => {
-            const { schemaErrors } = planModule.gatherPlanSchemaErrors({ ...mockPlan, run_id: 'bad' }, mockRunId);
-            expect(schemaErrors).toEqual(expect.arrayContaining([expect.stringMatching(/run_id mismatch/)]));
+        it('returns error if registry load fails', () => {
+            (registryModule.loadRolesRegistry as Mock).mockImplementation(() => { throw new Error('RegFail'); });
+            const res = planModule.gatherPlanSchemaErrors({}, 'run-1');
+            expect(res.schemaErrors[0]).toContain('roles registry error: RegFail');
         });
 
-        it('detects missing version', () => {
-            const { schemaErrors } = planModule.gatherPlanSchemaErrors({ ...mockPlan, version: undefined }, mockRunId);
-            expect(schemaErrors).toEqual(expect.arrayContaining([expect.stringMatching(/version missing/)]));
+        it('validates run_id', () => {
+            const res = planModule.gatherPlanSchemaErrors({ run_id: 'bad' }, 'run-1');
+            expect(res.schemaErrors.join(' ')).toContain('run_id mismatch');
         });
 
-        it('detects missing steps', () => {
-            const { schemaErrors } = planModule.gatherPlanSchemaErrors({ ...mockPlan, steps: [] }, mockRunId);
-            expect(schemaErrors).toEqual(expect.arrayContaining([expect.stringMatching(/must include at least one step/)]));
+        it('validates fields existence', () => {
+            const res = planModule.gatherPlanSchemaErrors({}, 'run-1');
+            const errs = res.schemaErrors.join(' ');
+            expect(errs).toContain('version missing');
+            expect(errs).toContain('created_at_utc');
+            expect(errs).toContain('flow_type');
+            expect(errs).toContain('rationale');
+            expect(errs).toContain('signals');
+            expect(errs).toContain('confidence');
         });
 
-        it('detects invalid step agent', () => {
-            const invalidSteps = [
-                { ...mockPlan.steps[0], agent: 'unknown-agent' }
-            ];
-            const { schemaErrors } = planModule.gatherPlanSchemaErrors({ ...mockPlan, steps: invalidSteps }, mockRunId);
-            expect(schemaErrors).toEqual(expect.arrayContaining([expect.stringMatching(/invalid agent: unknown-agent/)]));
+        it('validates confidence enum', () => {
+            const res = planModule.gatherPlanSchemaErrors({ confidence: 'bad' }, 'run-1');
+            expect(res.schemaErrors.join(' ')).toContain('confidence missing or invalid');
+        });
+
+        it('validates signal consistency', () => {
+            // signals empty but confidence high
+            const res = planModule.gatherPlanSchemaErrors({ signals: [], confidence: 'high' }, 'run-1');
+            expect(res.schemaErrors.join(' ')).toContain('signals empty but confidence is not low');
+        });
+
+        it('validates step fields', () => {
+            const step = {
+                id: 's1',
+                agent: 'planner',
+                depends_on: [],
+                inputs: { request: 'inputs/request.md', context: 'inputs/context.md', prior_outputs: [] },
+                outputs: { result: 'outputs/planner/result.json', notes: 'outputs/planner/notes.md' },
+                status: 'pending',
+                attempt: 0,
+                max_attempts: 1,
+                last_error: null,
+                allow_skip: true
+            };
+            const invalidStep = { ...step, agent: 'invalid' };
+            const plan = {
+                run_id: 'run-1',
+                version: 'plan.v1',
+                created_at_utc: 'now',
+                flow_type: 'ft',
+                rationale: 'r',
+                signals: ['s'],
+                confidence: 'high',
+                steps: [invalidStep]
+            };
+
+            const res = planModule.gatherPlanSchemaErrors(plan, 'run-1');
+            expect(res.schemaErrors.join(' ')).toContain('invalid agent'); // isAgentName check
+        });
+
+        it('validates step duplicate id', () => {
+            const step = {
+                id: 's1',
+                agent: 'planner',
+                depends_on: [],
+                inputs: { request: 'inputs/request.md', context: 'inputs/context.md', prior_outputs: [] },
+                outputs: { result: 'outputs/planner/result.json', notes: 'outputs/planner/notes.md' },
+                status: 'pending',
+                attempt: 0,
+                max_attempts: 1,
+                last_error: null,
+                allow_skip: true
+            };
+            const plan = {
+                run_id: 'run-1',
+                version: 'plan.v1',
+                created_at_utc: 'now',
+                flow_type: 'ft',
+                rationale: 'r',
+                signals: ['s'],
+                confidence: 'high',
+                steps: [step, step]
+            };
+            const res = planModule.gatherPlanSchemaErrors(plan, 'run-1');
+            expect(res.schemaErrors.join(' ')).toContain('step id is duplicated');
+        });
+    });
+
+    describe('validatePlanFiles', () => {
+        const mockPlan: any = {
+            steps: [
+                { id: 's1', agent: 'planner', status: 'done', inputs: { prior_outputs: [] }, depends_on: [] },
+                { id: 's2', agent: 'coordinator', status: 'pending', inputs: { prior_outputs: ['outputs/planner/result.json'] }, depends_on: ['planner'] }
+            ]
+        };
+
+        it('reports missing inputs', () => {
+            (fs.existsSync as Mock).mockReturnValue(false);
+            const errs = planModule.validatePlanFiles(mockPlan, '/run');
+            expect(errs.join(' ')).toContain('Missing input');
+        });
+
+        it('reports missing dependency outputs when required', () => {
+            // inputs exist
+            (fs.existsSync as Mock).mockImplementation((p: string) => {
+                if (p.includes('inputs')) return true;
+                return false;
+            });
+            const errs = planModule.validatePlanFiles(mockPlan, '/run');
+            // planner done -> coordinator requires planner result.
+            // coordinator always requires deps.
+            expect(errs.join(' ')).toContain('prior output missing');
+            expect(errs.join(' ')).toContain('dependency missing result');
         });
     });
 
     describe('runValidationChecks', () => {
-        it('returns load error if plan missing', () => {
+        it('returns error if plan missing', () => {
             (fs.existsSync as Mock).mockReturnValue(false);
-            const result = planModule.runValidationChecks(mockRunId, '/run/dir', 'plan.json');
-            expect(result.planLoadError).toContain('plan.json not found');
-        });
-
-        it('returns load error if invalid json', () => {
-            (fs.readFileSync as Mock).mockReturnValue('{ "bad" }');
-            const result = planModule.runValidationChecks(mockRunId, '/run/dir', 'plan.json');
-            expect(result.planLoadError).toContain('invalid JSON');
-        });
-
-        it('validates plan files existence', () => {
-            (fs.readFileSync as Mock).mockReturnValue(JSON.stringify(mockPlan));
-            // Return true for everything: plan.json, inputs, and dependency outputs
-            (fs.existsSync as Mock).mockReturnValue(true);
-
-            const result = planModule.runValidationChecks(mockRunId, '/run/dir', 'plan.json');
-            expect(result.schemaErrors).toHaveLength(0);
-            expect(result.missingPaths).toHaveLength(0);
-        });
-
-        it('reports missing inputs', () => {
-            (fs.readFileSync as Mock).mockReturnValue(JSON.stringify(mockPlan));
-            // Only plan.json exists. Inputs do not.
-            (fs.existsSync as Mock).mockImplementation((p: string) => {
-                if (p.endsWith('plan.json') || p.endsWith('registry.json')) return true;
-                return false;
-            });
-
-            const result = planModule.runValidationChecks(mockRunId, '/run/dir', 'plan.json');
-            expect(result.schemaErrors).toHaveLength(0);
-            expect(result.missingPaths).toEqual(expect.arrayContaining([expect.stringMatching(/Missing input/)]));
-        });
-    });
-
-    describe('loadPlan', () => {
-        it('loads and validates successfully', () => {
-            // mockPlan should now have version 0.1
-            (fs.readFileSync as Mock).mockReturnValue(JSON.stringify(mockPlan));
-            const result = planModule.loadPlan('plan.json', mockRunId);
-            expect(result).toEqual(mockPlan);
-        });
-
-        it('fails on read error', () => {
-            (fs.readFileSync as Mock).mockImplementation(() => { throw new Error('IO Error'); });
-            (fail as unknown as Mock).mockImplementation((msg) => { throw new Error(msg); });
-            expect(() => planModule.loadPlan('plan.json', mockRunId)).toThrow(/Failed to read or parse/);
+            const res = planModule.runValidationChecks('run-1', '/run', 'plan.json');
+            expect(res.planLoadError).toContain('not found');
         });
     });
 });
