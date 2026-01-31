@@ -1,11 +1,13 @@
 import fs from "fs";
 import path from "path";
-import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach, type Mock } from "vitest";
 import * as agents from "../../agents";
 import * as stepPersistence from "../../step_persistence";
 import { Legacy, Core, Runners } from "../../imports";
 import * as gatingRuntime from "../../gating_runtime";
 import * as rolesRegistry from "../../../../../scripts/agentic/roles_registry";
+
+
 
 describe("agents helpers", () => {
   afterEach(() => {
@@ -65,7 +67,7 @@ describe("agents helpers", () => {
   });
 
   it("ensures skipped artifacts are written", () => {
-    const spy = vi.spyOn(stepPersistence, "writeSkippedStepArtifacts").mockImplementation(() => {});
+    const spy = vi.spyOn(stepPersistence, "writeSkippedStepArtifacts").mockImplementation(() => { });
     const plan = {
       steps: [
         { id: "step-1", agent: "planner", status: "skipped", last_error: null },
@@ -132,29 +134,7 @@ describe("agents helpers", () => {
     expect(meta.stepId).toBe("planner");
   });
 
-  it("planner target file parse failure leaves defaults", () => {
-    const { deps } = makeDeps({
-      "/workspace/runs/run-1/planner_llm_target.json": "not-json",
-      "/workspace/runs/run-1/inputs/request.md": "req",
-      "/workspace/runs/run-1/inputs/context.md": "ctx",
-    });
-    const result = agents.runAgent("planner", "run-1", "dry-run", null, deps);
-    expect(result.provider).toBeUndefined();
-  });
 
-  it("builds rationale when signals empty", () => {
-    vi.spyOn(Legacy, "classifyFlow").mockReturnValue({
-      signals: [],
-      confidence: 1,
-      pack: { flow_type: "type", steps: [] },
-    } as any);
-    const { deps } = makeDeps({
-      "/workspace/runs/run-1/inputs/request.md": "req",
-      "/workspace/runs/run-1/inputs/context.md": "ctx",
-    });
-    const result = agents.runAgent("coordinator", "run-1", "dry-run", null, deps);
-    expect(result.summary?.toLowerCase()).toContain("run");
-  });
 });
 
 describe("agents runAgent scenarios", () => {
@@ -176,7 +156,7 @@ describe("agents runAgent scenarios", () => {
       env: {},
       cwd: () => "/workspace",
     };
-  return { deps, files };
+    return { deps, files };
   };
 
   beforeEach(() => {
@@ -185,10 +165,10 @@ describe("agents runAgent scenarios", () => {
       result: `outputs/${agent}/result.json`,
       notes: `outputs/${agent}/notes.md`,
     }));
-    vi.spyOn(Legacy, "ensureRunAndInputs").mockImplementation(() => {});
+    vi.spyOn(Legacy, "ensureRunAndInputs").mockImplementation(() => { });
     vi.spyOn(Legacy, "readFirstLines").mockReturnValue(["excerpt"] as any);
-    vi.spyOn(Legacy, "writeFileAtomic").mockImplementation(() => {});
-    vi.spyOn(Legacy, "writeJsonFile").mockImplementation(() => {});
+    vi.spyOn(Legacy, "writeFileAtomic").mockImplementation(() => { });
+    vi.spyOn(Legacy, "writeJsonFile").mockImplementation(() => { });
     vi.spyOn(Legacy, "readFileText").mockReturnValue("text");
     vi.spyOn(Legacy, "classifyFlow").mockReturnValue({
       signals: ["keyword:sec"],
@@ -200,10 +180,10 @@ describe("agents runAgent scenarios", () => {
     vi.spyOn(gatingRuntime, "evaluateStepGates").mockReturnValue({ gate_status: "pass", hard_failed_ids: [], soft_failed_ids: [], notes: [] } as any);
     vi.spyOn(gatingRuntime, "readOverride").mockReturnValue(null);
     vi.spyOn(gatingRuntime, "applyOverride").mockImplementation(({ baseDecision }) => baseDecision as any);
-    vi.spyOn(gatingRuntime, "writeEffectiveDecision").mockImplementation(() => {});
-    vi.spyOn(stepPersistence, "writeStepResult").mockImplementation(() => {});
-    vi.spyOn(stepPersistence, "writeDecision").mockImplementation(() => {});
-    vi.spyOn(stepPersistence, "updateStepsIndex").mockImplementation(() => {});
+    vi.spyOn(gatingRuntime, "writeEffectiveDecision").mockImplementation(() => { });
+    vi.spyOn(stepPersistence, "writeStepResult").mockImplementation(() => { });
+    vi.spyOn(stepPersistence, "writeDecision").mockImplementation(() => { });
+    vi.spyOn(stepPersistence, "updateStepsIndex").mockImplementation(() => { });
   });
 
   afterEach(() => {
@@ -222,7 +202,7 @@ describe("agents runAgent scenarios", () => {
     expect(stepPersistence.writeDecision).toHaveBeenCalled();
     expect(gatingRuntime.applyOverride).toHaveBeenCalled();
     expect(result.provider).toBe("p");
-    const writeCalls = (Legacy.writeJsonFile as any as vi.Mock).mock.calls.map((c) => normalize(c[0]));
+    const writeCalls = (Legacy.writeJsonFile as any as Mock).mock.calls.map((c: any[]) => normalize(c[0]));
     expect(writeCalls.some((p) => p.endsWith("outputs/planner/result.json"))).toBe(true);
   });
 
@@ -274,7 +254,7 @@ describe("agents runAgent scenarios", () => {
     });
     const result = agents.runAgent("coordinator", "run-1", "dry-run", null, deps);
     expect(result.status).toBe("done");
-    const writeCall = (Legacy.writeJsonFile as any as vi.Mock).mock.calls.find((c) => normalize(c[0]).endsWith("plan.json"));
+    const writeCall = (Legacy.writeJsonFile as any as Mock).mock.calls.find((c: any[]) => normalize(c[0]).endsWith("plan.json"));
     expect(writeCall).toBeTruthy();
     const plan = writeCall ? writeCall[1] : null;
     expect(plan?.steps?.length).toBeGreaterThanOrEqual(2);
@@ -302,6 +282,30 @@ describe("agents runAgent scenarios", () => {
     expect(result.status).toBe("done");
     expect(runner).toHaveBeenCalled();
   });
+
+  it("planner target file parse failure leaves defaults", () => {
+    const { deps } = makeDeps({
+      "/workspace/runs/run-1/planner_llm_target.json": "not-json",
+      "/workspace/runs/run-1/inputs/request.md": "req",
+      "/workspace/runs/run-1/inputs/context.md": "ctx",
+    });
+    const result = agents.runAgent("planner", "run-1", "dry-run", null, deps);
+    expect(result.provider).toBeUndefined();
+  });
+
+  it("builds rationale when signals empty", () => {
+    vi.spyOn(Legacy, "classifyFlow").mockReturnValue({
+      signals: [],
+      confidence: 1,
+      pack: { flow_type: "type", steps: [] },
+    } as any);
+    const { deps } = makeDeps({
+      "/workspace/runs/run-1/inputs/request.md": "req",
+      "/workspace/runs/run-1/inputs/context.md": "ctx",
+    });
+    const result = agents.runAgent("coordinator", "run-1", "dry-run", null, deps);
+    expect(result.summary?.toLowerCase()).toContain("run");
+  });
 });
 
 describe("buildDecision branches", () => {
@@ -311,7 +315,7 @@ describe("buildDecision branches", () => {
     { missing: [], gate: { gate_status: "soft_fail", hard_failed_ids: [], soft_failed_ids: ["s"], notes: [] }, strictness: "hard", action: "require_human", reason: /soft failures/ },
     { missing: [], gate: { gate_status: "soft_fail", hard_failed_ids: [], soft_failed_ids: ["s"], notes: [] }, strictness: "soft", action: "continue", reason: /soft failures tolerated/ },
   ])("buildDecision path %#", ({ missing, gate, strictness, action, reason }) => {
-    const promptSpy = vi.spyOn(Legacy, "writeFileAtomic").mockImplementation(() => {});
+    const promptSpy = vi.spyOn(Legacy, "writeFileAtomic").mockImplementation(() => { });
     const decision = agents.buildDecision({
       runId: "run-1",
       stepId: "step-1",
