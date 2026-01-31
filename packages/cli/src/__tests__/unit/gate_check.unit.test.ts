@@ -43,4 +43,12 @@ describe("gate_check", () => {
     };
     expect(detectGate("/run", { fs: makeFs(files) as any })).toBeNull();
   });
+
+  it("returns null when step-level override exists", () => {
+    const files = {
+      "/run/steps/index.json": JSON.stringify({ run_id: "run", steps: [{ step_id: "s1", decision_action: "require_human", step_index: 0 }] }),
+      "/run/steps/s1/override.json": "{}",
+    };
+    expect(detectGate("/run", { fs: makeFs(files) as any })).toBeNull();
+  });
 });

@@ -53,11 +53,28 @@ describe("step persistence helpers", () => {
     expect(parsed.value).toBe(1);
   });
 
+  it("ignores fsync errors other than allowed", () => {
+    const { deps, files } = makeFakeDeps();
+    deps.fs = {
+      ...deps.fs,
+      fsyncSync: () => {
+        const err: any = new Error("nope");
+        err.code = "EINVAL";
+        throw err;
+      },
+    } as any;
+    const persistence = createStepPersistence(deps);
+    persistence.writeJsonAtomic("runs/run/test.json", { ok: true });
+    expect(JSON.parse(files[normalizePath("runs/run/test.json")]).ok).toBe(true);
+  });
+
   it("reads JSON or returns null", () => {
     const persistence = createStepPersistence(context.deps);
     expect(persistence.readJson("missing")).toBeNull();
     persistence.writeJsonAtomic("runs/run/sample.json", { ok: true });
     expect(persistence.readJson("runs/run/sample.json")).toEqual({ ok: true });
+    context.files[normalizePath("runs/run/bad.json")] = "not-json";
+    expect(persistence.readJson("runs/run/bad.json")).toBeNull();
   });
 
   it("writes step result, decision, and updates index", () => {

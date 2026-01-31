@@ -72,7 +72,10 @@ describe("agents helpers", () => {
         { id: "step-2", agent: "coordinator", status: "done" },
       ],
     } as any;
-    vi.spyOn(fs, "existsSync").mockReturnValue(false);
+    vi.spyOn(fs, "existsSync").mockImplementation((p) => p.toString().includes("status.json"));
+    vi.spyOn(fs, "readFileSync").mockReturnValue(
+      JSON.stringify({ reason: { code: "dry_run", message: "cached" } })
+    );
     agents.ensureSkippedArtifactsForPlan("run-1", plan, "dry-run", { cwd: () => "/tmp" });
     expect(spy).toHaveBeenCalledTimes(1);
   });
@@ -95,6 +98,63 @@ describe("agents helpers", () => {
     );
     expect(missing).toEqual(["inputs/context.md", "a.txt", "extra1", "extra2"]);
   });
+
+  it("returns dependency not-done status", () => {
+    const fsOps = {
+      existsSync: () => true,
+      statSync: () => ({ isFile: () => true }),
+      readFileSync: () => JSON.stringify({ status: "running" }),
+    } as any;
+    const status = agents.readDependencyStatus("planner", "/run", { fs: fsOps });
+    expect(status.ok).toBe(false);
+    expect(status.message).toContain("running");
+  });
+
+  it("resolveStepMeta reads plan when present", () => {
+    const fsOps = {
+      existsSync: () => true,
+      statSync: () => ({ isFile: () => true }),
+      readFileSync: () => JSON.stringify({ flow_type: "ft", steps: [{ id: "s1", agent: "planner", inputs: { prior_outputs: ["a"] } }] }),
+    } as any;
+    const meta = agents.resolveStepMeta("/run", "planner", { fs: fsOps });
+    expect(meta.stepId).toBe("s1");
+    expect(meta.pipelineId).toBe("ft");
+    expect(meta.priorOutputs).toEqual(["a"]);
+  });
+
+  it("resolveStepMeta ignores malformed plan", () => {
+    const fsOps = {
+      existsSync: () => true,
+      statSync: () => ({ isFile: () => true }),
+      readFileSync: () => "not-json",
+    } as any;
+    const meta = agents.resolveStepMeta("/run", "planner", { fs: fsOps });
+    expect(meta.stepId).toBe("planner");
+  });
+
+  it("planner target file parse failure leaves defaults", () => {
+    const { deps } = makeDeps({
+      "/workspace/runs/run-1/planner_llm_target.json": "not-json",
+      "/workspace/runs/run-1/inputs/request.md": "req",
+      "/workspace/runs/run-1/inputs/context.md": "ctx",
+    });
+    const result = agents.runAgent("planner", "run-1", "dry-run", null, deps);
+    expect(result.provider).toBeUndefined();
+  });
+
+  it("builds rationale when signals empty", () => {
+    vi.spyOn(Legacy, "classifyFlow").mockReturnValue({
+      signals: [],
+      confidence: 1,
+      pack: { flow_type: "type", steps: [] },
+    } as any);
+    const { deps } = makeDeps({
+      "/workspace/runs/run-1/inputs/request.md": "req",
+      "/workspace/runs/run-1/inputs/context.md": "ctx",
+    });
+    const result = agents.runAgent("coordinator", "run-1", "dry-run", null, deps);
+    expect(result.summary?.toLowerCase()).toContain("run");
+  });
 });
 
 describe("agents runAgent scenarios", () => {
@@ -116,7 +176,7 @@ describe("agents runAgent scenarios", () => {
       env: {},
       cwd: () => "/workspace",
     };
-    return { deps, files };
+  return { deps, files };
   };
 
   beforeEach(() => {

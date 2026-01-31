@@ -62,6 +62,33 @@ describe("gating runtime helpers", () => {
     expect(policy.system_default.strictness).toBe("soft");
   });
 
+  it("returns default policy when file read throws", () => {
+    const overridePath = "/tmp/custom-policy.json";
+    context.deps.env.GATING_POLICY_PATH = overridePath;
+    context.files[normalizePath(overridePath)] = JSON.stringify({ schema_version: "gating-policy.v1", system_default: { strictness: "hard" } });
+    const runtime = createGatingRuntime({
+      ...context.deps,
+      fs: {
+        ...context.deps.fs,
+        readFileSync: () => {
+          throw new Error("boom");
+        },
+      },
+    });
+    const policy = runtime.loadGatingPolicy();
+    expect(policy.system_default.strictness).toBe("soft");
+  });
+
+  it("skips overrides that mismatch run/step", () => {
+    const runtime = createGatingRuntime(context.deps);
+    context.files[normalizePath(path.join("runs", "run-1", "steps", "step-1", "override.json"))] = JSON.stringify({
+      schema_version: "step-override.v1",
+      run_id: "other",
+      step_id: "step-1",
+    });
+    expect(runtime.readOverride("run-1", "step-1")).toBeNull();
+  });
+
   it("derives strictness from the policy hierarchy", () => {
     const runtime = createGatingRuntime(context.deps);
     const policy = {
