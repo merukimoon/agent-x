@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import path from "path";
 import { createStepPersistence, StepPersistenceDeps } from "../../step_persistence";
+import type { DecisionAfterStep, StepResult } from "../../../../contracts/src/index";
 
 const normalizePath = (value: string | Buffer | URL) => value.toString().split(path.sep).join("/");
 
@@ -18,7 +19,7 @@ const makeFakeDeps = (): { deps: Partial<StepPersistenceDeps>; files: Record<str
         throw new Error("missing");
       }
       return files[normalized];
-    }),
+    }) as any,
     existsSync: vi.fn((filePath) => normalizePath(filePath) in files),
     statSync: vi.fn((filePath) => ({ isFile: () => normalizePath(filePath) in files })),
     openSync: vi.fn(() => 1),
@@ -32,7 +33,7 @@ const makeFakeDeps = (): { deps: Partial<StepPersistenceDeps>; files: Record<str
     }),
   };
   const deps: Partial<StepPersistenceDeps> = {
-    fs: fsOps,
+    fs: fsOps as any,
     process: { pid: 42 },
     now: () => 123,
   };
@@ -66,6 +67,33 @@ describe("step persistence helpers", () => {
     const persistence = createStepPersistence(deps);
     persistence.writeJsonAtomic("runs/run/test.json", { ok: true });
     expect(JSON.parse(files[normalizePath("runs/run/test.json")]).ok).toBe(true);
+    expect(JSON.parse(files[normalizePath("runs/run/test.json")]).ok).toBe(true);
+  });
+
+  it("throws on logic fsync errors", () => {
+    const { deps } = makeFakeDeps();
+    deps.fs = {
+      ...deps.fs,
+      fsyncSync: () => {
+        const err: any = new Error("io error");
+        err.code = "EIO";
+        throw err;
+      },
+    } as any;
+    const persistence = createStepPersistence(deps);
+    expect(() => persistence.writeJsonAtomic("runs/run/test.json", { ok: true })).toThrow("io error");
+  });
+
+  it("ignores close errors", () => {
+    const { deps } = makeFakeDeps();
+    deps.fs = {
+      ...deps.fs,
+      closeSync: () => {
+        throw new Error("close fail");
+      },
+    } as any;
+    const persistence = createStepPersistence(deps);
+    expect(() => persistence.writeJsonAtomic("runs/run/test.json", { ok: true })).not.toThrow();
   });
 
   it("reads JSON or returns null", () => {
@@ -80,7 +108,7 @@ describe("step persistence helpers", () => {
   it("writes step result, decision, and updates index", () => {
     const persistence = createStepPersistence(context.deps);
     const stepResult = {
-      schema_version: "step-result.v1",
+      schema_version: "step-result.v1" as const,
       run_id: "run-1",
       step_id: "step-1",
       step_index: 0,
@@ -93,13 +121,13 @@ describe("step persistence helpers", () => {
       execution: { status: "ok", error: null },
       signals: { matched_keywords: [], confidence: null },
       notes: { warnings: [] },
-    };
+    } as unknown as StepResult;
     persistence.writeStepResult("run-1", "step-1", stepResult);
     const stepResultParsed = JSON.parse(context.files[normalizePath(path.join("runs", "run-1", "steps", "step-1", "step_result.json"))]);
     expect(stepResultParsed.step_id).toBe("step-1");
 
     const decision = {
-      schema_version: "decision-after-step.v1",
+      schema_version: "decision-after-step.v1" as const,
       run_id: "run-1",
       step_id: "step-1",
       decided_at: new Date().toISOString(),
@@ -108,7 +136,7 @@ describe("step persistence helpers", () => {
       requirements: { required_inputs: [], human_prompt_ref: null },
       constraints: { immutable_context: true, engine_smartness: "none" },
       audit: { policy_ids: ["gating-policy.v1"], rule_ids: [] },
-    };
+    } as unknown as DecisionAfterStep;
     persistence.writeDecision("run-1", "step-1", decision);
     const decisionParsed = JSON.parse(context.files[normalizePath(path.join("runs", "run-1", "steps", "step-1", "decision_after_step.json"))]);
     expect(decisionParsed.step_id).toBe("step-1");
@@ -117,10 +145,10 @@ describe("step persistence helpers", () => {
   it("updates steps index by replacing entries", () => {
     const persistence = createStepPersistence(context.deps);
     context.files["runs/run-1/steps/index.json"] = JSON.stringify({
-      schema_version: "steps-index.v1",
+      schema_version: "steps-index.v1" as const,
       run_id: "run-1",
       updated_at: "now",
-      steps: [{ step_id: "step-1", step_index: 0, agent_name: "planner", status: "done", decision_action: "continue", model: { provider: "unknown", name: "unknown" }, duration_ms: 10 }],
+      steps: [{ step_id: "step-1", step_index: 0, agent_name: "planner", status: "ok", decision_action: "continue", model: { provider: "unknown", name: "unknown" }, duration_ms: 10 }],
     });
     persistence.updateStepsIndex({
       runId: "run-1",
@@ -128,7 +156,7 @@ describe("step persistence helpers", () => {
         step_id: "step-1",
         step_index: 0,
         agent_name: "planner",
-        status: "done",
+        status: "ok",
         decision_action: "continue",
         model: { provider: "unknown", name: "unknown", mode: "dry-run", temperature: null },
         duration_ms: 5,

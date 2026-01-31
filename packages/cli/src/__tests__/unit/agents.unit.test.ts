@@ -306,6 +306,49 @@ describe("agents runAgent scenarios", () => {
     const result = agents.runAgent("coordinator", "run-1", "dry-run", null, deps);
     expect(result.summary?.toLowerCase()).toContain("run");
   });
+
+  it("handles malformed status.json in skipped artifacts", () => {
+    // Trigger ensureSkippedArtifactsForPlan catch block
+    const spy = vi.spyOn(stepPersistence, "writeSkippedStepArtifacts").mockImplementation(() => { });
+    const plan = {
+      steps: [
+        { id: "step-1", agent: "planner", status: "skipped", last_error: null },
+      ],
+    } as any;
+    const fsOps = {
+      existsSync: () => true,
+      statSync: () => ({ isFile: () => true }),
+      readFileSync: () => "not-json",
+      mkdirSync: vi.fn(),
+    } as any;
+    agents.ensureSkippedArtifactsForPlan("run-1", plan, "dry-run", { fs: fsOps, cwd: () => "/tmp" } as any);
+    expect(spy).toHaveBeenCalled(); // Should proceed with derived reason
+  });
+
+  it("checkDependenciesSatisfied continues when array empty", () => {
+    // cover 179-180
+    const res = agents.checkDependenciesSatisfied({ depends_on: [] } as any, "run", {});
+    expect(res.ready).toBe(true);
+  });
+
+  it("throws on unknown dependency mapping", () => {
+    // cover 389-391 in runAgent coordinator flow
+    vi.spyOn(Legacy, "classifyFlow").mockReturnValue({
+      signals: ["keyword:block"],
+      confidence: 1,
+      pack: {
+        flow_type: "security",
+        steps: [
+          { id: "s1", agent: "a1", depends_on: ["unknown_step"], outputs: {} },
+        ],
+      },
+    } as any);
+    const { deps } = makeDeps({
+      "/workspace/runs/run-1/inputs/request.md": "req",
+      "/workspace/runs/run-1/inputs/context.md": "ctx",
+    });
+    expect(() => agents.runAgent("coordinator", "run-1", "dry-run", null, deps)).toThrow(/Unknown dependency/);
+  });
 });
 
 describe("buildDecision branches", () => {

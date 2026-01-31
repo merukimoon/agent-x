@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { BufferEncoding } from "node:buffer";
+
 import { loadPolicy, type LoadPolicyDeps } from "../../policy/loadPolicy";
 
 const baseEnv = {} as NodeJS.ProcessEnv;
@@ -10,7 +10,7 @@ function buildDeps(path: string, result: string | (() => string), options?: { th
         AGENTX_MCP_POLICY_PATH: path,
     };
 
-    const readFileSync = vi.fn<[string, BufferEncoding], string>(() => {
+    const readFileSync = vi.fn<[string, any], string>(() => {
         if (typeof result === "function") {
             return result();
         }
@@ -77,7 +77,7 @@ describe("MCP Load Policy", () => {
     });
 
     it("returns default policy with warning for inprocess transport when file not found", () => {
-        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => { });
         const deps = buildDeps("/tmp/missing.json", "", { throws: true });
 
         const policy = loadPolicy("inprocess", deps);
@@ -90,7 +90,7 @@ describe("MCP Load Policy", () => {
     });
 
     it("returns default policy with warning for inprocess transport when JSON is invalid", () => {
-        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => { });
         const deps = buildDeps("/tmp/invalid.json", "{ bad json");
 
         const policy = loadPolicy("inprocess", deps);
@@ -115,5 +115,29 @@ describe("MCP Load Policy", () => {
         expect(policy.allow).toHaveLength(2);
         expect(policy.allow[0].method).toBe("custom.method.1");
         expect(policy.allow[1].method).toBe("custom.method.2");
+    });
+
+
+    it("uses default fs when readFileSync dep is missing", () => {
+        // Mock global fs via vi.mock is hard here because we are using vitest imports.
+        // However, we can use vi.spyOn regarding the fs module if it was imported in the SUT.
+        // In loadPolicy.ts: import fs from "fs".
+        // We can spy on fs.readFileSync.
+        const fs = require("fs");
+        const spy = vi.spyOn(fs, "readFileSync").mockReturnValue(JSON.stringify({ allow: [] }));
+
+        const policy = loadPolicy("inprocess", { env: { ...baseEnv, AGENTX_MCP_POLICY_PATH: "/tmp/default.json" } });
+        expect(policy.allow).toEqual([]);
+        expect(spy).toHaveBeenCalled();
+        spy.mockRestore();
+    });
+
+    it("fails hard for HTTP transport with unexpected error type", () => {
+        // Trigger line 54 catch block with non-Error object
+        const deps = {
+            env: { ...baseEnv, AGENTX_MCP_POLICY_PATH: "/tmp/fake.json" },
+            readFileSync: () => { throw "string error"; },
+        };
+        expect(() => loadPolicy("http", deps)).toThrow(/Failed to load MCP policy.*string error/);
     });
 });

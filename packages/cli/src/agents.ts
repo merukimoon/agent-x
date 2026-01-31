@@ -39,9 +39,9 @@ export type AgentsDeps = {
 export const defaultAgentsDeps: AgentsDeps = {
   fs: {
     existsSync: (p) => fs.existsSync(p),
-    statSync: (p) => fs.statSync(p),
-    readFileSync: (p, enc) => fs.readFileSync(p, enc),
-    mkdirSync: (p, opts) => fs.mkdirSync(p, opts as any),
+    statSync: ((p) => fs.statSync(p)) as typeof fs.statSync,
+    readFileSync: ((p, ...args) => fs.readFileSync(p, ...args)) as typeof fs.readFileSync,
+    mkdirSync: ((p, ...args) => fs.mkdirSync(p, ...args)) as typeof fs.mkdirSync,
   },
   env: process.env,
   cwd: () => process.cwd(),

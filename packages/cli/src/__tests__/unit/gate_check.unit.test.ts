@@ -51,4 +51,11 @@ describe("gate_check", () => {
     };
     expect(detectGate("/run", { fs: makeFs(files) as any })).toBeNull();
   });
+
+  it("returns null when index.json is invalid", () => {
+    const files = {
+      "/run/steps/index.json": "not-json",
+    };
+    expect(detectGate("/run", { fs: makeFs(files) as any })).toBeNull();
+  });
 });

@@ -88,6 +88,33 @@ describe("status render helpers", () => {
     expect(rendered).not.toContain("Required inputs:");
     expect(rendered).not.toContain("Relevant files:");
   });
+
+
+  it("renders blocked state with missing metadata validly", () => {
+    // Cover lines 17 (blocked) with nulls
+    const view: NormalizedStatus = {
+      run_id: "run-345",
+      overall: "in_progress",
+      artifacts_valid: true,
+      errors: [],
+      steps: [
+        { step_index: 0, step_id: "s0", agent_name: "a", status: "blocked", decision_action: "require_human", model: null, duration_ms: null },
+      ],
+      current_state: {
+        is_blocked: true,
+        blocked_reason: null,
+        blocked_step_id: null, // explicit null
+        next_action: "approve_or_override",
+        required_inputs: [],
+        paths: [],
+      },
+    } as any;
+    const rendered = renderStatusView(view);
+    expect(rendered).toContain("Blocked step: -");
+    expect(rendered).toContain("Reason: -");
+    // cover line 33 with null model/duration
+    expect(rendered).toMatch(/a\s+blocked\s+require_human\s+-\s+-\s*$/m);
+  });
 });
 
 describe("status_view helpers", () => {
