@@ -1,9 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { Core } from "./imports.js";
-import type { ExecutionMode } from "../../core/src/index.js";
-
-const { readFirstLines, writeFileAtomic, writeJsonFile } = Core;
+import { readFirstLines, writeFileAtomic, writeJsonFile } from "../../core/src/index.js";
 
 export interface RunnerParams {
     runId: string;
