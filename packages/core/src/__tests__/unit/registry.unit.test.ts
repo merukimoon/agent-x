@@ -5,9 +5,12 @@ import path from 'path';
 import process from 'process';
 
 vi.mock('fs');
-vi.mock('process', () => {
+vi.mock('process', async (importOriginal) => {
+    const mod = await importOriginal<typeof import('process')>();
     return {
+        ...mod,
         default: {
+            ...mod.default,
             cwd: vi.fn(() => '/repo'),
         },
         cwd: vi.fn(() => '/repo')
@@ -52,7 +55,7 @@ describe('registry', () => {
         });
 
         it('throws on duplicate id', () => {
-            const entry = { id: 'planner', runner: 'llm', required_artifacts: ['result.json'] };
+            const entry = { id: 'planner', runner: 'llm', required_artifacts: ['result.json', 'notes.md', 'status.json'] };
             (fs.readFileSync as Mock).mockReturnValue(JSON.stringify([entry, entry]));
             expect(() => registryModule.loadRolesRegistry()).toThrow('Duplicate role id');
         });

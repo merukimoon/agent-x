@@ -39,8 +39,9 @@ export function readFileText(filePath: string): string {
  * Validate that run directory and inputs exist.
  * @param {string} runDir
  */
-export function ensureRunAndInputs(runDir: string) {
-    if (!fs.existsSync(runDir) || !fs.statSync(runDir).isDirectory()) {
+export function ensureRunAndInputs(runDir: string, deps: { fs?: any } = {}) {
+    const fsVal = deps.fs || fs;
+    if (!fsVal.existsSync(runDir) || !fsVal.statSync(runDir).isDirectory()) {
         fail(`Run directory not found: ${runDir}`);
     }
 
@@ -48,7 +49,7 @@ export function ensureRunAndInputs(runDir: string) {
     const contextPath = path.join(runDir, "inputs", "context.md");
 
     [requestPath, contextPath].forEach((filePath) => {
-        if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+        if (!fsVal.existsSync(filePath) || !fsVal.statSync(filePath).isFile()) {
             fail(`Input file not found: ${filePath}`);
         }
     });

@@ -209,8 +209,8 @@ export async function runAgent(agentName, runId, mode, contextOverridePath = nul
     cwd: deps.cwd ?? defaultAgentsDeps.cwd,
   } satisfies AgentsDeps;
   const runDir = path.join(resolved.cwd(), "runs", runId);
-  Legacy.ensureRunAndInputs(runDir);
-  const registryEntry = requireExecutableRole(agentName);
+  Legacy.ensureRunAndInputs(runDir, resolved);
+  const registryEntry = Core.requireExecutableRole(agentName);
   const { stepId, stepIndex, priorOutputs, pipelineId } = resolveStepMeta(runDir, agentName, resolved);
   const startedAt = new Date();
   const modelRef: ModelRef = {

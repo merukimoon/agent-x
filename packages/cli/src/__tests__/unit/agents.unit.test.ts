@@ -161,7 +161,7 @@ describe("agents runAgent scenarios", () => {
   };
 
   beforeEach(() => {
-    vi.spyOn(rolesRegistry, "requireExecutableRole").mockReturnValue({ runner: "mock-runner" } as any);
+    vi.spyOn(Core, "requireExecutableRole").mockReturnValue({ runner: "mock-runner" } as any);
     vi.spyOn(Core, "getCanonicalOutputs").mockImplementation((agent: string) => ({
       result: `outputs/${agent}/result.json`,
       notes: `outputs/${agent}/notes.md`,
@@ -391,6 +391,42 @@ describe("buildDecision branches", () => {
 });
 
 describe("agents additional coverage", () => {
+  beforeEach(() => {
+    vi.spyOn(Core, "requireExecutableRole").mockReturnValue({ runner: "mock-runner" } as any);
+    vi.spyOn(Core, "getCanonicalOutputs").mockImplementation((agent: string) => ({
+      result: `outputs/${agent}/result.json`,
+      notes: `outputs/${agent}/notes.md`,
+    }));
+    vi.spyOn(Legacy, "ensureRunAndInputs").mockImplementation(() => { });
+    vi.spyOn(Legacy, "readFirstLines").mockReturnValue(["excerpt"] as any);
+    vi.spyOn(Legacy, "writeFileAtomic").mockImplementation(() => { });
+    vi.spyOn(Legacy, "writeJsonFile").mockImplementation(() => { });
+    vi.spyOn(Legacy, "readFileText").mockReturnValue("text");
+    vi.spyOn(Legacy, "generatePlanFromLLM").mockResolvedValue({
+      rawText: JSON.stringify({ flow_type: "ft", steps: [] }),
+      target: { provider: "mock", model: "mock" }
+    } as any);
+    vi.spyOn(Legacy, "validatePlannerOutput").mockReturnValue({ valid: true, errors: [], warnings: [], parsed: { flow_type: "ft", steps: [] } } as any);
+    vi.spyOn(Legacy, "classifyFlow").mockReturnValue({
+      signals: ["keyword:sec"],
+      confidence: 1,
+      pack: { flow_type: "type", steps: [] },
+    } as any);
+    vi.spyOn(gatingRuntime, "loadGatingPolicy").mockReturnValue({ system_default: { strictness: "soft" } } as any);
+    vi.spyOn(gatingRuntime, "determineStrictness").mockReturnValue("soft" as any);
+    vi.spyOn(gatingRuntime, "evaluateStepGates").mockReturnValue({ gate_status: "pass", hard_failed_ids: [], soft_failed_ids: [], notes: [] } as any);
+    vi.spyOn(gatingRuntime, "readOverride").mockReturnValue(null);
+    vi.spyOn(gatingRuntime, "applyOverride").mockImplementation(({ baseDecision }) => baseDecision as any);
+    vi.spyOn(gatingRuntime, "writeEffectiveDecision").mockImplementation(() => { });
+    vi.spyOn(stepPersistence, "writeStepResult").mockImplementation(() => { });
+    vi.spyOn(stepPersistence, "writeDecision").mockImplementation(() => { });
+    vi.spyOn(stepPersistence, "updateStepsIndex").mockImplementation(() => { });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("handles planner JSON parse failure", async () => {
     // Cover lines 352-353
     vi.spyOn(Legacy, "generatePlanFromLLM").mockResolvedValue({
@@ -401,7 +437,7 @@ describe("agents additional coverage", () => {
     // We need to setup a valid run env
     const fsOps = {
       existsSync: (p: string) => true,
-      statSync: () => ({ isFile: () => true }),
+      statSync: () => ({ isFile: () => true, isDirectory: () => true }),
       readFileSync: () => "text",
       mkdirSync: vi.fn(),
     } as any;
@@ -427,7 +463,7 @@ describe("agents additional coverage", () => {
 
     const fsOps = {
       existsSync: (p: string) => true,
-      statSync: () => ({ isFile: () => true }),
+      statSync: () => ({ isFile: () => true, isDirectory: () => true }),
       readFileSync: () => "text",
       mkdirSync: vi.fn(),
     } as any;

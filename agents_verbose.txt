@@ -1,0 +1,99 @@
+
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/Users/merukimon/source/git/merukimoon/agent-x[39m
+
+[90mstdout[2m | packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22m[2magents runAgent scenarios[2m > [22m[2mruns planner happy path with injected deps[22m[39m
+Dry run complete for agent "planner" on run "run-1". Outputs written to \workspace\runs\run-1\outputs\planner
+
+[90mstdout[2m | packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22m[2magents runAgent scenarios[2m > [22m[2mrequests clarification when inputs are missing[22m[39m
+Dry run complete for agent "planner" on run "run-1". Outputs written to \workspace\runs\run-1\outputs\planner
+
+[90mstdout[2m | packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22m[2magents runAgent scenarios[2m > [22m[2mswitches summaries between dry-run and live[22m[39m
+Dry run complete for agent "planner" on run "run-1". Outputs written to \workspace\runs\run-1\outputs\planner
+Run complete for agent "planner" on run "run-1". Outputs written to \workspace\runs\run-1\outputs\planner
+
+[90mstdout[2m | packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22m[2magents runAgent scenarios[2m > [22m[2mhandles plan metadata parse failures gracefully[22m[39m
+Dry run complete for agent "planner" on run "run-1". Outputs written to \workspace\runs\run-1\outputs\planner
+
+[90mstdout[2m | packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22m[2magents runAgent scenarios[2m > [22m[2mbuilds coordinator plan with matched signals and skips disabled steps[22m[39m
+Dry run complete for agent "coordinator" on run "run-1". Outputs written to \workspace\runs\run-1\outputs\coordinator
+
+[90mstdout[2m | packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22m[2magents runAgent scenarios[2m > [22m[2mmarks human_gate blocked when override missing[22m[39m
+Dry run complete for agent "human_gate" on run "run-1". Outputs written to \workspace\runs\run-1\outputs\human_gate
+
+[90mstdout[2m | packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22m[2magents runAgent scenarios[2m > [22m[2mroutes technical-writer through runner output[22m[39m
+Run complete for agent "technical-writer" on run "run-1". Outputs written to \workspace\runs\run-1\outputs\technical-writer
+
+[90mstdout[2m | packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22m[2magents runAgent scenarios[2m > [22m[2mplanner target file parse failure leaves defaults[22m[39m
+Dry run complete for agent "planner" on run "run-1". Outputs written to \workspace\runs\run-1\outputs\planner
+
+[90mstdout[2m | packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22m[2magents runAgent scenarios[2m > [22m[2mbuilds rationale when signals empty[22m[39m
+Dry run complete for agent "coordinator" on run "run-1". Outputs written to \workspace\runs\run-1\outputs\coordinator
+
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents helpers[2m > [22mnormalizes statuses to canonical buckets
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents helpers[2m > [22mbuilds skip reasons with fallback messaging
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents helpers[2m > [22mderives dry run skip reason
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents helpers[2m > [22mnormalizes dependencies via mapping
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents helpers[2m > [22mchecks dependency status against filesystem
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents helpers[2m > [22mthrows when dependencies not ready
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents helpers[2m > [22mensures skipped artifacts are written
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents helpers[2m > [22mdetects missing inputs and honors forced overrides
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents helpers[2m > [22mreturns dependency not-done status
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents helpers[2m > [22mresolveStepMeta reads plan when present
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents helpers[2m > [22mresolveStepMeta ignores malformed plan
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents runAgent scenarios[2m > [22mruns planner happy path with injected deps
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents runAgent scenarios[2m > [22mrequests clarification when inputs are missing
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents runAgent scenarios[2m > [22mswitches summaries between dry-run and live
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents runAgent scenarios[2m > [22mhandles plan metadata parse failures gracefully
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents runAgent scenarios[2m > [22mbuilds coordinator plan with matched signals and skips disabled steps
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents runAgent scenarios[2m > [22mmarks human_gate blocked when override missing
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents runAgent scenarios[2m > [22mroutes technical-writer through runner output
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents runAgent scenarios[2m > [22mplanner target file parse failure leaves defaults
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents runAgent scenarios[2m > [22mbuilds rationale when signals empty
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents runAgent scenarios[2m > [22mhandles malformed status.json in skipped artifacts
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents runAgent scenarios[2m > [22mcheckDependenciesSatisfied continues when array empty
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents runAgent scenarios[2m > [22mthrows on unknown dependency mapping
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22mbuildDecision branches[2m > [22mbuildDecision path 0
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22mbuildDecision branches[2m > [22mbuildDecision path 1
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22mbuildDecision branches[2m > [22mbuildDecision path 2
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22mbuildDecision branches[2m > [22mbuildDecision path 3
+ [31m×[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents additional coverage[2m > [22mhandles planner JSON parse failure
+[31m   → fsVal.statSync(...).isDirectory is not a function[39m
+ [31m×[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents additional coverage[2m > [22mhandles LLM network failure
+[31m   → fsVal.statSync(...).isDirectory is not a function[39m
+ [32m✓[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents additional coverage[2m > [22mthrows on unknown dependency in flatMap
+
+[31m⎯⎯⎯⎯⎯⎯⎯[1m[7m Failed Tests 2 [27m[22m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[31m[1m[7m FAIL [27m[22m[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents additional coverage[2m > [22mhandles planner JSON parse failure
+[31m[1mTypeError[22m: fsVal.statSync(...).isDirectory is not a function[39m
+[36m [2m❯[22m Module.ensureRunAndInputs packages/core/src/fs.ts:[2m44:62[22m[39m
+    [90m 42| [39m[35mexport[39m [35mfunction[39m [34mensureRunAndInputs[39m(runDir[33m:[39m string[33m,[39m deps[33m:[39m { fs[33m?[39m[33m:[39m any } …
+    [90m 43| [39m    [35mconst[39m fsVal [33m=[39m deps[33m.[39mfs [33m||[39m fs[33m;[39m
+    [90m 44| [39m    [35mif[39m ([33m![39mfsVal[33m.[39m[34mexistsSync[39m(runDir) [33m||[39m [33m![39mfsVal[33m.[39m[34mstatSync[39m(runDir)[33m.[39m[34misDirecto[39m…
+    [90m   | [39m                                                             [31m^[39m
+    [90m 45| [39m        [34mfail[39m([32m`Run directory not found: [39m[36m${[39mrunDir[36m}[39m[32m`[39m)[33m;[39m
+    [90m 46| [39m    }
+[90m [2m❯[22m Module.runAgent packages/cli/src/agents.ts:[2m212:10[22m[39m
+[90m [2m❯[22m packages/cli/src/__tests__/unit/agents.unit.test.ts:[2m410:33[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m packages/cli/src/__tests__/unit/agents.unit.test.ts[2m > [22magents additional coverage[2m > [22mhandles LLM network failure
+[31m[1mTypeError[22m: fsVal.statSync(...).isDirectory is not a function[39m
+[36m [2m❯[22m Module.ensureRunAndInputs packages/core/src/fs.ts:[2m44:62[22m[39m
+    [90m 42| [39m[35mexport[39m [35mfunction[39m [34mensureRunAndInputs[39m(runDir[33m:[39m string[33m,[39m deps[33m:[39m { fs[33m?[39m[33m:[39m any } …
+    [90m 43| [39m    [35mconst[39m fsVal [33m=[39m deps[33m.[39mfs [33m||[39m fs[33m;[39m
+    [90m 44| [39m    [35mif[39m ([33m![39mfsVal[33m.[39m[34mexistsSync[39m(runDir) [33m||[39m [33m![39mfsVal[33m.[39m[34mstatSync[39m(runDir)[33m.[39m[34misDirecto[39m…
+    [90m   | [39m                                                             [31m^[39m
+    [90m 45| [39m        [34mfail[39m([32m`Run directory not found: [39m[36m${[39mrunDir[36m}[39m[32m`[39m)[33m;[39m
+    [90m 46| [39m    }
+[90m [2m❯[22m Module.runAgent packages/cli/src/agents.ts:[2m212:10[22m[39m
+[90m [2m❯[22m packages/cli/src/__tests__/unit/agents.unit.test.ts:[2m436:33[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m28 passed[39m[22m[90m (30)[39m
+[2m   Start at [22m 00:53:21
+[2m   Duration [22m 1.07s[2m (transform 220ms, setup 0ms, collect 275ms, tests 67ms, environment 0ms, prepare 219ms)[22m
+
