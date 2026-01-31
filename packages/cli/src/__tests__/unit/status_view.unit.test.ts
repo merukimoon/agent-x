@@ -1,5 +1,6 @@
 import path from "path";
-import { describe, it, expect } from "vitest";
+import fs from "fs";
+import { describe, it, expect, vi } from "vitest";
 import { buildStatusView } from "../../status_view";
 
 const runDir = "/run";
@@ -115,6 +116,111 @@ describe("status_view branches", () => {
     };
     const view = buildStatusView(runDir, makeDeps(files));
     expect(view?.current_state.next_action).toBe("provide_inputs");
+  });
+
+  // Coverage: line 55 (skipped status)
+  it("normalizes skipped status correctly", () => {
+    const files: Record<string, string> = {
+      [join("run.json")]: JSON.stringify({ run_id: "run-id", status: "skipped" }),
+      [join("steps", "index.json")]: JSON.stringify({
+        schema_version: "steps-index.v1",
+        run_id: "run-id",
+        steps: []
+      }),
+    };
+    const view = buildStatusView(runDir, makeDeps(files));
+    // The view logic doesn't explicitly set "overall" to "skipped" (defaults to incomplete/in_progress?)
+    // Let's check what it maps to. "skipped" returns "skipped" from normalize.
+    // Line 182 check: running/pending -> in_progress.
+    // skipped is not in the list. So it falls to incomplete?
+    // Let's check line 175: let overall = "incomplete".
+    expect(view?.overall).toBe("incomplete");
+  });
+
+  // Coverage: line 100/155 (empty reason), 151 (short-circuit), 180 (failed status)
+  it("handles complex blocked scenarios", () => {
+    const files: Record<string, string> = {
+      [join("run.json")]: JSON.stringify({ run_id: "run-id", status: "failed", exit_code: 1 }),
+      [join("steps", "index.json")]: JSON.stringify({
+        schema_version: "steps-index.v1",
+        run_id: "run-id",
+        // Step 1: blocked (action require_human, but empty reason) -> triggers line 100/155
+        // Step 2: blocked (should be ignored due to loop short-circuit line 151)
+        steps: [
+          { step_id: "s1", step_index: 0, agent_name: "a", status: "blocked", decision_action: "continue" },
+          { step_id: "s2", step_index: 1, agent_name: "b", status: "blocked", decision_action: "continue" }
+        ]
+      }),
+      // s1 decision: require_human with NO reason (null)
+      [join("steps", "s1", "decision_after_step.json")]: JSON.stringify({ decision: { action: "require_human", reason: null } }),
+    };
+    const view = buildStatusView(runDir, makeDeps(files));
+
+    // Check line 180 (failed status)
+    expect(view?.overall).toBe("finished_failure");
+
+    // Check line 155 fallback reason
+    expect(view?.current_state.blocked_reason).toBe("decision: require_human");
+    expect(view?.current_state.blocked_step_id).toBe("s1");
+    // Verify s2 was not processed as blocked (s1 took precedence)
+    expect(view?.current_state.is_blocked).toBe(true);
+  });
+
+  // Coverage: line 171 (runId fallback)
+  it("infers runId from fallback sources", () => {
+    const files: Record<string, string> = {
+      // run.json missing run_id
+      [join("run.json")]: JSON.stringify({ status: "running" }),
+      // index also missing run_id
+      [join("steps", "index.json")]: JSON.stringify({
+        schema_version: "steps-index.v1",
+        steps: []
+      }),
+    };
+    // Expected to fall back to path.basename(runDir) -> "run"
+    const view = buildStatusView(runDir, makeDeps(files));
+    expect(view?.run_id).toBe("run");
+  });
+
+
+  // Coverage: line 180 side branch (exit_code > 0 fallback when status is not failed)
+  it("marks failure when exit_code is non-zero even if status is not failed", () => {
+    const files: Record<string, string> = {
+      [join("run.json")]: JSON.stringify({ run_id: "run-id", status: "done", exit_code: 12 }),
+      [join("steps", "index.json")]: JSON.stringify({
+        schema_version: "steps-index.v1",
+        run_id: "run-id",
+        steps: []
+      }),
+    };
+    const view = buildStatusView(runDir, makeDeps(files));
+    expect(view?.overall).toBe("finished_failure");
+  });
+
+  // Coverage: defaultDeps (lines 13-19)
+  it("uses default fs dependencies when none provided", () => {
+    // We spy on real fs to force defaultDeps wrappers to execute down the line
+    const existsSpy = vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    const statSpy = vi.spyOn(fs, "statSync").mockReturnValue({ isFile: () => true } as any);
+    // Return a payload that satisfies both "run.json" (status, exit_code) and "steps/index.json" (steps array)
+    // because readFileSync will return the same value for both calls.
+    const readSpy = vi.spyOn(fs, "readFileSync").mockReturnValue(JSON.stringify({
+      run_id: "spy-run",
+      status: "done",
+      exit_code: 0,
+      steps: [],
+      schema_version: "steps-index.v1"
+    }));
+
+    // Call without deps -> uses defaultDeps -> calls fs.*Sync spies
+    const view = buildStatusView("/dummy/path");
+
+    expect(view?.run_id).toBe("spy-run");
+    expect(existsSpy).toHaveBeenCalled();
+    expect(statSpy).toHaveBeenCalled();
+    expect(readSpy).toHaveBeenCalled();
+
+    vi.restoreAllMocks();
   });
 });
 

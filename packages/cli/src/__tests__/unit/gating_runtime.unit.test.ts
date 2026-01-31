@@ -65,18 +65,22 @@ describe("gating runtime helpers", () => {
   it("returns default policy when file read throws", () => {
     const overridePath = "/tmp/custom-policy.json";
     context.deps.env.GATING_POLICY_PATH = overridePath;
+    // Ensure existsSync returns true so we enter the try block
     context.files[normalizePath(overridePath)] = JSON.stringify({ schema_version: "gating-policy.v1", system_default: { strictness: "hard" } });
+
+    // Create runtime with a readFileSync that explicitly throws
     const runtime = createGatingRuntime({
       ...context.deps,
       fs: {
         ...context.deps.fs,
         readFileSync: () => {
-          throw new Error("boom");
+          throw new Error("Simulated Read Error");
         },
       },
     });
+
     const policy = runtime.loadGatingPolicy();
-    expect(policy.system_default.strictness).toBe("soft");
+    // Should catch the error and return default (soft)
     expect(policy.system_default.strictness).toBe("soft");
   });
 
