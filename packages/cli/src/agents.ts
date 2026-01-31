@@ -386,7 +386,6 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null, dep
       const priorOutputs = mappedDepends.flatMap((dep) => {
         const depAgent = idToAgent[dep];
         if (!depAgent) {
-          // istanbul ignore next
           throw new Error(`Unknown dependency mapping for ${dep}`);
         }
         const depOutputs = getCanonicalOutputs(depAgent as any);
