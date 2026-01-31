@@ -32,7 +32,7 @@
 
       "test:golden": "node --import tsx tests/agentic/generate-golden.ts",
       "verify:esm": "node --import tsx scripts/verify-esm.ts",
-      "verify-run": "pnpm exec agentic verify-run",
+    "verify-run": "node --import tsx packages/cli/src/index.ts verify-run",
 
       "dev": "node --import tsx scripts/agentic.ts",
       "run-new": "node --import tsx scripts/scaffold-run.ts",
