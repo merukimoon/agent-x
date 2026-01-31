@@ -13,13 +13,13 @@ The run scaffold reads the run name from the `NAME` environment variable and pri
 
 Git Bash:
 ```bash
-NAME="manual-verify-flow" pnpm run run-new
+NAME="manual-verify-flow" pnpm exec agentic run new
 ```
 
 PowerShell:
 ```powershell
 $env:NAME = "manual-verify-flow"
-pnpm run run-new
+pnpm exec agentic run new
 ```
 
 Set `RUN` in your shell for the remaining steps:

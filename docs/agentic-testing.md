@@ -22,7 +22,7 @@ Generation resolves paths from the repo root via `import.meta.url`, so it is ind
 
 ## How to add a new CLI snapshot
 
-1. Update `tests/agentic/generate-golden.js` to include the new command and any required plan mutation.
+1. Update `packages/cli/src/__tests__/integration/generate-golden.ts` to include the new command and any required plan mutation.
 2. Run `pnpm run test:golden` to regenerate snapshots.
 3. Run `pnpm run test` to confirm snapshots match.
 

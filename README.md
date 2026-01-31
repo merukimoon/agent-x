@@ -23,7 +23,6 @@ The repository is organized into the following packages (Monorepo-ready):
 | `packages/contracts` | **Contracts**. Canonical enforceable contract types (run/step schemas) shared across the framework. |
 | `packages/cli` | **ADX (CLI)**. The `agentic` binary implementation. Orchestrates agents, manages plans, and handles user interactions. |
 | `packages/adapters` | **Adapters** (Future). Connectors for external tools and platforms. |
-| `scripts/agentic` | **Legacy/Entrypoint**. Contains the `agentic.ts` entrypoint (which delegates to the CLI package) and legacy implementation logic being migrated. |
 
 > **Note**: Packages are managed via a pnpm workspace, but builds still run from the repo root with relative imports (no separate package build yet).
 

@@ -25,7 +25,7 @@
     "test:cli": "pnpm exec vitest run --config vitest.unit.config.js packages/cli/src/__tests__/unit",
     "test:core": "pnpm exec vitest run --config vitest.unit.config.js packages/core/src/__tests__/unit",
     "test:e2e": "pnpm exec vitest run tests/e2e/flow.test.ts",
-    "test:golden": "node --import tsx tests/agentic/generate-golden.ts",
+    "test:golden": "node --import tsx packages/cli/src/__tests__/integration/generate-golden.ts",
     "verify:esm": "node --import tsx scripts/verify-esm.ts",
     "verify-run": "node --import tsx packages/cli/src/index.ts verify-run",
     "dev": "node --import tsx packages/cli/src/bin/agentic.ts",
