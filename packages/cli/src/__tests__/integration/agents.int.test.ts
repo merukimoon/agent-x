@@ -7,7 +7,7 @@ import { Legacy } from "../../imports.ts";
 import type { PlanStep } from "../../imports.ts";
 import type { GateOutcome } from "../../../../core/src/policy/gating.ts";
 import * as stepPersistence from "../../step_persistence.ts";
-import * as rolesRegistry from "../../../../../scripts/agentic/roles_registry.ts";
+import * as rolesRegistry from "../../../../core/src/registry.js";
 import * as gatingRuntime from "../../gating_runtime.ts";
 
 vi.mock("../../step_persistence.ts", async (importOriginal) => {
@@ -22,7 +22,7 @@ vi.mock("../../step_persistence.ts", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../../../scripts/agentic/roles_registry.ts", () => ({
+vi.mock("../../../../core/src/registry.js", () => ({
   requireExecutableRole: vi.fn().mockReturnValue({
     id: "mock-agent",
     runner: "llm",
@@ -502,47 +502,31 @@ describe("runAgent", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("reads planner target info from file", () => {
+  it("reads planner target info from file", async () => {
     const targetInfo = { model: "gpt-4-turbo", provider: "openai" };
     fs.writeFileSync(
       path.join(runDir, "planner_llm_target.json"),
       JSON.stringify(targetInfo)
     );
 
-    // We need to spy on writeStepResult to check the modelRef passed to it
-    // agents.ts calls writeStepResult(runId, stepId, initialStepResult)
-    // We can import writeStepResult from step_persistence and spy on it?
-    // step_persistence is mocked above, but writeStepResult was NOT mocked (via ...actual).
-    // So it uses real implementation which writes files.
-    // We can verify the written file?
-
-    // runAgent returns AgentResult. But modelRef is in StepResult/StepsIndex.
-    // runAgent calls updateStepsIndex at the end.
-
-    // We can spy on agents.writeStepResult? No, it imports it.
-    // We can spy on defaultInstance.writeStepResult in step_persistence if we exported it?
-    // agents.ts uses named import `writeStepResult`.
-    // In the mock, we returned `...actual`.
-    // We can assume it writes to disk.
-
-    const result = agents.runAgent("planner", runId, "live");
+    const result = await agents.runAgent("planner", runId, "live");
 
     // Check result.model/provider
     expect(result.model).toBe("gpt-4-turbo");
     expect(result.provider).toBe("openai");
   });
 
-  it("handles planner target info parse error", () => {
+  it("handles planner target info parse error", async () => {
     fs.writeFileSync(
       path.join(runDir, "planner_llm_target.json"),
       "{ bad json"
     );
     // Should not throw, just ignore
-    const result = agents.runAgent("planner", runId, "live");
+    const result = await agents.runAgent("planner", runId, "live");
     expect(result.model).toBeUndefined();
   });
 
-  it("blocks human_gate when override missing", () => {
+  it("blocks human_gate when override missing", async () => {
     // Mock requireExecutableRole to return human_gate runner
     vi.mocked(rolesRegistry.requireExecutableRole).mockReturnValue({
       id: "human_gate",
@@ -553,7 +537,7 @@ describe("runAgent", () => {
 
     // Gating runtime mock returns null for override (default)
 
-    const result = agents.runAgent("human_gate", runId, "live");
+    const result = await agents.runAgent("human_gate", runId, "live");
 
     expect(result.status).toBe("blocked");
     expect(result.summary).toContain("Awaiting human override");
@@ -575,7 +559,7 @@ describe("runAgent", () => {
     expect(decisionArg?.requirements?.required_inputs).toEqual(expect.arrayContaining([expect.stringContaining("override.json")]));
   });
 
-  it("coordinator generates plan", () => {
+  it("coordinator generates plan", async () => {
     // Mock requireExecutableRole for coordinator
     vi.mocked(rolesRegistry.requireExecutableRole).mockReturnValue({
       id: "coordinator",
@@ -598,7 +582,7 @@ describe("runAgent", () => {
       confidence: "high"
     });
 
-    const result = agents.runAgent("coordinator", runId, "live");
+    const result = await agents.runAgent("coordinator", runId, "live");
 
     expect(result.status).toBe("done");
 
@@ -607,14 +591,9 @@ describe("runAgent", () => {
     const plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
     expect(plan.flow_type).toBe("test-flow");
     expect(plan.steps).toHaveLength(3); // coordinator + planner (explicit) + step1 (planner)
-    // agents.ts unshifts planner and coordinator?
-    // Lines 386-422: unshift coordinator, unshift planner.
-    // loops over pack steps.
-    // If pack has "planner", duplicate?
-    // The code maps ids.
   });
 
-  it("skips step if enabled_if_keywords mismatch", () => {
+  it("skips step if enabled_if_keywords mismatch", async () => {
     vi.mocked(rolesRegistry.requireExecutableRole).mockReturnValue({
       id: "coordinator",
       runner: "rule",
@@ -633,7 +612,7 @@ describe("runAgent", () => {
       confidence: "high"
     });
 
-    const result = agents.runAgent("coordinator", runId, "live");
+    const result = await agents.runAgent("coordinator", runId, "live");
     const planPath = path.join(runDir, "plan.json");
     const plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
     const cisoStep = plan.steps.find((s: any) => s.id === "s1");
@@ -641,7 +620,7 @@ describe("runAgent", () => {
     expect(cisoStep.last_error).toContain("no security signals");
   });
 
-  it("uses simple rationale if signals empty", () => {
+  it("uses simple rationale if signals empty", async () => {
     vi.mocked(rolesRegistry.requireExecutableRole).mockReturnValue({
       id: "coordinator",
       runner: "rule",
@@ -658,7 +637,7 @@ describe("runAgent", () => {
       confidence: "high"
     });
 
-    agents.runAgent("coordinator", runId, "live");
+    await agents.runAgent("coordinator", runId, "live");
     const planPath = path.join(runDir, "plan.json");
     const plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
     expect(plan.rationale).toBe("Selected basic.");

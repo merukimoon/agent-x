@@ -1,10 +1,9 @@
-// @ts-check
-
 import fs from "fs";
 import path from "path";
-import { fail } from "./errors";
-import { writeJsonFile } from "./fs";
-import { resolveLlmTarget } from "./llm_config";
+import process from "process";
+import { fail } from "../errors.js";
+import { writeJsonFile } from "../fs.js";
+import { resolveLlmTarget } from "./config.js";
 
 /**
  * @typedef {Object} PlannerAssumption
@@ -12,6 +11,11 @@ import { resolveLlmTarget } from "./llm_config";
  * @property {string} text
  * @property {"low"|"medium"|"high"} confidence
  */
+export interface PlannerAssumption {
+    id: string;
+    text: string;
+    confidence: "low" | "medium" | "high";
+}
 
 /**
  * @typedef {Object} PlannerQuestion
@@ -19,12 +23,21 @@ import { resolveLlmTarget } from "./llm_config";
  * @property {string} text
  * @property {string} why_needed
  */
+export interface PlannerQuestion {
+    id: string;
+    text: string;
+    why_needed: string;
+}
 
 /**
  * @typedef {Object} PlannerStepVerification
  * @property {string} method
  * @property {string} success_criteria
  */
+export interface PlannerStepVerification {
+    method: string;
+    success_criteria: string;
+}
 
 /**
  * @typedef {Object} PlannerStep
@@ -37,6 +50,16 @@ import { resolveLlmTarget } from "./llm_config";
  * @property {"low"|"medium"|"high"} risk
  * @property {string} [rollback]
  */
+export interface PlannerStep {
+    id: string;
+    title: string;
+    action_type: string;
+    inputs: Record<string, any>;
+    expected_output: string;
+    verification: PlannerStepVerification[];
+    risk: "low" | "medium" | "high";
+    rollback?: string;
+}
 
 /**
  * @typedef {Object} PlannerOutput
@@ -46,6 +69,13 @@ import { resolveLlmTarget } from "./llm_config";
  * @property {PlannerQuestion[]} questions
  * @property {PlannerStep[]} plan
  */
+export interface PlannerOutput {
+    goal: string;
+    assumptions: PlannerAssumption[];
+    needs_clarification: boolean;
+    questions: PlannerQuestion[];
+    plan: PlannerStep[];
+}
 
 /**
  * Capabilities available to the planner.
@@ -65,7 +95,7 @@ export const CAPABILITIES = [
  * @param {string} raw
  * @returns {string}
  */
-export function cleanJsonOutput(raw) {
+export function cleanJsonOutput(raw: string): string {
     let text = raw.trim();
     // Match strict outer fence: starts with ``` (optionally json), ends with ```
     const fenceStart = /^```([a-zA-Z]*)?\n/;
@@ -106,14 +136,14 @@ function loadEnv() {
  * @param {string[]} capabilities
  * @returns {{ valid: boolean; errors: string[]; warnings: string[]; parsed: PlannerOutput | null }}
  */
-export function validatePlannerOutput(json, capabilities) {
-    const errors = [];
-    const warnings = [];
+export function validatePlannerOutput(json: unknown, capabilities: string[]): { valid: boolean; errors: string[]; warnings: string[]; parsed: PlannerOutput | null } {
+    const errors: string[] = [];
+    const warnings: string[] = [];
     if (!json || typeof json !== "object") {
         return { valid: false, errors: ["Output must be a JSON object."], warnings: [], parsed: null };
     }
 
-    const output = /** @type {PlannerOutput} */ (json);
+    const output = json as PlannerOutput;
 
     // 1. Schema Validation (Basic types)
     if (typeof output.goal !== "string") errors.push("Missing or invalid 'goal'.");
@@ -189,9 +219,9 @@ export function validatePlannerOutput(json, capabilities) {
  * @param {string} promptPath
  * @param {string} goal
  * @param {string} context
- * @returns {Promise<string>} Raw output string
+ * @returns {Promise<{ rawText: string; target: import("./config.js").LlmTarget }>} Raw output string
  */
-export async function generatePlanFromLLM(promptPath, goal, context) {
+export async function generatePlanFromLLM(promptPath: string, goal: string, context: string): Promise<{ rawText: string; target: import("./config.js").LlmTarget }> {
     loadEnv();
 
     // Read the template
@@ -242,10 +272,10 @@ Constraints: No execution, Plan only.
             throw new Error(`LLM request failed: ${response.status} ${response.statusText} - ${body}`);
         }
 
-        const data = await response.json();
+        const data: any = await response.json();
         const content = data.choices[0].message.content;
         return { rawText: content, target };
-    } catch (err) {
-        throw new Error(`LLM interaction failed: ${err.message}`);
+    } catch (err: unknown) {
+        throw new Error(`LLM interaction failed: ${(err as Error).message}`);
     }
 }

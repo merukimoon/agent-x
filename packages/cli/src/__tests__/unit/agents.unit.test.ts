@@ -5,7 +5,7 @@ import * as agents from "../../agents";
 import * as stepPersistence from "../../step_persistence";
 import { Legacy, Core, Runners } from "../../imports";
 import * as gatingRuntime from "../../gating_runtime";
-import * as rolesRegistry from "../../../../../scripts/agentic/roles_registry";
+import * as rolesRegistry from "../../../../core/src/registry.js";
 
 
 

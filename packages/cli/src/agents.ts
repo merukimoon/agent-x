@@ -6,7 +6,7 @@ import type { AgentName, AgentStatus, ExecutionMode, Plan, PlanStep, AgentResult
 import type { DecisionAfterStep, ExecutionStatus, ModelRef, SkipReason, SkipReasonCode, StepResult, StepOverride } from "../../contracts/src/index.ts";
 import { writeDecision, writeEffectiveDecision, writeSkippedStepArtifacts, writeStepResult, updateStepsIndex } from "./step_persistence.ts";
 import { applyOverride, determineStrictness, evaluateStepGates, loadGatingPolicy, readOverride } from "./gating_runtime.ts";
-import { requireExecutableRole } from "../../../scripts/agentic/roles_registry.ts";
+const { requireExecutableRole } = Core;
 
 
 

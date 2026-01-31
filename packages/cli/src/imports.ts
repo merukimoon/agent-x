@@ -4,9 +4,11 @@
  */
 
 // Re-export EVERYTHING from Core/Legacy as namespaces for values
+// Re-export EVERYTHING from Core/Legacy as namespaces for values
 import * as _CoreValues from "../../core/src/index.ts";
-import * as _LegacyValues from "../../../scripts/agentic/legacy/index.ts";
-import { runTechnicalWriter } from "../../../scripts/agentic/runners.ts";
+// Legacy is now fully merged into Core, so we alias it to Core for backward compatibility during refactor
+import * as _LegacyValues from "../../core/src/index.ts";
+import { runTechnicalWriter } from "./runners.ts";
 
 export const Core = _CoreValues;
 export const Legacy = _LegacyValues;

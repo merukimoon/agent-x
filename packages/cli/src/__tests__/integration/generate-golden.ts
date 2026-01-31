@@ -17,17 +17,17 @@ const goldenDir = path.join(__dirname, "golden");
 
 /** @type {{ name: string; args: string[]; mutation?: { type: "setStatus"; stepId: string; status: string; attempt?: number } }[]} */
 const commands = [
-  { name: "help", args: ["scripts/agentic.js", "--help"] },
-  { name: "validate", args: ["scripts/agentic.js", "validate", "--run", "test-run"] },
-  { name: "status", args: ["scripts/agentic.js", "status", "--run", "test-run"] },
-  { name: "agent-coordinator", args: ["scripts/agentic.js", "agent", "coordinator", "--run", "test-run", "--dry-run"] },
-  { name: "flow", args: ["scripts/agentic.js", "flow", "--run", "test-run", "--dry-run"] },
+  { name: "help", args: ["packages/cli/src/bin/agentic.ts", "--help"] },
+  { name: "validate", args: ["packages/cli/src/bin/agentic.ts", "validate", "--run", "test-run"] },
+  { name: "status", args: ["packages/cli/src/bin/agentic.ts", "status", "--run", "test-run"] },
+  { name: "agent-coordinator", args: ["packages/cli/src/bin/agentic.ts", "agent", "coordinator", "--run", "test-run", "--dry-run"] },
+  { name: "flow", args: ["packages/cli/src/bin/agentic.ts", "flow", "--run", "test-run", "--dry-run"] },
   {
     name: "retry",
-    args: ["scripts/agentic.js", "retry", "--run", "test-run", "--step", "step-2"],
+    args: ["packages/cli/src/bin/agentic.ts", "retry", "--run", "test-run", "--step", "step-2"],
     mutation: { type: "setStatus", stepId: "step-2", status: "failed", attempt: 0 },
   },
-  { name: "skip", args: ["scripts/agentic.js", "skip", "--run", "test-run", "--step", "step-1"] },
+  { name: "skip", args: ["packages/cli/src/bin/agentic.ts", "skip", "--run", "test-run", "--step", "step-1"] },
 ];
 
 function ensureDirs() {
@@ -52,7 +52,7 @@ function main() {
     copyDir(fixtureDir, tmp);
     const runDir = path.join(tmp, "runs", "test-run");
     applyMutation(runDir, entry.mutation);
-    const result = runCli({ cwd: tmp, args: entry.args });
+    const result = runCli({ cwd: tmp, args: entry.args, useTsx: true });
     const stdout = normalizeOutput(result.stdout, { cwd: tmp });
     const stderr = normalizeOutput(result.stderr, { cwd: tmp });
     writeGolden(entry.name, stdout, stderr, result.code);

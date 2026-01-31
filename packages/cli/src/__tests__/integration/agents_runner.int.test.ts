@@ -1,12 +1,12 @@
 import { describe, expect, it, vi, beforeEach, type Mock } from "vitest";
 import path from "path";
 import fs from "fs";
-import { requireExecutableRole } from "../../../../../scripts/agentic/roles_registry.ts";
+import { requireExecutableRole } from "../../../../core/src/registry.js";
 import { Legacy, Core, Runners } from "../../imports.ts";
 import * as agents from "../../agents.ts";
 
 vi.mock("fs");
-vi.mock("../../../../../scripts/agentic/roles_registry.ts");
+vi.mock("../../../../core/src/registry.js");
 
 // Explicit mock for step_persistence
 vi.mock("../../step_persistence.ts", () => ({
@@ -23,7 +23,7 @@ vi.mock("../../gating_runtime.ts", () => ({
     readOverride: vi.fn().mockReturnValue(null),
     evaluateStepGates: vi.fn().mockReturnValue({ gate_status: "pass", hard_failed_ids: [], soft_failed_ids: [], notes: [] }),
 }));
-vi.mock("../../../../../scripts/agentic/runners.ts");
+vi.mock("../../runners.ts");
 
 vi.mock("../../imports.ts", () => {
     const path = require("path");

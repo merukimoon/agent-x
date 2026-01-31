@@ -6,9 +6,9 @@
  * shared across the framework (CLI, Agents, Tools).
  */
 
-// Implementation is currently hosted in scripts/agentic/core.ts
+// Implementation is now hosted locally in packages/core/src
 // We re-export only the stable public surface.
-import * as Impl from "../../../scripts/agentic/core";
+import * as Impl from "./types.js";
 
 // --- Types ---
 export type {
@@ -25,7 +25,7 @@ export type {
     RulePack,
     Plan,
     ValidationResult
-} from "../../../scripts/agentic/core";
+} from "./types.js";
 
 export type {
     StepResult,
@@ -54,25 +54,45 @@ export {
     getStepResultPath,
     getDecisionPath,
     getStepsIndexPath,
-} from "./paths/steps";
+} from "./paths/steps.js";
 
 export type {
     StepsIndex,
     StepsIndexEntry,
-} from "./paths/steps";
+} from "./paths/steps.js";
 
 export type {
     GatingPolicy,
     Strictness,
     GateOutcome,
-} from "./policy/gating";
+} from "./policy/gating.js";
 
 export {
     resolveStrictness,
     evaluateGates,
-} from "./policy/gating";
+} from "./policy/gating.js";
 
-export * from "./policy/orchestrator";
+export * from "./policy/orchestrator.js";
+
+// --- Registry ---
+export {
+    loadRolesRegistry,
+    requireExecutableRole,
+} from "./registry.js";
+
+export type {
+    RoleEntry,
+    RoleRegistry,
+} from "./registry.js";
+
+// --- Utilities (Migrated from scripts/agentic) ---
+export * from "./errors.js";
+export * from "./fs.js";
+export * from "./lock.js";
+export * from "./rules.js";
+export * from "./plan.js";
+export * from "./llm/config.js";
+export * from "./llm/planner.js";
 
 // --- Internal/Legacy (Exposed but use with caution) ---
 export const RULES_DIR = Impl.RULES_DIR;

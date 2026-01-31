@@ -1,5 +1,3 @@
-// @ts-check
-
 import fs from "fs";
 import path from "path";
 import {
@@ -7,19 +5,23 @@ import {
   isAgentName,
   isStepStatus,
   getCanonicalOutputs,
-} from "./core";
-import { fail } from "./errors";
-import { writeJsonFile } from "./fs";
-import { loadRolesRegistry } from "./roles_registry";
-// import { getCanonicalOutputs } from "./agents"; // Moved to core
+  RunId,
+  Plan,
+  PlanStep,
+  StepStatus,
+  AgentName
+} from "./types.js";
+import { fail } from "./errors.js";
+import { writeJsonFile } from "./fs.js";
+import { loadRolesRegistry } from "./registry.js";
 
 /**
  * Validate a parsed plan object and return it if valid.
  * @param {unknown} candidate
- * @param {import("./core.ts").RunId} expectedRunId
- * @returns {import("./core.ts").Plan}
+ * @param {RunId} expectedRunId
+ * @returns {Plan}
  */
-export function validatePlan(candidate, expectedRunId) {
+export function validatePlan(candidate: unknown, expectedRunId: RunId): Plan {
   const { plan, schemaErrors } = gatherPlanSchemaErrors(candidate, expectedRunId);
   if (schemaErrors.length > 0) {
     fail(schemaErrors[0]);
@@ -30,25 +32,24 @@ export function validatePlan(candidate, expectedRunId) {
 /**
  * Gather schema and invariant errors without throwing.
  * @param {unknown} candidate
- * @param {import("./core.ts").RunId} expectedRunId
- * @returns {{ plan: import("./core.ts").Plan; schemaErrors: string[] }}
+ * @param {RunId} expectedRunId
+ * @returns {{ plan: Plan; schemaErrors: string[] }}
  */
-export function gatherPlanSchemaErrors(candidate, expectedRunId) {
-  const plan = /** @type {Partial<import("./core.ts").Plan>} */ (candidate);
-  /** @type {string[]} */
-  const errors = [];
+export function gatherPlanSchemaErrors(candidate: unknown, expectedRunId: RunId): { plan: Plan; schemaErrors: string[] } {
+  const plan = candidate as Plan;
+  const errors: string[] = [];
   let registry;
   try {
     registry = loadRolesRegistry();
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     errors.push(`roles registry error: ${reason}`);
-    return { plan: /** @type {import("./core.ts").Plan} */ (plan), schemaErrors: errors };
+    return { plan, schemaErrors: errors };
   }
 
   if (!candidate || typeof candidate !== "object") {
     errors.push("plan.json is invalid: expected an object.");
-    return { plan: /** @type {import("./core.ts").Plan} */ (plan), schemaErrors: errors };
+    return { plan, schemaErrors: errors };
   }
 
   if (!plan.run_id || plan.run_id !== expectedRunId) {
@@ -95,10 +96,9 @@ export function gatherPlanSchemaErrors(candidate, expectedRunId) {
     errors.push("plan.json signals empty but confidence is not low.");
   }
 
-  /** @type {Set<string>} */
-  const stepIds = new Set();
+  const stepIds = new Set<string>();
 
-  plan.steps?.forEach((step, index) => {
+  plan.steps?.forEach((step: PlanStep, index: number) => {
     if (!step || typeof step !== "object") {
       errors.push(`plan.json step at index ${index} is invalid.`);
       return;
@@ -125,7 +125,7 @@ export function gatherPlanSchemaErrors(candidate, expectedRunId) {
     if (!Array.isArray(step.depends_on)) {
       errors.push(`plan.json step ${step.id ?? index} depends_on must be an array.`);
     } else {
-      step.depends_on.forEach((dep) => {
+      step.depends_on.forEach((dep: string) => {
         if (typeof dep !== "string") {
           errors.push(
             `plan.json step ${step.id ?? index} has invalid dependency: ${String(
@@ -167,7 +167,7 @@ export function gatherPlanSchemaErrors(candidate, expectedRunId) {
       }
       if (
         !Array.isArray(step.inputs.prior_outputs) ||
-        step.inputs.prior_outputs.some((p) => typeof p !== "string")
+        step.inputs.prior_outputs.some((p: unknown) => typeof p !== "string")
       ) {
         errors.push(
           `plan.json step ${step.id ?? index} inputs.prior_outputs must be strings.`
@@ -231,17 +231,22 @@ export function gatherPlanSchemaErrors(candidate, expectedRunId) {
     }
   });
 
-  return { plan: /** @type {import("./core.ts").Plan} */ (plan), schemaErrors: errors };
+  return { plan, schemaErrors: errors };
 }
 
 /**
  * Perform validation and classify errors.
- * @param {import("./core.ts").RunId} runId
+ * @param {RunId} runId
  * @param {string} runDir
  * @param {string} planPath
- * @returns {{ plan: import("./core.ts").Plan | null; schemaErrors: string[]; missingPaths: string[]; planLoadError: string | null }}
+ * @returns {{ plan: Plan | null; schemaErrors: string[]; missingPaths: string[]; planLoadError: string | null }}
  */
-export function runValidationChecks(runId, runDir, planPath) {
+export function runValidationChecks(runId: RunId, runDir: string, planPath: string): {
+  plan: Plan | null;
+  schemaErrors: string[];
+  missingPaths: string[];
+  planLoadError: string | null;
+} {
   if (!fs.existsSync(planPath) || !fs.statSync(planPath).isFile()) {
     return {
       plan: null,
@@ -251,7 +256,7 @@ export function runValidationChecks(runId, runDir, planPath) {
     };
   }
 
-  let parsed;
+  let parsed: unknown;
   try {
     const raw = fs.readFileSync(planPath, "utf8");
     parsed = JSON.parse(raw);
@@ -276,13 +281,12 @@ export function runValidationChecks(runId, runDir, planPath) {
 
 /**
  * Validate plan references against the filesystem and layout.
- * @param {import("./core.ts").Plan} plan
+ * @param {Plan} plan
  * @param {string} runDir
  * @returns {string[]} List of validation errors.
  */
-export function validatePlanFiles(plan, runDir) {
-  /** @type {string[]} */
-  const errors = [];
+export function validatePlanFiles(plan: Plan, runDir: string): string[] {
+  const errors: string[] = [];
   const requestPath = path.join(runDir, "inputs", "request.md");
   const contextPath = path.join(runDir, "inputs", "context.md");
 
@@ -293,8 +297,7 @@ export function validatePlanFiles(plan, runDir) {
     errors.push(`Missing input: ${contextPath}`);
   }
 
-  /** @type {Map<import("./core.ts").AgentName, import("./core.ts").StepStatus>} */
-  const statusByAgent = new Map();
+  const statusByAgent = new Map<AgentName, StepStatus>();
   plan.steps.forEach((step) => {
     statusByAgent.set(step.agent, step.status);
   });
@@ -303,10 +306,10 @@ export function validatePlanFiles(plan, runDir) {
    * Determine whether dependency outputs must exist now.
    * - Coordinator dependencies are always required.
    * - Other agents are required when their status is not pending.
-   * @param {import("./core.ts").AgentName} agent
+   * @param {AgentName} agent
    * @returns {boolean}
    */
-  const mustRequireDependency = (agent) => {
+  const mustRequireDependency = (agent: AgentName): boolean => {
     if (agent === "coordinator") {
       return true;
     }
@@ -318,11 +321,11 @@ export function validatePlanFiles(plan, runDir) {
   };
 
   plan.steps.forEach((step) => {
-    step.inputs.prior_outputs.forEach((relPath) => {
+    step.inputs.prior_outputs.forEach((relPath: string) => {
       const fullPath = path.join(runDir, relPath);
       const match = relPath.match(/^outputs\/([^/]+)\/(result\.json|notes\.md)$/);
       const depAgent =
-        match && isAgentName(match[1]) ? /** @type {import("./core.ts").AgentName} */ (match[1]) : null;
+        match && isAgentName(match[1]) ? (match[1] as AgentName) : null;
       const requireNow = depAgent ? mustRequireDependency(depAgent) : true;
       if (requireNow) {
         if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
@@ -334,8 +337,8 @@ export function validatePlanFiles(plan, runDir) {
     });
 
     step.depends_on.forEach((dep) => {
-      const depResult = path.join(runDir, getCanonicalOutputs(dep).result);
-      const requireNow = mustRequireDependency(dep);
+      const depResult = path.join(runDir, getCanonicalOutputs(dep as AgentName).result); // Cast dep to AgentName
+      const requireNow = mustRequireDependency(dep as AgentName);
       if (requireNow) {
         if (!fs.existsSync(depResult) || !fs.statSync(depResult).isFile()) {
           errors.push(
@@ -352,10 +355,10 @@ export function validatePlanFiles(plan, runDir) {
 /**
  * Load plan.json from disk.
  * @param {string} planPath
- * @param {import("./core.ts").RunId} runId
- * @returns {import("./core.ts").Plan}
+ * @param {RunId} runId
+ * @returns {Plan}
  */
-export function loadPlan(planPath, runId) {
+export function loadPlan(planPath: string, runId: RunId): Plan {
   try {
     const raw = fs.readFileSync(planPath, "utf8");
     const parsed = JSON.parse(raw);
@@ -369,8 +372,8 @@ export function loadPlan(planPath, runId) {
 /**
 * Write the plan to disk.
 * @param {string} planPath
-* @param {import("./core.ts").Plan} plan
+* @param {Plan} plan
 */
-export function persistPlan(planPath, plan) {
+export function persistPlan(planPath: string, plan: Plan) {
   writeJsonFile(planPath, plan);
 }

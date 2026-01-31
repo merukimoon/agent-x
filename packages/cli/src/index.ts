@@ -51,7 +51,7 @@ function resolveVersion() {
   return process.env.AGENTIC_VERSION || "0.0.0";
 }
 const VERSION = resolveVersion();
-import { fail, handleFatalError, CLIError } from "../../../scripts/agentic/errors";
+import { fail, handleFatalError, CLIError } from "../../core/src/errors.js";
 
 type GlobalFlags = { json: boolean; quiet: boolean; help: boolean; version: boolean };
 

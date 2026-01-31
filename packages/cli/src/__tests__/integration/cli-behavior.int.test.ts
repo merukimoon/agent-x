@@ -151,7 +151,7 @@ function makeExecutionFailureRun() {
 
 describe("CLI help snapshots", () => {
   it("agentic --help includes description, commands, examples, exit codes", () => {
-    const result = runCli({ cwd: REPO_ROOT, args: ["scripts/agentic.ts", "--help"], useTsx: true });
+    const result = runCli({ cwd: REPO_ROOT, args: ["packages/cli/src/bin/agentic.ts", "--help"], useTsx: true });
     expect(result.code).toBe(0);
     const out = result.stdout || result.stderr;
     expect(out).toContain("ADX");
@@ -162,7 +162,7 @@ describe("CLI help snapshots", () => {
   });
 
   it("agentic run --help includes usage and exit codes", () => {
-    const result = runCli({ cwd: REPO_ROOT, args: ["scripts/agentic.ts", "run", "--help"], useTsx: true });
+    const result = runCli({ cwd: REPO_ROOT, args: ["packages/cli/src/bin/agentic.ts", "run", "--help"], useTsx: true });
     expect(result.code).toBe(0);
     const out = result.stdout || result.stderr;
     expect(out).toContain("agentic run");
@@ -178,7 +178,7 @@ describe("Exit code normalization", () => {
     makeValidRun(tmp, runId);
     const result = runCli({
       cwd: tmp,
-      args: ["scripts/agentic.ts", "run", "--run", runId, "--step", "nope", "--dry-run"],
+      args: ["packages/cli/src/bin/agentic.ts", "run", "--run", runId, "--step", "nope", "--dry-run"],
       useTsx: true,
     });
     expect(result.code).toBe(1);
@@ -191,7 +191,7 @@ describe("Exit code normalization", () => {
     fs.unlinkSync(path.join(runDir, "outputs", "pr-reviewer", "result.json"));
     const result = runCli({
       cwd: tmp,
-      args: ["scripts/agentic.ts", "verify", "--run", runId],
+      args: ["packages/cli/src/bin/agentic.ts", "verify", "--run", runId],
       useTsx: true,
     });
     expect(result.code).toBe(2);
@@ -201,7 +201,7 @@ describe("Exit code normalization", () => {
     const { tmp, runId } = makeExecutionFailureRun();
     const result = runCli({
       cwd: tmp,
-      args: ["scripts/agentic.ts", "run", "--run", runId, "--step", "step-a"],
+      args: ["packages/cli/src/bin/agentic.ts", "run", "--run", runId, "--step", "step-a"],
       useTsx: true,
     });
     expect(result.code).toBe(3);
@@ -215,7 +215,7 @@ describe("JSON output stability", () => {
     makeValidRun(tmp, runId);
     const result = runCli({
       cwd: tmp,
-      args: ["scripts/agentic.ts", "status", "--run", runId, "--json"],
+      args: ["packages/cli/src/bin/agentic.ts", "status", "--run", runId, "--json"],
       useTsx: true,
     });
     expect(result.code).toBe(0);
