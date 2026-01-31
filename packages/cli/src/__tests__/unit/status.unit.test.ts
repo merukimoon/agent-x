@@ -8,6 +8,8 @@ import {
   parseRunAndStepArgs,
   selectArtifactPath,
 } from "../../cli";
+import { isAllowedStatusTransition, applyStatusTransition } from "../../status";
+import { Legacy } from "../../imports";
 
 describe("CLI status helpers", () => {
   const basePlan = {
@@ -41,6 +43,32 @@ describe("CLI status helpers", () => {
     applyStatusTransitionWrapper(plan as any, "step-1", "running", "/tmp/plan.json", mutator);
     expect(plan.steps[0].status).toBe("running");
     expect(mutator).toHaveBeenCalledWith(plan.steps[0]);
+  });
+
+  it.each([
+    { from: "pending", to: "pending", allowed: true },
+    { from: "pending", to: "running", allowed: true },
+    { from: "pending", to: "done", allowed: false },
+    { from: "unknown" as any, to: "pending", allowed: false },
+  ])("isAllowedStatusTransition %#", ({ from, to, allowed }) => {
+    expect(isAllowedStatusTransition(from, to)).toBe(allowed);
+  });
+
+  it("fails when step is missing", () => {
+    const failSpy = vi.spyOn(Legacy, "fail").mockImplementation(() => {
+      throw new Error("missing");
+    });
+    expect(() => applyStatusTransition({ steps: [] } as any, "nope", "running", "/tmp/plan.json", vi.fn())).toThrow(/Step nope not found/);
+    failSpy.mockRestore();
+  });
+
+  it("fails on invalid transition without mutator", () => {
+    const plan = { steps: [{ id: "step-1", status: "done" }] } as any;
+    const failSpy = vi.spyOn(Legacy, "fail").mockImplementation(() => {
+      throw new Error("invalid");
+    });
+    expect(() => applyStatusTransition(plan, "step-1", "running", "/tmp/plan.json", vi.fn())).toThrow(/Invalid status transition/);
+    failSpy.mockRestore();
   });
 
   it("parses run arguments", () => {

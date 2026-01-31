@@ -38,6 +38,31 @@ describe("status render helpers", () => {
     expect(rendered).toContain("Blocked step: step-0");
     expect(rendered).toContain("- inputs/context.md");
   });
+
+  it("renders unlocked success without blocked details", () => {
+    const view: NormalizedStatus = {
+      run_id: "run-234",
+      overall: "finished_success",
+      artifacts_valid: true,
+      errors: [],
+      steps: [
+        { step_index: 0, step_id: "s0", agent_name: "a", status: "done", decision_action: "continue", model: "m", duration_ms: 1 },
+      ],
+      current_state: {
+        is_blocked: false,
+        blocked_reason: null,
+        blocked_step_id: null,
+        next_action: "none",
+        required_inputs: [],
+        paths: [],
+      },
+    };
+    const rendered = renderStatusView(view, null);
+    expect(rendered).toContain("Artifacts: VALID");
+    expect(rendered).toContain("UNBLOCKED");
+    expect(rendered).not.toContain("Errors:");
+    expect(rendered).not.toContain("Blocked step");
+  });
 });
 
 describe("status_view helpers", () => {
