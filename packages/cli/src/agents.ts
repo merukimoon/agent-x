@@ -25,6 +25,28 @@ export const {
   validateCanonicalOutputs
 } = Core;
 
+export type AgentsDeps = {
+  fs: {
+    existsSync: typeof fs.existsSync;
+    statSync: typeof fs.statSync;
+    readFileSync: typeof fs.readFileSync;
+    mkdirSync: typeof fs.mkdirSync;
+  };
+  env: NodeJS.ProcessEnv;
+  cwd: () => string;
+};
+
+export const defaultAgentsDeps: AgentsDeps = {
+  fs: {
+    existsSync: (p) => fs.existsSync(p),
+    statSync: (p) => fs.statSync(p),
+    readFileSync: (p, enc) => fs.readFileSync(p, enc),
+    mkdirSync: (p, opts) => fs.mkdirSync(p, opts as any),
+  },
+  env: process.env,
+  cwd: () => process.cwd(),
+};
+
 const ALLOWED_SKIP_REASON_CODES: SkipReasonCode[] = ["dry_run", "not_applicable", "precondition_unmet", "policy_disabled"];
 
 export function normalizeStatusLocal(raw: string | undefined | null) {
@@ -53,15 +75,23 @@ export function deriveSkipReason(params: { step: PlanStep; mode: ExecutionMode }
   return buildSkipReason(code, message);
 }
 
-export function ensureSkippedArtifactsForPlan(runId: string, plan: Plan, mode: ExecutionMode) {
+export function ensureSkippedArtifactsForPlan(runId: string, plan: Plan, mode: ExecutionMode, deps: Partial<AgentsDeps> = {}) {
+  const resolved = {
+    ...defaultAgentsDeps,
+    ...deps,
+    fs: { ...defaultAgentsDeps.fs, ...(deps.fs ?? {}) },
+    env: deps.env ?? defaultAgentsDeps.env,
+    cwd: deps.cwd ?? defaultAgentsDeps.cwd,
+  } satisfies AgentsDeps;
+
   plan.steps.forEach((step, idx) => {
     if (normalizeStatusLocal(step.status) !== "skipped") return;
-    const outputsDir = path.join(process.cwd(), "runs", runId, "outputs", step.agent);
+    const outputsDir = path.join(resolved.cwd(), "runs", runId, "outputs", step.agent);
     let reason = deriveSkipReason({ step, mode });
     const statusPath = path.join(outputsDir, "status.json");
-    if (fs.existsSync(statusPath)) {
+    if (resolved.fs.existsSync(statusPath)) {
       try {
-        const parsed = JSON.parse(fs.readFileSync(statusPath, "utf8"));
+        const parsed = JSON.parse(resolved.fs.readFileSync(statusPath, "utf8"));
         if (parsed?.reason?.code && parsed?.reason?.message && ALLOWED_SKIP_REASON_CODES.includes(parsed.reason.code)) {
           const derived = buildSkipReason(parsed.reason.code, parsed.reason.message);
           reason = {
@@ -100,16 +130,21 @@ export function normalizeDepends(depList: string[], agentToId: Record<string, st
  * @param {string} runDir
  * @returns {{ ok: boolean; message: string | null }}
  */
-export function readDependencyStatus(agent, runDir) {
+export function readDependencyStatus(agent, runDir, deps: Partial<AgentsDeps> = {}) {
+  const resolved = {
+    ...defaultAgentsDeps,
+    ...deps,
+    fs: { ...defaultAgentsDeps.fs, ...(deps.fs ?? {}) },
+  } satisfies AgentsDeps;
   const depResult = path.join(runDir, "outputs", agent, "result.json");
-  if (!fs.existsSync(depResult) || !fs.statSync(depResult).isFile()) {
+  if (!resolved.fs.existsSync(depResult) || !resolved.fs.statSync(depResult).isFile()) {
     return {
       ok: false,
       message: `Dependency result missing for ${agent}: ${depResult}`,
     };
   }
   try {
-    const raw = fs.readFileSync(depResult, "utf8");
+    const raw = resolved.fs.readFileSync(depResult, "utf8");
     const parsed = JSON.parse(raw);
     const status = parsed?.status;
     if (status !== "done") {
@@ -133,10 +168,10 @@ export function readDependencyStatus(agent, runDir) {
  * @param {string} runDir
  * @returns {{ ready: boolean; blocking: string | null }}
  */
-export function checkDependenciesSatisfied(step, runDir, idToAgent) {
+export function checkDependenciesSatisfied(step, runDir, idToAgent, deps: Partial<AgentsDeps> = {}) {
   for (const dep of step.depends_on) {
     const agent = idToAgent?.[dep] ?? dep;
-    const status = readDependencyStatus(agent, runDir);
+    const status = readDependencyStatus(agent, runDir, deps);
     if (!status.ok) {
       return { ready: false, blocking: status.message ?? `Dependency ${agent} not ready.` };
     }
@@ -149,8 +184,8 @@ export function checkDependenciesSatisfied(step, runDir, idToAgent) {
  * @param {PlanStep} step
  * @param {string} runDir
  */
-export function ensureDependencies(step, runDir, idToAgent) {
-  const depsStatus = checkDependenciesSatisfied(step, runDir, idToAgent);
+export function ensureDependencies(step, runDir, idToAgent, deps: Partial<AgentsDeps> = {}) {
+  const depsStatus = checkDependenciesSatisfied(step, runDir, idToAgent, deps);
   if (!depsStatus.ready) {
     throw new Error(`Dependencies not satisfied for ${step.id}: ${depsStatus.blocking ?? ""}`.trim());
   }
@@ -165,11 +200,18 @@ export function ensureDependencies(step, runDir, idToAgent) {
  * @param {string | null} [contextOverridePath]
  * @returns {AgentResult}
  */
-export function runAgent(agentName, runId, mode, contextOverridePath = null) {
-  const runDir = path.join(process.cwd(), "runs", runId);
+export function runAgent(agentName, runId, mode, contextOverridePath = null, deps: Partial<AgentsDeps> = {}) {
+  const resolved = {
+    ...defaultAgentsDeps,
+    ...deps,
+    fs: { ...defaultAgentsDeps.fs, ...(deps.fs ?? {}) },
+    env: deps.env ?? defaultAgentsDeps.env,
+    cwd: deps.cwd ?? defaultAgentsDeps.cwd,
+  } satisfies AgentsDeps;
+  const runDir = path.join(resolved.cwd(), "runs", runId);
   Legacy.ensureRunAndInputs(runDir);
   const registryEntry = requireExecutableRole(agentName);
-  const { stepId, stepIndex, priorOutputs, pipelineId } = resolveStepMeta(runDir, agentName);
+  const { stepId, stepIndex, priorOutputs, pipelineId } = resolveStepMeta(runDir, agentName, resolved);
   const startedAt = new Date();
   const modelRef: ModelRef = {
     provider: registryEntry.runner,
@@ -228,9 +270,9 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   let targetInfo: any = null;
   if (agentName === "planner") {
     const targetPath = path.join(runDir, "planner_llm_target.json");
-    if (fs.existsSync(targetPath)) {
+    if (resolved.fs.existsSync(targetPath)) {
       try {
-        targetInfo = JSON.parse(fs.readFileSync(targetPath, "utf8"));
+        targetInfo = JSON.parse(resolved.fs.readFileSync(targetPath, "utf8"));
       } catch {
         targetInfo = null;
       }
@@ -244,7 +286,7 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   }
 
   const outputsDir = path.join(runDir, "outputs", agentName);
-  fs.mkdirSync(outputsDir, { recursive: true });
+  resolved.fs.mkdirSync(outputsDir, { recursive: true });
 
   const resultPath = path.join(outputsDir, "result.json");
   /** @type {AgentStatus} */
@@ -469,7 +511,7 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null) {
   const gatingPolicy = loadGatingPolicy();
   const strictness = determineStrictness(gatingPolicy, { pipeline_id: pipelineId, agent_name: agentName, step_id: stepId });
   const gateOutcome = evaluateStepGates(finalStepResult, strictness);
-  const missingInputs = detectMissingInputs(runDir, finalStepResult.inputs);
+  const missingInputs = detectMissingInputs(runDir, finalStepResult.inputs, resolved);
   if (agentName === "human_gate" && gateOverrideMissing) {
     missingInputs.push(path.join("outputs", agentName, "override.json"));
   }
@@ -576,15 +618,20 @@ export function mapAgentStatusToExecutionStatus(status: AgentStatus): ExecutionS
   return "ok";
 }
 
-export function resolveStepMeta(runDir: string, agentName: AgentName) {
+export function resolveStepMeta(runDir: string, agentName: AgentName, deps: Partial<AgentsDeps> = {}) {
+  const resolved = {
+    ...defaultAgentsDeps,
+    ...deps,
+    fs: { ...defaultAgentsDeps.fs, ...(deps.fs ?? {}) },
+  } satisfies AgentsDeps;
   const planPath = path.join(runDir, "plan.json");
   let stepId: string = agentName;
   let stepIndex = 0;
   let priorOutputs: string[] = [];
   let pipelineId: string | null = null;
-  if (fs.existsSync(planPath) && fs.statSync(planPath).isFile()) {
+  if (resolved.fs.existsSync(planPath) && resolved.fs.statSync(planPath).isFile()) {
     try {
-      const raw = fs.readFileSync(planPath, "utf8");
+      const raw = resolved.fs.readFileSync(planPath, "utf8");
       const parsed = JSON.parse(raw) as { steps?: Array<{ id: string; agent: string; inputs?: { prior_outputs?: string[] } }>; flow_type?: string };
       pipelineId = parsed?.flow_type ?? null;
       const steps = parsed?.steps ?? [];
@@ -601,7 +648,13 @@ export function resolveStepMeta(runDir: string, agentName: AgentName) {
   return { stepId, stepIndex, priorOutputs, pipelineId };
 }
 
-export function detectMissingInputs(runDir: string, inputs: StepResult["inputs"]) {
+export function detectMissingInputs(runDir: string, inputs: StepResult["inputs"], deps: Partial<AgentsDeps> = {}) {
+  const resolved = {
+    ...defaultAgentsDeps,
+    ...deps,
+    fs: { ...defaultAgentsDeps.fs, ...(deps.fs ?? {}) },
+    env: deps.env ?? defaultAgentsDeps.env,
+  } satisfies AgentsDeps;
   const missing: string[] = [];
   const refs = [
     inputs.context_ref,
@@ -610,11 +663,11 @@ export function detectMissingInputs(runDir: string, inputs: StepResult["inputs"]
   ];
   refs.forEach((rel) => {
     const full = path.join(runDir, rel);
-    if (!fs.existsSync(full) || !fs.statSync(full).isFile()) {
+    if (!resolved.fs.existsSync(full) || !resolved.fs.statSync(full).isFile()) {
       missing.push(rel);
     }
   });
-  const forcedMissing = process.env.FORCE_MISSING_INPUTS;
+  const forcedMissing = resolved.env.FORCE_MISSING_INPUTS;
   if (forcedMissing) {
     forcedMissing.split(",").map((s) => s.trim()).filter(Boolean).forEach((item) => missing.push(item));
   }
