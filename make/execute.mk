@@ -10,8 +10,8 @@ $(call register_target,e2e-plan-flow,VERIFY,Run planner with fresh inputs and fu
 
 .PHONY: verify-flow
 verify-flow:
-	@echo "Running verify-flow..."
-	node --import tsx scripts/smoke/verify-flow.ts
+	@echo "Running verify-flow (E2E tests)..."
+	$(PNPM) run test:e2e
 
 .PHONY: orchestrator-validate
 orchestrator-validate:

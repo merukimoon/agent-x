@@ -332,7 +332,7 @@ export function parseRunAndStepArgs(args) {
  * Execute the "agent" command.
  * @param {string[]} args
  */
-export function handleAgentCommand(args) {
+export async function handleAgentCommand(args) {
   if (args.length === 0 || (args[0]?.startsWith("-") ?? false)) {
     fail('Agent name is required as the first argument after "agent".', {
       showUsage: true,
@@ -360,7 +360,7 @@ export function handleAgentCommand(args) {
   const runId = parsed.runId;
   const mode = parsed.dryRun ? "dry-run" : "live";
 
-  runAgent(agentCandidate, runId, mode, parsed.contextPath);
+  await runAgent(agentCandidate, runId, mode, parsed.contextPath);
 }
 
 function readRunJson(runDir) {
@@ -706,7 +706,7 @@ export function verifyRun(runDir) {
  * @param {ExecutionMode} mode
  * @param {ExecutionScope} [scope]
  */
-export function runFlow(runId, mode, scope: ExecutionScope = { kind: "full" }) {
+export async function runFlow(runId, mode, scope: ExecutionScope = { kind: "full" }) {
   const runDir = path.join(process.cwd(), "runs", runId);
   if (!fs.existsSync(runDir) || !fs.statSync(runDir).isDirectory()) {
     fail(`Run directory not found: ${runDir}`, { exitCode: 1 });
@@ -745,7 +745,7 @@ export function runFlow(runId, mode, scope: ExecutionScope = { kind: "full" }) {
 
     if (!fs.existsSync(planPath)) {
       console.log("plan.json not found; running coordinator to generate plan.");
-      runAgent("coordinator", runId, mode);
+      await runAgent("coordinator", runId, mode);
     }
 
     let validation = runValidationChecks(runId, runDir, planPath);
@@ -788,7 +788,7 @@ export function runFlow(runId, mode, scope: ExecutionScope = { kind: "full" }) {
 
     const idToAgent = Object.fromEntries(plan.steps.map((s) => [s.id, s.agent]));
     const stepsToRun = computeExecutionSteps(plan, scope);
-    stepsToRun.forEach((step) => {
+    for (const step of stepsToRun) {
       if (step.status === "failed") {
         fail(
           `Cannot continue: step ${step.id} is already failed. Update plan.json before rerunning flow.`
@@ -800,7 +800,7 @@ export function runFlow(runId, mode, scope: ExecutionScope = { kind: "full" }) {
         );
       }
       if (step.status === "done" || step.status === "skipped") {
-        return;
+        continue;
       }
 
       if (step.attempt > step.max_attempts) {
@@ -823,7 +823,7 @@ export function runFlow(runId, mode, scope: ExecutionScope = { kind: "full" }) {
       plan = loadPlan(planPathFinal, runId);
 
       try {
-        runAgent(step.agent, runId, mode);
+        await runAgent(step.agent, runId, mode);
         const effectiveDecisionPath = path.join(runDir, "steps", step.id, "effective_decision.json");
         const effectiveDecision = readJson<{ decision?: { action?: string; reason?: string } }>(effectiveDecisionPath);
         const gateActions = new Set(["require_human", "request_clarification", "requires_human"]);
@@ -868,7 +868,7 @@ export function runFlow(runId, mode, scope: ExecutionScope = { kind: "full" }) {
         );
         throw error;
       }
-    });
+    }
 
     planForSummary = plan;
     const summary = plan.steps
@@ -908,7 +908,7 @@ export function runFlow(runId, mode, scope: ExecutionScope = { kind: "full" }) {
  * Execute the "flow" command.
  * @param {string[]} args
  */
-export function handleFlowCommand(args) {
+export async function handleFlowCommand(args) {
   const parsed = parseRunArgs(args);
   if (parsed.remainder.length > 0) {
     fail(`Unknown arguments: ${parsed.remainder.join(" ")}`, { showUsage: true });
@@ -927,7 +927,7 @@ export function handleFlowCommand(args) {
   } else if (parsed.untilStepId) {
     scope = { kind: "until", stepId: parsed.untilStepId };
   }
-  runFlow(parsed.runId, mode, scope);
+  await runFlow(parsed.runId, mode, scope);
 }
 
 /**

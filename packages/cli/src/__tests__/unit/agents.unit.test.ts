@@ -156,6 +156,7 @@ describe("agents runAgent scenarios", () => {
       env: {},
       cwd: () => "/workspace",
     };
+    files["/workspace/prompts/planner.md"] = "prompt template";
     return { deps, files };
   };
 
@@ -170,6 +171,11 @@ describe("agents runAgent scenarios", () => {
     vi.spyOn(Legacy, "writeFileAtomic").mockImplementation(() => { });
     vi.spyOn(Legacy, "writeJsonFile").mockImplementation(() => { });
     vi.spyOn(Legacy, "readFileText").mockReturnValue("text");
+    vi.spyOn(Legacy, "generatePlanFromLLM").mockResolvedValue({
+      rawText: JSON.stringify({ flow_type: "ft", steps: [] }),
+      target: { provider: "mock", model: "mock" }
+    } as any);
+    vi.spyOn(Legacy, "validatePlannerOutput").mockReturnValue({ valid: true, errors: [], warnings: [], parsed: { flow_type: "ft", steps: [] } } as any);
     vi.spyOn(Legacy, "classifyFlow").mockReturnValue({
       signals: ["keyword:sec"],
       confidence: 1,
@@ -190,13 +196,17 @@ describe("agents runAgent scenarios", () => {
     vi.restoreAllMocks();
   });
 
-  it("runs planner happy path with injected deps", () => {
+  it("runs planner happy path with injected deps", async () => {
     const { deps, files } = makeDeps({
       "/workspace/runs/run-1/inputs/request.md": "req",
       "/workspace/runs/run-1/inputs/context.md": "ctx",
     });
     files["/workspace/runs/run-1/planner_llm_target.json"] = JSON.stringify({ provider: "p", model: "m" });
-    const result = agents.runAgent("planner", "run-1", "dry-run", null, deps);
+    vi.spyOn(Legacy, "generatePlanFromLLM").mockResolvedValue({
+      rawText: JSON.stringify({ flow_type: "ft", steps: [] }),
+      target: { provider: "p", model: "m" }
+    } as any);
+    const result = await agents.runAgent("planner", "run-1", "dry-run", null, deps);
     expect(result.status).toBe("done");
     expect(stepPersistence.writeStepResult).toHaveBeenCalled();
     expect(stepPersistence.writeDecision).toHaveBeenCalled();
@@ -206,37 +216,37 @@ describe("agents runAgent scenarios", () => {
     expect(writeCalls.some((p) => p.endsWith("outputs/planner/result.json"))).toBe(true);
   });
 
-  it("requests clarification when inputs are missing", () => {
+  it("requests clarification when inputs are missing", async () => {
     const { deps } = makeDeps({
       "/workspace/runs/run-1/inputs/request.md": "req",
     });
     const decisionSpy = vi.spyOn(stepPersistence, "writeDecision");
-    agents.runAgent("planner", "run-1", "dry-run", null, deps);
+    await agents.runAgent("planner", "run-1", "dry-run", null, deps);
     const decisionPayload = decisionSpy.mock.calls[0][2] ?? decisionSpy.mock.calls[0][1];
     expect(JSON.stringify(decisionPayload)).toContain("missing inputs");
   });
 
-  it("switches summaries between dry-run and live", () => {
+  it("switches summaries between dry-run and live", async () => {
     const { deps } = makeDeps({
       "/workspace/runs/run-1/inputs/request.md": "req",
       "/workspace/runs/run-1/inputs/context.md": "ctx",
     });
-    const dry = agents.runAgent("planner", "run-1", "dry-run", null, deps);
-    const live = agents.runAgent("planner", "run-1", "live", null, deps);
+    const dry = await agents.runAgent("planner", "run-1", "dry-run", null, deps);
+    const live = await agents.runAgent("planner", "run-1", "live", null, deps);
     expect(dry.summary?.toLowerCase()).toContain("dry run");
-    expect(live.summary?.toLowerCase()).toContain("run complete");
+    expect(live.summary?.toLowerCase()).toContain("plan generated");
   });
 
-  it("handles plan metadata parse failures gracefully", () => {
+  it("handles plan metadata parse failures gracefully", async () => {
     const { deps } = makeDeps({
       "/workspace/runs/run-1/plan.json": "not-json",
       "/workspace/runs/run-1/inputs/request.md": "req",
       "/workspace/runs/run-1/inputs/context.md": "ctx",
     });
-    expect(() => agents.runAgent("planner", "run-1", "dry-run", null, deps)).not.toThrow();
+    await expect(agents.runAgent("planner", "run-1", "dry-run", null, deps)).resolves.not.toThrow();
   });
 
-  it("builds coordinator plan with matched signals and skips disabled steps", () => {
+  it("builds coordinator plan with matched signals and skips disabled steps", async () => {
     vi.spyOn(Legacy, "classifyFlow").mockReturnValue({
       signals: ["keyword:block"],
       confidence: 0.5,
@@ -252,7 +262,7 @@ describe("agents runAgent scenarios", () => {
       "/workspace/runs/run-1/inputs/request.md": "req",
       "/workspace/runs/run-1/inputs/context.md": "ctx",
     });
-    const result = agents.runAgent("coordinator", "run-1", "dry-run", null, deps);
+    const result = await agents.runAgent("coordinator", "run-1", "dry-run", null, deps);
     expect(result.status).toBe("done");
     const writeCall = (Legacy.writeJsonFile as any as Mock).mock.calls.find((c: any[]) => normalize(c[0]).endsWith("plan.json"));
     expect(writeCall).toBeTruthy();
@@ -260,40 +270,44 @@ describe("agents runAgent scenarios", () => {
     expect(plan?.steps?.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("marks human_gate blocked when override missing", () => {
+  it("marks human_gate blocked when override missing", async () => {
     const { deps } = makeDeps({
       "/workspace/runs/run-1/inputs/request.md": "req",
       "/workspace/runs/run-1/inputs/context.md": "ctx",
     });
     const decisionSpy = vi.spyOn(stepPersistence, "writeDecision");
-    const result = agents.runAgent("human_gate" as any, "run-1", "dry-run", null, deps);
+    const result = await agents.runAgent("human_gate" as any, "run-1", "dry-run", null, deps);
     expect(result.status).toBe("blocked");
     const decisionPayload = decisionSpy.mock.calls[0][2] ?? decisionSpy.mock.calls[0][1];
     expect(JSON.stringify(decisionPayload)).toContain("missing inputs");
   });
 
-  it("routes technical-writer through runner output", () => {
+  it("routes technical-writer through runner output", async () => {
     const { deps } = makeDeps({
       "/workspace/runs/run-1/inputs/request.md": "req",
       "/workspace/runs/run-1/inputs/context.md": "ctx",
     });
     const runner = vi.spyOn(Runners, "runTechnicalWriter").mockReturnValue({ status: "done", summary: "ok" } as any);
-    const result = agents.runAgent("technical-writer" as any, "run-1", "live", null, deps);
+    const result = await agents.runAgent("technical-writer" as any, "run-1", "live", null, deps);
     expect(result.status).toBe("done");
     expect(runner).toHaveBeenCalled();
   });
 
-  it("planner target file parse failure leaves defaults", () => {
+  it("planner target file parse failure leaves defaults", async () => {
     const { deps } = makeDeps({
       "/workspace/runs/run-1/planner_llm_target.json": "not-json",
       "/workspace/runs/run-1/inputs/request.md": "req",
       "/workspace/runs/run-1/inputs/context.md": "ctx",
     });
-    const result = agents.runAgent("planner", "run-1", "dry-run", null, deps);
+    vi.spyOn(Legacy, "generatePlanFromLLM").mockResolvedValue({
+      rawText: "{}",
+      target: undefined
+    } as any);
+    const result = await agents.runAgent("planner", "run-1", "dry-run", null, deps);
     expect(result.provider).toBeUndefined();
   });
 
-  it("builds rationale when signals empty", () => {
+  it("builds rationale when signals empty", async () => {
     vi.spyOn(Legacy, "classifyFlow").mockReturnValue({
       signals: [],
       confidence: 1,
@@ -303,7 +317,7 @@ describe("agents runAgent scenarios", () => {
       "/workspace/runs/run-1/inputs/request.md": "req",
       "/workspace/runs/run-1/inputs/context.md": "ctx",
     });
-    const result = agents.runAgent("coordinator", "run-1", "dry-run", null, deps);
+    const result = await agents.runAgent("coordinator", "run-1", "dry-run", null, deps);
     expect(result.summary?.toLowerCase()).toContain("run");
   });
 
@@ -331,7 +345,7 @@ describe("agents runAgent scenarios", () => {
     expect(res.ready).toBe(true);
   });
 
-  it("throws on unknown dependency mapping", () => {
+  it("throws on unknown dependency mapping", async () => {
     // cover 389-391 in runAgent coordinator flow
     vi.spyOn(Legacy, "classifyFlow").mockReturnValue({
       signals: ["keyword:block"],
@@ -347,7 +361,7 @@ describe("agents runAgent scenarios", () => {
       "/workspace/runs/run-1/inputs/request.md": "req",
       "/workspace/runs/run-1/inputs/context.md": "ctx",
     });
-    expect(() => agents.runAgent("coordinator", "run-1", "dry-run", null, deps)).toThrow(/Unknown dependency/);
+    await expect(agents.runAgent("coordinator", "run-1", "dry-run", null, deps)).rejects.toThrow(/Unknown dependency/);
   });
 });
 

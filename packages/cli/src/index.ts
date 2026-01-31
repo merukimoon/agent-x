@@ -12,6 +12,8 @@ import path from "path";
 import process from "process";
 import { spawnSync } from "child_process";
 import { fileURLToPath } from "url";
+import { ScaffoldService } from "./services/scaffold";
+import { OrchestratorService } from "./services/orchestrator";
 import {
   handleAgentCommand,
   handleFlowCommand,
@@ -187,40 +189,32 @@ function generateRunId() {
 function scaffoldRun(params: { goal: string; contextPath: string; runId?: string; json?: boolean; printOnly?: boolean }) {
   const { goal, contextPath, json, printOnly } = params;
   const runId = params.runId || generateRunId();
-  const runDir = path.join(process.cwd(), "runs", runId);
-  if (fs.existsSync(runDir)) {
-    fail(`Run already exists: ${runDir}`, { exitCode: 1 });
-  }
-  fs.mkdirSync(path.join(runDir, "inputs"), { recursive: true });
+
   const contextContent = fs.existsSync(contextPath) ? fs.readFileSync(contextPath, "utf8") : contextPath;
-  fs.writeFileSync(path.join(runDir, "inputs", "context.md"), contextContent, "utf8");
-  fs.writeFileSync(path.join(runDir, "inputs", "request.md"), goal + "\n", "utf8");
-  fs.mkdirSync(path.join(runDir, "outputs"), { recursive: true });
-  fs.mkdirSync(path.join(runDir, "summary"), { recursive: true });
-  const now = new Date().toISOString();
-  const runJson = {
-    id: runId,
-    run_id: runId,
-    flow: "",
-    status: "pending",
-    created_at_utc: now,
-    started_at_utc: now,
-    exit_code: null,
-    error: null,
-  };
-  fs.writeFileSync(path.join(runDir, "run.json"), JSON.stringify(runJson, null, 2));
-  fs.writeFileSync(path.join(runDir, "summary", "final.md"), `Run: ${runId}\nStatus: pending\nGoal: ${goal}\n`);
-  if (json) {
-    console.log(JSON.stringify({ run: runId, path: runDir, goal, context: "inputs/context.md" }, null, 2));
-  } else if (printOnly) {
-    console.log(runId);
-  } else {
-    console.log(`Created run: ${runId}`);
-    console.log(`  inputs/request.md`);
-    console.log(`  inputs/context.md`);
-    console.log(`  run.json`);
+
+  try {
+    const createdRunDir = ScaffoldService.createRun({
+      runId: runId,
+      goal: goal,
+      context: contextContent,
+      log: (msg) => { if (!json && !printOnly) console.log(msg); }
+    });
+
+    if (json) {
+      console.log(JSON.stringify({ run: runId, path: createdRunDir, goal, context: "inputs/context.md" }, null, 2));
+    } else if (printOnly) {
+      console.log(runId);
+    } else {
+      console.log(`Created run: ${runId}`);
+      console.log(`  inputs/request.md`);
+      console.log(`  inputs/context.md`);
+      console.log(`  run.json`);
+    }
+    return runId;
+  } catch (err: any) {
+    fail(err.message, { exitCode: 1 });
+    return "";
   }
-  return runId;
 }
 
 function showRun(runId: string, json: boolean) {
@@ -249,7 +243,7 @@ function showRun(runId: string, json: boolean) {
 
 async function runPlannerOnly(runId: string, dryRun: boolean, json: boolean) {
   const mode = dryRun ? "dry-run" : "live";
-  runAgent("planner" as AgentName, runId, mode);
+  await runAgent("planner" as AgentName, runId, mode);
   if (json) {
     console.log(JSON.stringify({ run: runId, mode, planner: "done" }, null, 2));
   }
@@ -265,7 +259,7 @@ async function executeRun(runId: string, scopeArgs: string[], dryRun: boolean, j
         ? { kind: "until", stepId: parsed.untilStepId }
         : { kind: "full" };
   try {
-    runFlow(runId, dryRun ? "dry-run" : "live", scope as any);
+    await runFlow(runId, dryRun ? "dry-run" : "live", scope as any);
   } catch (error) {
     if (error instanceof CLIError) {
       throw error;
@@ -501,14 +495,14 @@ export async function runCli(args: string[]) {
         handleVerifyRunCommand(remainder);
         break;
       case "agent":
-        handleAgentCommand(remainder);
+        await handleAgentCommand(remainder);
         break;
       case "planner":
       case "architect":
-        handleAgentCommand([command, ...remainder]);
+        await handleAgentCommand([command, ...remainder]);
         break;
       case "flow":
-        handleFlowCommand(remainder);
+        await handleFlowCommand(remainder);
         break;
       case "retry":
         handleRetryCommand(remainder);
@@ -526,3 +520,6 @@ export async function runCli(args: string[]) {
     handleFatalError(error, renderTopLevelHelp());
   }
 }
+
+
+export { OrchestratorService };

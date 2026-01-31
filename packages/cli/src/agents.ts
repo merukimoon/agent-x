@@ -200,7 +200,7 @@ export function ensureDependencies(step, runDir, idToAgent, deps: Partial<Agents
  * @param {string | null} [contextOverridePath]
  * @returns {AgentResult}
  */
-export function runAgent(agentName, runId, mode, contextOverridePath = null, deps: Partial<AgentsDeps> = {}) {
+export async function runAgent(agentName, runId, mode, contextOverridePath = null, deps: Partial<AgentsDeps> = {}) {
   const resolved = {
     ...defaultAgentsDeps,
     ...deps,
@@ -321,6 +321,69 @@ export function runAgent(agentName, runId, mode, contextOverridePath = null, dep
     result.status = status;
     result.summary = resultSummary;
     outputsWritten = true;
+  } else if (agentName === "planner") {
+    const goalRaw = Legacy.readFileText(requestPath);
+    const contextRaw = Legacy.readFileText(contextPath);
+    // Extract goal/context text (simple heuristic, or parse markdown sections if possible)
+    // For now, pass raw strings as prompt expects.
+
+    // We need prompt template.
+    const promptPath = path.join(resolved.cwd(), "prompts", "planner.md");
+
+    try {
+      // 1. Generate
+      const { rawText, target } = await Legacy.generatePlanFromLLM(promptPath, goalRaw, contextRaw);
+      if (target) {
+        targetInfo = target;
+        result.provider = target.provider;
+        result.model = target.model;
+      }
+
+      // 2. Parse & Validate
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : rawText;
+      let parsed = null;
+      let validation = { valid: false, errors: [] as string[], warnings: [] as string[], parsed: null as any };
+
+      try {
+        parsed = JSON.parse(jsonStr);
+        validation = Legacy.validatePlannerOutput(parsed, Legacy.CAPABILITIES);
+      } catch (e: any) {
+        validation.errors.push(`JSON Parse Fail: ${e.message}`);
+      }
+
+      // 3. Write artifacts
+      Legacy.writeJsonFile(path.join(runDir, "planner_validation.json"), {
+        valid: validation.valid,
+        errors: validation.errors,
+        warnings: validation.warnings
+      });
+
+      if (!validation.valid) {
+        Legacy.writeJsonFile(path.join(runDir, "planner_validation_error.json"), {
+          error_type: "validation",
+          message: "Planner output failed validation",
+          details: validation.errors
+        });
+        result.status = "failed";
+        result.summary = `Planner failed validation: ${validation.errors.length} errors.`;
+      } else {
+        result.status = "done";
+        result.summary = `${mode === "dry-run" ? "Dry run: " : ""}Plan generated and validated.`;
+        // Write result.json with the parsed plan
+        Legacy.writeJsonFile(resultPath, parsed); // We write the LLM output as result
+        outputsWritten = true; // prevent generic write
+      }
+
+    } catch (err: any) {
+      // Network/LLM error
+      Legacy.writeJsonFile(path.join(runDir, "planner_validation_error.json"), {
+        error_type: "llm_error",
+        message: err.message
+      });
+      result.status = "failed";
+      result.summary = `Planner LLM error: ${err.message}`;
+    }
   } else {
     Legacy.writeJsonFile(resultPath, result);
   }

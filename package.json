@@ -12,34 +12,26 @@
     "agentic": "./bin/agentic.js"
   },
   "scripts": {
-      "preinstall": "node scripts/check-node-version.mjs",
-      "typecheck": "tsc -p tsconfig.json",
-
-      "test": "pnpm exec vitest run --config vitest.config.js",
-      "test:watch": "pnpm exec vitest --config vitest.config.js",
-
-      "test:unit": "pnpm exec vitest run --config vitest.unit.config.js",
-      "test:unit:coverage": "pnpm exec vitest run --config vitest.unit.config.js --coverage",
-
-      "test:integration": "pnpm exec vitest run --config vitest.integration.config.js",
-
-      "test:mcp-protections": "pnpm exec vitest run --config vitest.mcp-protections.config.js",
-      "test:mcp-stress": "pnpm exec vitest run --config vitest.mcp-stress.config.js",
-
-      "test:mcp": "pnpm exec vitest run --config vitest.unit.config.js packages/mcp/src/__tests__/unit",
-      "test:cli": "pnpm exec vitest run --config vitest.unit.config.js packages/cli/src/__tests__/unit",
-      "test:core": "pnpm exec vitest run --config vitest.unit.config.js packages/core/src/__tests__/unit",
-
-      "test:golden": "node --import tsx tests/agentic/generate-golden.ts",
-      "verify:esm": "node --import tsx scripts/verify-esm.ts",
+    "preinstall": "node scripts/check-node-version.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "pnpm exec vitest run --config vitest.config.js",
+    "test:watch": "pnpm exec vitest --config vitest.config.js",
+    "test:unit": "pnpm exec vitest run --config vitest.unit.config.js",
+    "test:unit:coverage": "pnpm exec vitest run --config vitest.unit.config.js --coverage",
+    "test:integration": "pnpm exec vitest run --config vitest.integration.config.js",
+    "test:mcp-protections": "pnpm exec vitest run --config vitest.mcp-protections.config.js",
+    "test:mcp-stress": "pnpm exec vitest run --config vitest.mcp-stress.config.js",
+    "test:mcp": "pnpm exec vitest run --config vitest.unit.config.js packages/mcp/src/__tests__/unit",
+    "test:cli": "pnpm exec vitest run --config vitest.unit.config.js packages/cli/src/__tests__/unit",
+    "test:core": "pnpm exec vitest run --config vitest.unit.config.js packages/core/src/__tests__/unit",
+    "test:e2e": "pnpm exec vitest run tests/e2e/flow.test.ts",
+    "test:golden": "node --import tsx tests/agentic/generate-golden.ts",
+    "verify:esm": "node --import tsx scripts/verify-esm.ts",
     "verify-run": "node --import tsx packages/cli/src/index.ts verify-run",
-
-      "dev": "node --import tsx scripts/agentic.ts",
-      "run-new": "node --import tsx scripts/scaffold-run.ts",
-      "build": "tsc -p tsconfig.json",
-      "start": "node dist/scripts/agentic.js",
-
-      "doctor:native": "pnpm ls rollup @rollup/rollup-linux-x64-gnu @rollup/rollup-win32-x64-msvc"
+    "dev": "node --import tsx packages/cli/src/bin/agentic.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/packages/cli/src/bin/agentic.js",
+    "doctor:native": "pnpm ls rollup @rollup/rollup-linux-x64-gnu @rollup/rollup-win32-x64-msvc"
   },
   "devDependencies": {
     "@rollup/rollup-linux-x64-gnu": "^4.55.1",
