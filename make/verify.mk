@@ -17,6 +17,14 @@ verify:
 	echo "Running tests..."; \
 	$(MAKE) test
 
+$(call register_target,vtt,VERIFY,Run the VTT sequence (npm typecheck + pnpm unit/coverage/integration).,make vtt)
+.PHONY: vtt
+vtt:
+	@npm run typecheck
+	@$(PNPM) run test:unit
+	@$(PNPM) run test:unit:coverage
+	@$(PNPM) run test:integration
+
 $(call register_target,validate-run,VERIFY,Validate run artifacts contract (requires RUN=<run-id>).,make validate-run RUN=<run-id>)
 $(call register_target,verify-run,VERIFY,Alias for validate-run.,make verify-run RUN=<run-id>)
 $(call register_target,verify-flows,VERIFY,Feature-level end-to-end flow verification (includes gated pause/resume).,make verify-flows)

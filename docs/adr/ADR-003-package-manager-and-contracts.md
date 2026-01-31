@@ -10,7 +10,7 @@ Status: Accepted
 
 ## Decision
 1) **Package manager**: Adopt pnpm (pinned via `packageManager: pnpm@9.12.3`). Remove `package-lock.json`, generate `pnpm-lock.yaml`, and use Corepack-driven installs (`pnpm install --frozen-lockfile`) with pnpm store caching in CI.
-2) **Make scope**: Treat Makefiles as contributor convenience only. The supported/public entry points are the CLI scripts (`pnpm run dev ...` and `pnpm run verify-run ...`). Make targets remain for internal verification but are not release guarantees.
+2) **Make scope**: Treat Makefiles as contributor convenience only. The supported/public entry point is ADX (the `agentic` CLI). From this repo, invoke it via `pnpm exec agentic ...` (or via a globally installed `agentic` binary). Make targets remain for internal verification but are not release guarantees.
 3) **Contracts package**: Establish `packages/contracts` as the canonical home for enforceable contracts (currently the step/run contract types) and import from there across the codebase.
 4) **Nx readiness**: Keep the workspace package-based and pnpm-managed (`pnpm-workspace.yaml` with `packages/*`), without introducing Nx yet; the structure is prepared for future Nx adoption.
 

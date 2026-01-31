@@ -1,6 +1,6 @@
 import process from "process";
 import { createServer, startHttpServer, PROTOCOL_VERSION } from "../../packages/mcp/src/index";
-import { runTechnicalWriter } from "../agentic/runners";
+import { runTechnicalWriter } from "../../packages/cli/src/runners.ts";
 
 const server = createServer();
 server.registerMethod("runner.technical-writer", (payload) => {

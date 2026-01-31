@@ -5,16 +5,22 @@ import type { MCPServer } from "../server/createServer";
 import { getConfiguredApiKey, isApiKeyAllowed } from "../auth/api_key";
 import { TokenBucket } from "../server/rate_limit";
 
+export interface HttpTransportDeps {
+  env?: NodeJS.ProcessEnv;
+}
+
 export interface HttpTransportOptions {
   port?: number;
   host?: string;
   apiKey?: string;
   logger?: Pick<Console, "log" | "error" | "warn">;
+  deps?: HttpTransportDeps;
 }
 
 export function startHttpServer(server: MCPServer, options: HttpTransportOptions = {}) {
   const logger = options.logger ?? console;
-  const expectedKey = options.apiKey ?? getConfiguredApiKey();
+  const env = options.deps?.env ?? process.env;
+  const expectedKey = options.apiKey ?? getConfiguredApiKey(env);
   const apiKeyMissing = !expectedKey;
 
   if (apiKeyMissing) {
@@ -22,10 +28,10 @@ export function startHttpServer(server: MCPServer, options: HttpTransportOptions
   }
 
   // HTTP Protections configuration
-  const maxBodyBytes = parseInt(process.env.AGENTX_MCP_MAX_BODY_BYTES ?? "1048576", 10); // 1MB default
-  const timeoutMs = parseInt(process.env.AGENTX_MCP_TIMEOUT_MS ?? "30000", 10); // 30s default
-  const rlPerMin = parseInt(process.env.AGENTX_MCP_RL_PER_MIN ?? "60", 10);
-  const rlBurst = parseInt(process.env.AGENTX_MCP_RL_BURST ?? "20", 10);
+  const maxBodyBytes = parseInt(env.AGENTX_MCP_MAX_BODY_BYTES ?? "1048576", 10); // 1MB default
+  const timeoutMs = parseInt(env.AGENTX_MCP_TIMEOUT_MS ?? "30000", 10); // 30s default
+  const rlPerMin = parseInt(env.AGENTX_MCP_RL_PER_MIN ?? "60", 10);
+  const rlBurst = parseInt(env.AGENTX_MCP_RL_BURST ?? "20", 10);
 
   const rateLimiter = new TokenBucket(rlPerMin, rlBurst);
 
@@ -164,22 +170,54 @@ function readBodyWithLimit(req: http.IncomingMessage, maxBytes: number): Promise
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let totalSize = 0;
+    let settled = false;
 
-    req.on("data", (chunk) => {
+    const cleanup = () => {
+      req.off("data", onData);
+      req.off("end", onEnd);
+      req.off("error", onError);
+      req.off("aborted", onAborted);
+      req.off("close", onClose);
+    };
+
+    const settle = (fn: (value: any) => void, value: any) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      fn(value);
+    };
+
+    const onData = (chunk: Buffer | string) => {
       const buffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
       totalSize += buffer.length;
 
       if (totalSize > maxBytes) {
         req.destroy();
-        reject(new Error("Body too large"));
+        settle(reject, new Error("Body too large"));
         return;
       }
 
       chunks.push(buffer);
-    });
+    };
 
-    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
-    req.on("error", (err) => reject(err));
+    const onEnd = () => settle(resolve, Buffer.concat(chunks).toString("utf8"));
+    const onError = (err: unknown) => settle(reject, err);
+    const onAborted = () => settle(reject, new Error("Request aborted"));
+
+    // If the socket closes before "end", treat it as a read error.
+    const onClose = () => {
+      if (!settled) {
+        settle(reject, new Error("Request closed"));
+      }
+    };
+
+    req.on("data", onData);
+    req.on("end", onEnd);
+    req.on("error", onError);
+    req.on("aborted", onAborted);
+    req.on("close", onClose);
   });
 }
 

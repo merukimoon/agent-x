@@ -1,16 +1,6 @@
 
-import { spawn } from "child_process";
-import fs from "fs";
-import path from "path";
+import { OrchestratorService } from "../../packages/cli/src/index.js";
 import process from "process";
-
-// Configuration
-const MAX_RETRIES = 2; // Total attempts = 1 + N
-const BACKOFF_MS = 2000;
-
-function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function parseArgs() {
     const args = process.argv.slice(2);
@@ -33,226 +23,24 @@ function parseArgs() {
         console.error("Error: --goal is required");
         process.exit(1);
     }
-
     return { goal, context, explicitRunId };
-}
-
-function runPlanner(runId: string, goal: string, context: string) {
-    const runDir = path.join(process.cwd(), "runs", runId);
-    const inputsDir = path.join(runDir, "inputs");
-    const requestPath = path.join(inputsDir, "request.md");
-    const contextPath = path.join(inputsDir, "context.md");
-
-    fs.mkdirSync(inputsDir, { recursive: true });
-    fs.writeFileSync(requestPath, goal);
-
-    let contextValue = context;
-    if (context && fs.existsSync(context)) {
-        contextValue = fs.readFileSync(context, "utf8");
-    }
-    fs.writeFileSync(contextPath, contextValue || "");
-
-    const scriptPath = path.join(process.cwd(), "scripts", "agentic.ts");
-
-    // Construct the command arguments
-    // equivalent to: node --import tsx scripts/agentic.ts planner --run ...
-    const nodeArgs = [
-        "--import",
-        "tsx",
-        scriptPath,
-        "planner",
-        "--run",
-        runId,
-    ];
-
-    console.log(`[Orchestrator] Invoking Planner (RunID: ${runId})...`);
-
-    const result = spawn(process.execPath, nodeArgs, {
-        stdio: "inherit", // Pipe output directly to user
-        cwd: process.cwd(),
-        env: process.env,
-    });
-
-    return new Promise<number>((resolve) => {
-        result.on("close", (code) => {
-            resolve(code ?? 1);
-        });
-    });
-}
-
-function getRunArtifacts(runId: string) {
-    const runDir = path.join(process.cwd(), "runs", runId);
-    const validationErrorPath = path.join(runDir, "planner_validation_error.json");
-    const validReportPath = path.join(runDir, "planner_validation.json");
-
-    let errorDetails = null;
-    if (fs.existsSync(validationErrorPath)) {
-        try {
-            errorDetails = JSON.parse(fs.readFileSync(validationErrorPath, "utf8"));
-        } catch (e) { /* ignore */ }
-    }
-
-    let validReport = null;
-    if (fs.existsSync(validReportPath)) {
-        try {
-            validReport = JSON.parse(fs.readFileSync(validReportPath, "utf8"));
-        } catch (e) { /* ignore */ }
-    }
-
-    return { errorDetails, validReport };
-}
-
-function writePlannerRunArtifacts(runId: string) {
-    const runDir = path.join(process.cwd(), "runs", runId);
-    const summaryDir = path.join(runDir, "summary");
-    fs.mkdirSync(summaryDir, { recursive: true });
-
-    const now = new Date().toISOString();
-    const plan = {
-        run_id: runId,
-        created_at_utc: now,
-        version: "0.1",
-        flow_type: "orchestrator-planner",
-        rationale: "planner-only orchestrator run",
-        signals: ["orchestrator"],
-        confidence: "low",
-        steps: [
-            {
-                id: "planner",
-                agent: "planner",
-                depends_on: [],
-                inputs: {
-                    request: "inputs/request.md",
-                    context: "inputs/context.md",
-                    prior_outputs: []
-                },
-                outputs: {
-                    result: "outputs/planner/result.json",
-                    notes: "outputs/planner/notes.md",
-                    status: "outputs/planner/status.json"
-                },
-                status: "done",
-                attempt: 0,
-                max_attempts: 1,
-                last_error: null,
-                allow_skip: true
-            }
-        ]
-    };
-
-    fs.writeFileSync(path.join(runDir, "plan.json"), JSON.stringify(plan, null, 2));
-
-    const runJson = {
-        id: runId,
-        run_id: runId,
-        flow: "orchestrator-planner",
-        status: "done",
-        created_at_utc: now,
-        started_at_utc: now,
-        finished_at_utc: now,
-        exit_code: 0,
-        error: null
-    };
-
-    fs.writeFileSync(path.join(runDir, "run.json"), JSON.stringify(runJson, null, 2));
-
-    const summary = [
-        "# Run summary",
-        "",
-        `- Run: ${runId}`,
-        "- Flow: orchestrator-planner",
-        "- Status: done",
-        `- Started: ${now}`,
-        `- Finished: ${now}`,
-        "",
-        "## Steps",
-        "- planner (planner): done",
-        "",
-        "## Key artifacts",
-        "- run.json",
-        "- plan.json",
-        "- planner: result=outputs/planner/result.json notes=outputs/planner/notes.md status=outputs/planner/status.json"
-    ].join("\n");
-
-    fs.writeFileSync(path.join(summaryDir, "final.md"), summary);
 }
 
 async function main() {
     const { goal, context, explicitRunId } = parseArgs();
 
-    // Use provided ID or generate a base one. 
-    // For retries, we might want to append suffixes or reuse the same ID? 
-    // The constraints say "retry". Usually retry means re-execution. 
-    // If we reuse the runID, we overwrite artifacts. This is probably desired for "retry until success".
-    // However, useful debugging might want separate IDs. 
-    // Let's use the same RunID to keep the "logical run" together, assuming the planner overwrites.
-    // Actually, the planner tool creates the directory if missing. It overwrites files.
+    // Delegate to Service
+    const result = await OrchestratorService.runPlannerWithPolicy(goal, context, {
+        explicitRunId,
+        log: console.log
+    });
 
-    const baseRunId = explicitRunId || `orch-${new Date().toISOString().replace(/[:.]/g, "-")}`;
-    console.log(`RUN_ID=${baseRunId}`);
-
-    let attempt = 0;
-
-    while (attempt <= MAX_RETRIES) {
-        attempt++;
-        const currentRunId = attempt > 1 ? `${baseRunId}-retry${attempt - 1}` : baseRunId;
-
-        console.log(`\n=== Orchestrator Policy Loop: Attempt ${attempt}/${MAX_RETRIES + 1} ===`);
-
-        // We run the planner synchronously to wait for exit code
-        const exitCode = await runPlanner(currentRunId, goal, context);
-
-        console.log(`[Orchestrator] Planner exited with code: ${exitCode}`);
-
-        const { errorDetails, validReport } = getRunArtifacts(currentRunId);
-
-        if (exitCode === 0) {
-            console.log("\n✅ [SUCCESS] Plan generated and validated.");
-            writePlannerRunArtifacts(currentRunId);
-            if (validReport) {
-                if (validReport.warnings?.length) {
-                    console.log("Warnings:", validReport.warnings);
-                }
-            }
-            process.exit(0);
-        }
-        else if (exitCode === 10) {
-            console.log("⚠️ [RETRYABLE] Exit Code 10 (Network/Internal).");
-            if (errorDetails) {
-                console.log(`Details: ${errorDetails.message}`);
-            }
-
-            if (attempt <= MAX_RETRIES) {
-                console.log(`Backing off for ${BACKOFF_MS}ms before retry...`);
-                await sleep(BACKOFF_MS);
-                continue; // Retry loop
-            } else {
-                console.error("❌ [FAILED] Max retries exhausted.");
-                process.exit(10);
-            }
-        }
-        else if (exitCode === 11) {
-            console.error("❌ [FATAL] Exit Code 11 (Parse/Schema).");
-            console.error("Guidance: Refine your prompt or fix the schema. Do not retry.");
-            if (errorDetails) {
-                console.log(`Error Type: ${errorDetails.error_type}`);
-                console.log(`Message: ${errorDetails.message}`);
-            }
-            process.exit(11);
-        }
-        else if (exitCode === 12) {
-            console.error("⛔ [BLOCKED] Exit Code 12 (Safety/Policy).");
-            console.error("Guidance: Safety violation. Do not retry.");
-            if (errorDetails) {
-                console.log(`Violations: ${JSON.stringify(errorDetails.details)}`);
-            }
-            process.exit(12);
-        }
-        else {
-            console.error(`❌ [UNKNOWN] Exit Code ${exitCode}.`);
-            process.exit(exitCode);
-        }
+    if (!result.success) {
+        console.error(`Orchestrator failed with code ${result.exitCode}`);
+        process.exit(result.exitCode || 1);
     }
+
+    process.exit(0);
 }
 
 main().catch(err => {

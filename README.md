@@ -21,9 +21,8 @@ The repository is organized into the following packages (Monorepo-ready):
 | :--- | :--- |
 | `packages/core` | **Fundamentals**. Contains the core types, contracts, schemas, and shared utilities defining the "Agentic Squad" protocol. |
 | `packages/contracts` | **Contracts**. Canonical enforceable contract types (run/step schemas) shared across the framework. |
-| `packages/cli` | **Command Line Interface**. The `agentic` CLI implementation. Orchestrates agents, manages plans, and handles user interactions. |
+| `packages/cli` | **ADX (CLI)**. The `agentic` binary implementation. Orchestrates agents, manages plans, and handles user interactions. |
 | `packages/adapters` | **Adapters** (Future). Connectors for external tools and platforms. |
-| `scripts/agentic` | **Legacy/Entrypoint**. Contains the `agentic.ts` entrypoint (which delegates to the CLI package) and legacy implementation logic being migrated. |
 
 > **Note**: Packages are managed via a pnpm workspace, but builds still run from the repo root with relative imports (no separate package build yet).
 
@@ -42,6 +41,8 @@ These terms describe the intended shape of the project; adjust as the codebase e
 
 **AgentX** is the conceptual execution platform that defines how agentic systems operate within the framework. While **Agentic Squad Framework** names the overall project and repository, **AgentX** describes the runtime and execution model.
 
+ADX is the CLI interface of AgentX, used by developers to run, plan, and verify AI-driven workflows via a deterministic API.
+
 It encompasses:
 - **AgentX Runtime**: The deterministic engine that drives flows and typically serves as the "Coordinator".
 - **AgentX Verification Model**: The fail-closed safety system ensuring policy compliance (Exit 12).
@@ -50,15 +51,15 @@ It encompasses:
 
 AgentX is the layer that makes the "Squad" behave reliably, ensuring no "ghost actions" occur outside the plan.
 
-CLI contract: see `docs/cli-contract.md` for the stable `agentic` command surface.
+ADX contract: see `docs/cli-contract.md` for the stable `agentic` command surface.
 
 ## Platform support
 
 The framework is developed on Windows (using WSL or Git Bash) and Linux.
 
 - **Package manager**: Uses pnpm (pinned via `packageManager`). Enable Corepack and run `pnpm install --frozen-lockfile` from the repo root.
-- **Make**: On Windows, you must use **Git Bash** or **WSL** to run `make` targets. PowerShell is not supported for Make commands due to shell syntax differences (`set -eu`, etc.). Make targets are contributor convenience only; the CLI (`pnpm run dev ...`) is the public surface.
-- **Node.js**: The runtime scripts (`pnpm run dev`) work natively in PowerShell, cmd.exe, and bash.
+- **Make**: On Windows, you must use **Git Bash** or **WSL** to run `make` targets. PowerShell is not supported for Make commands due to shell syntax differences (`set -eu`, etc.). Make targets are contributor convenience only; ADX (the `agentic` CLI) is the public surface.
+- **Node.js**: To run ADX without installing globally, use `pnpm exec agentic ...` from the repo root.
 
 More detail: `docs/concepts.md`.
 
@@ -100,7 +101,7 @@ make planner GOAL="Create a new feature" CONTEXT="Repo uses /src for code" RUN="
 Or manually via CLI after editing `runs/$RUN/inputs/request.md` and `runs/$RUN/inputs/context.md`:
 
 ```bash
-pnpm run dev planner --run "$RUN"
+pnpm exec agentic plan --run "$RUN"
 ```
 
 The planner outputs:
@@ -191,7 +192,7 @@ For a complete, runnable example of a single-agent run using the Planner, see:
 - Quick verification: `make verify-fast` (typecheck + verify-esm; no tests).
 - Full verification: `make verify` (verify-fast + tests).
 - Product wiring verification: `make verify-flow` (creates a run, planner, status, agent dry-run, flow dry-run).
-- Run artifacts contract check: `make validate-run RUN=<RUN>` (alias: `make verify-run RUN=<RUN>` or `pnpm run verify-run --run <RUN>`).
+- Run artifacts contract check: `make validate-run RUN=<RUN>` (alias: `make verify-run RUN=<RUN>` or `pnpm exec agentic verify-run --run <RUN>`).
 - Orchestrator validation: `make orchestrator-validate GOAL="..." [MODE=planner|planner-architect]` (runs orchestrator flow then verify-run; default mode is planner-architect).
 
 ## Make targets

@@ -11,13 +11,25 @@ const DEFAULT_POLICY: Policy = {
     ],
 };
 
+export interface LoadPolicyDeps {
+    env?: NodeJS.ProcessEnv;
+    readFileSync?: (path: string, encoding: BufferEncoding) => string;
+}
+
 /**
  * Load policy from environment variable or return default.
  * 
  * @param transport - "http" for fail-hard on errors, "inprocess" for fail-soft
+ * @param deps - injectable dependencies for env + filesystem
  */
-export function loadPolicy(transport: "http" | "inprocess" = "inprocess"): Policy {
-    const policyPath = process.env.AGENTX_MCP_POLICY_PATH;
+export function loadPolicy(
+    transport: "http" | "inprocess" = "inprocess",
+    deps: LoadPolicyDeps = {}
+): Policy {
+    const env = deps.env ?? process.env;
+    const readFile =
+        deps.readFileSync ?? ((path, encoding) => fs.readFileSync(path, encoding) as string);
+    const policyPath = env.AGENTX_MCP_POLICY_PATH;
 
     // No policy path configured, use defaults
     if (!policyPath || policyPath.trim().length === 0) {
@@ -26,7 +38,7 @@ export function loadPolicy(transport: "http" | "inprocess" = "inprocess"): Polic
 
     // Try to load policy from file
     try {
-        const rawContent = fs.readFileSync(policyPath, "utf8");
+        const rawContent = readFile(policyPath, "utf8");
         const parsed = JSON.parse(rawContent) as Policy;
 
         // Validate basic structure

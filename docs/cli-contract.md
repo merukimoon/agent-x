@@ -1,10 +1,12 @@
-# AgentX CLI Contract (Beta)
+# ADX CLI Contract (Beta)
 
-The `agentic` binary is the external, stable interface for running the AgentX (Agentic Squad Framework) system. Make targets remain developer convenience only.
+ADX is the CLI interface of AgentX, used by developers to run, plan, and verify AI-driven workflows via a deterministic API.
+
+The `agentic` binary is the external, stable interface for interacting with AgentX via ADX. Make targets remain developer convenience only.
 
 ## Philosophy
 
-- CLI is the public surface; contracts are enforced through run artifacts and verification.
+- ADX is the public surface; contracts are enforced through run artifacts and verification.
 - Commands are deterministic and step-centric; plans remain DAGs.
 - JSON output is the stable interface; human output is informational.
 - Exit codes reflect contract status and must not be ignored.

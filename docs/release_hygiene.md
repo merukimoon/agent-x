@@ -6,7 +6,7 @@
 
 ## Stability and Guarantees
 - Stable: documented contracts (`docs/contracts/*`), run artifacts layout, run lifecycle states, finished criteria, and enforced hard constraints (R1, R2, R3, R4, R5, R8) as implemented today.
-- Stable: canonical CLI entry commands (`pnpm run verify-run --run <RUN>`), with maintained Make convenience targets (`make verify`, `make verify-plan-e2e`, `make verify-flow`, `make orchestrator-validate`, `make validate-run RUN=<RUN>`), and status semantics in `docs/status.md`.
+- Stable: canonical ADX entry commands (`pnpm exec agentic verify-run --run <RUN>`), with maintained Make convenience targets (`make verify`, `make verify-plan-e2e`, `make verify-flow`, `make orchestrator-validate`, `make validate-run RUN=<RUN>`), and status semantics in `docs/status.md`.
 - Stable: required artifacts per agent (`outputs/<agent>/result.json`, `outputs/<agent>/notes.md`, step decision files) and run-level files (`run.json`, `summary/final.md`, `plan.json`, `steps/index.json` when steps exist).
 - Non-guaranteed: undocumented commands, experimental scripts, ad hoc folder layouts outside `runs/`, and any behavior not covered by the contracts or verification commands.
 - Trust is derived from artifacts on disk plus verification outcomes; no out-of-band assurances exist.
@@ -50,7 +50,7 @@
 - Quick check: `make verify-fast`
 - Full check: `make verify`
 - Flow check: `make verify-flow`
-- Run validation: `make validate-run RUN=<RUN_ID>` (alias: `make verify-run RUN=<RUN_ID>`, `pnpm run verify-run --run <RUN_ID>`)
+- Run validation: `make validate-run RUN=<RUN_ID>` (alias: `make verify-run RUN=<RUN_ID>`, `pnpm exec agentic verify-run --run <RUN_ID>`)
 - Orchestrator validation: `make orchestrator-validate GOAL="..." [MODE=planner|planner-architect]`
 - Planner-driven end-to-end: `make verify-plan-e2e GOAL="..." CONTEXT="..."`
 

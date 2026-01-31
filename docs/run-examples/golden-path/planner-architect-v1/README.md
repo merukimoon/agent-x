@@ -55,7 +55,7 @@ The Architect reviews the plan and produces architectural decisions:
 RUN_ID="<timestamp-from-step-1>"
 
 # Run architect with the plan as additional context
-pnpm run dev agent architect --run "$RUN_ID"
+pnpm exec agentic agent architect --run "$RUN_ID"
 ```
 
 This produces additional artifacts in the same run directory:
@@ -71,7 +71,7 @@ ls -la runs/$RUN_ID/
 
 ## One-command E2E run
 
-The existing orchestrator target still expects the legacy `--goal/--context` planner interface and should be updated before relying on it. For now, prefer the manual steps above so the planner reads from `runs/<RUN>/inputs/` via `pnpm run dev planner --run "$RUN"`.
+The existing orchestrator target still expects the legacy `--goal/--context` planner interface and should be updated before relying on it. For now, prefer the manual steps above so the planner reads from `runs/<RUN>/inputs/` via `pnpm exec agentic plan --run "$RUN"`.
 
 ## Check Status
 

@@ -1,5 +1,5 @@
-export function getConfiguredApiKey(): string | null {
-  const key = process.env.AGENTX_MCP_API_KEY;
+export function getConfiguredApiKey(env: NodeJS.ProcessEnv = process.env): string | null {
+  const key = env.AGENTX_MCP_API_KEY;
   return key && key.length > 0 ? key : null;
 }
 

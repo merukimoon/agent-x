@@ -1,28 +1,38 @@
 {
   "name": "agenticx",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=20.0.0 <21.0.0 || >=22.0.0 <23.0.0",
+    "pnpm": ">=9.12.3 <10.0.0"
+  },
   "bin": {
     "agentic": "./bin/agentic.js"
   },
   "scripts": {
+    "preinstall": "node scripts/check-node-version.js",
     "typecheck": "tsc -p tsconfig.json",
     "test": "pnpm exec vitest run --config vitest.config.js",
+    "test:watch": "pnpm exec vitest --config vitest.config.js",
     "test:unit": "pnpm exec vitest run --config vitest.unit.config.js",
     "test:unit:coverage": "pnpm exec vitest run --config vitest.unit.config.js --coverage",
     "test:integration": "pnpm exec vitest run --config vitest.integration.config.js",
-    "test:all": "pnpm exec vitest run --config vitest.config.js",
-    "test:coverage": "pnpm exec vitest run --config vitest.unit.config.js --coverage",
-    "test:watch": "pnpm exec vitest --config vitest.config.js",
-    "test:golden": "node --import tsx tests/agentic/generate-golden.ts",
+    "test:mcp-protections": "pnpm exec vitest run --config vitest.mcp-protections.config.js",
+    "test:mcp-stress": "pnpm exec vitest run --config vitest.mcp-stress.config.js",
+    "test:stress": "pnpm exec vitest run --dir tests/stress",
+    "coverage": "pnpm run test:unit:coverage",
+    "test:mcp": "pnpm exec vitest run --config vitest.unit.config.js packages/mcp/src/__tests__/unit",
+    "test:cli": "pnpm exec vitest run --config vitest.unit.config.js packages/cli/src/__tests__/unit",
+    "test:core": "pnpm exec vitest run --config vitest.unit.config.js packages/core/src/__tests__/unit",
+    "test:e2e": "pnpm exec vitest run tests/e2e/flow.test.ts",
+    "test:golden": "node --import tsx packages/cli/src/__tests__/integration/generate-golden.ts",
     "verify:esm": "node --import tsx scripts/verify-esm.ts",
-    "verify-run": "pnpm run dev verify-run",
-    "dev": "node --import tsx scripts/agentic.ts",
-    "run-new": "node --import tsx scripts/scaffold-run.ts",
+    "verify-run": "node --import tsx packages/cli/src/index.ts verify-run",
+    "dev": "node --import tsx packages/cli/src/bin/agentic.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/scripts/agentic.js",
+    "start": "node dist/packages/cli/src/bin/agentic.js",
     "doctor:native": "pnpm ls rollup @rollup/rollup-linux-x64-gnu @rollup/rollup-win32-x64-msvc"
   },
   "devDependencies": {

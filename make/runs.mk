@@ -6,7 +6,8 @@ $(call register_target,run-new,RUNS,Create a new run directory with timestamp.,m
 run-new:
 	@set -eu; \
 	NAME="$${NAME:-}"; \
-	node --import tsx scripts/scaffold-run.ts
+	if [ -z "$$NAME" ]; then echo "NAME is required. Example: make run-new NAME=\"docs-pr-audit\""; exit 1; fi; \
+	$(PNPM) run dev run new --run "$$(date +%Y-%m-%d_%H%M)-$$NAME" --goal "TODO" --context "TODO" --print-run
 
 $(call register_target,run-tree,RUNS,List files in a run directory.,make run-tree RUN=\"<run-id>\")
 .PHONY: run-tree

@@ -21,7 +21,7 @@
 
 ## CLI Usage
 - Show status for a run:  
-  `pnpm run dev status --run <RUN_ID>`
+  `pnpm exec agentic status --run <RUN_ID>`
 - If `--run` is omitted, the latest run directory is used.
 - Output includes:
   - `Overall`: lifecycle state

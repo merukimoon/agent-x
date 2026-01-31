@@ -1,8 +1,8 @@
-# Agentic CLI golden tests
+# ADX CLI golden tests
 
 ## Overview
 
-Golden snapshots lock the current behavior of `scripts/agentic.js` so refactors can be validated without changing outputs. Snapshots cover help, validate, status, flow, agent, retry, and skip.
+Golden snapshots lock the current behavior of ADX (the `agentic` CLI) so refactors can be validated without changing outputs. Snapshots cover help, validate, status, flow, agent, retry, and skip.
 
 ## How to regenerate goldens
 
@@ -22,7 +22,7 @@ Generation resolves paths from the repo root via `import.meta.url`, so it is ind
 
 ## How to add a new CLI snapshot
 
-1. Update `tests/agentic/generate-golden.js` to include the new command and any required plan mutation.
+1. Update `packages/cli/src/__tests__/integration/generate-golden.ts` to include the new command and any required plan mutation.
 2. Run `pnpm run test:golden` to regenerate snapshots.
 3. Run `pnpm run test` to confirm snapshots match.
 

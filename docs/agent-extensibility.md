@@ -13,7 +13,7 @@ This guide explains how to add or adjust agents in AgentX without weakening guar
 1. A new role directory under `domain/roles/<agent-name>/` exists with a README that follows the checklist structure.
 2. The run rules and plan schema already allow referencing the agent by name and defining its outputs; do not extend the schema ad hoc.
 3. Required inputs are available under `runs/<RUN_ID>/inputs/` or from prior outputs listed in depends_on.
-4. Verification commands `make verify-flow`, `make validate-run`, and `pnpm run verify-run` remain applicable without special flags.
+4. Verification commands `make verify-flow`, `make validate-run`, and `pnpm exec agentic verify-run` remain applicable without special flags.
 
 ## Defining responsibilities and artifacts
 

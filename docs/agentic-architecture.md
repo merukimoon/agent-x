@@ -1,4 +1,4 @@
-# Agentic CLI architecture
+# ADX CLI architecture
 
 ## Purpose
 - Entry CLI for running agent flows: coordinator-driven planning, agent execution, validation, status.

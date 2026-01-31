@@ -1,0 +1,43 @@
+
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/Users/merukimon/source/git/merukimoon/agent-x[39m
+
+ [32m✓[39m packages/core/src/__tests__/unit/registry.unit.test.ts[2m > [22mregistry[2m > [22mloadRolesRegistry[2m > [22mthrows if registry file missing
+ [32m✓[39m packages/core/src/__tests__/unit/registry.unit.test.ts[2m > [22mregistry[2m > [22mloadRolesRegistry[2m > [22mthrows if json parse fails
+ [32m✓[39m packages/core/src/__tests__/unit/registry.unit.test.ts[2m > [22mregistry[2m > [22mloadRolesRegistry[2m > [22mthrows if not array
+ [32m✓[39m packages/core/src/__tests__/unit/registry.unit.test.ts[2m > [22mregistry[2m > [22mloadRolesRegistry[2m > [22mthrows on invalid entry object
+ [32m✓[39m packages/core/src/__tests__/unit/registry.unit.test.ts[2m > [22mregistry[2m > [22mloadRolesRegistry[2m > [22mthrows on unknown role id (not AgentName)
+ [31m×[39m packages/core/src/__tests__/unit/registry.unit.test.ts[2m > [22mregistry[2m > [22mloadRolesRegistry[2m > [22mthrows on duplicate id
+[31m   → expected [Function] to throw error including 'Duplicate role id' but got 'Role planner required_artifacts must …'[39m
+ [32m✓[39m packages/core/src/__tests__/unit/registry.unit.test.ts[2m > [22mregistry[2m > [22mloadRolesRegistry[2m > [22mthrows on invalid runner
+ [32m✓[39m packages/core/src/__tests__/unit/registry.unit.test.ts[2m > [22mregistry[2m > [22mloadRolesRegistry[2m > [22mthrows on missing required artifacts for role
+ [32m✓[39m packages/core/src/__tests__/unit/registry.unit.test.ts[2m > [22mregistry[2m > [22mloadRolesRegistry[2m > [22mthrows if role docs missing
+ [32m✓[39m packages/core/src/__tests__/unit/registry.unit.test.ts[2m > [22mregistry[2m > [22mloadRolesRegistry[2m > [22mloads valid registry
+ [32m✓[39m packages/core/src/__tests__/unit/registry.unit.test.ts[2m > [22mregistry[2m > [22mrequireExecutableRole[2m > [22mreturns entry for known agent
+ [32m✓[39m packages/core/src/__tests__/unit/registry.unit.test.ts[2m > [22mregistry[2m > [22mrequireExecutableRole[2m > [22mthrows for unknown agent
+
+[31m⎯⎯⎯⎯⎯⎯⎯[1m[7m Failed Tests 1 [27m[22m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[31m[1m[7m FAIL [27m[22m[39m packages/core/src/__tests__/unit/registry.unit.test.ts[2m > [22mregistry[2m > [22mloadRolesRegistry[2m > [22mthrows on duplicate id
+[31m[1mAssertionError[22m: expected [Function] to throw error including 'Duplicate role id' but got 'Role planner required_artifacts must …'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- Duplicate role id[39m
+[31m+ Role planner required_artifacts must include notes.md, status.json[39m
+
+[36m [2m❯[22m packages/core/src/__tests__/unit/registry.unit.test.ts:[2m60:62[22m[39m
+    [90m 58| [39m            [35mconst[39m entry [33m=[39m { id[33m:[39m [32m'planner'[39m[33m,[39m runner[33m:[39m [32m'llm'[39m[33m,[39m required_art…
+    [90m 59| [39m            (fs[33m.[39mreadFileSync [35mas[39m [33mMock[39m)[33m.[39m[34mmockReturnValue[39m([33mJSON[39m[33m.[39m[34mstringify[39m([…
+    [90m 60| [39m            [34mexpect[39m(() [33m=>[39m registryModule[33m.[39m[34mloadRolesRegistry[39m())[33m.[39m[34mtoThrow[39m([32m'[39m…
+    [90m   | [39m                                                             [31m^[39m
+    [90m 61| [39m        })[33m;[39m
+    [90m 62| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m11 passed[39m[22m[90m (12)[39m
+[2m   Start at [22m 00:53:29
+[2m   Duration [22m 742ms[2m (transform 65ms, setup 0ms, collect 84ms, tests 20ms, environment 0ms, prepare 268ms)[22m
+

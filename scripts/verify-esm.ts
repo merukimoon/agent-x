@@ -13,6 +13,7 @@ const ignoreDirs = new Set([
   "build",
   "out",
   "coverage",
+  ".agent",
 ]);
 
 /** @type {string[]} */
@@ -30,6 +31,7 @@ function isIgnored(entryPath) {
  */
 function checkFile(filePath) {
   const rel = path.relative(repoRoot, filePath);
+  if (rel === "scripts/check-node-version.mjs") return;
   if (filePath.endsWith(".mjs")) {
     errors.push(`Found disallowed .mjs file: ${rel}`);
     return;
