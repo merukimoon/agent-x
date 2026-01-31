@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 
 const REPO_ROOT = path.resolve(__dirname, "../../");
-const CLI_ENTRY = path.join(REPO_ROOT, "scripts/agentic.ts");
+const CLI_ENTRY = path.join(REPO_ROOT, "packages/cli/src/bin/agentic.ts");
 
 export type RunCliResult = {
     stdout: string;

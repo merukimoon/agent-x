@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { readFirstLines, writeFileAtomic, writeJsonFile } from "../../core/src/index.js";
+import { readFirstLines, writeFileAtomic, writeJsonFile } from "./core_deps.js";
+import type { ExecutionMode } from "../../core/src/index.js";
 
 export interface RunnerParams {
     runId: string;
