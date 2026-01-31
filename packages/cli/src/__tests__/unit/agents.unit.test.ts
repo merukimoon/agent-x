@@ -3,7 +3,7 @@ import path from "path";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import * as agents from "../../agents";
 import * as stepPersistence from "../../step_persistence";
-import { Legacy, Core } from "../../imports";
+import { Legacy, Core, Runners } from "../../imports";
 import * as gatingRuntime from "../../gating_runtime";
 import * as rolesRegistry from "../../../../../scripts/agentic/roles_registry";
 
@@ -155,14 +155,15 @@ describe("agents runAgent scenarios", () => {
       "/workspace/runs/run-1/inputs/request.md": "req",
       "/workspace/runs/run-1/inputs/context.md": "ctx",
     });
+    files["/workspace/runs/run-1/planner_llm_target.json"] = JSON.stringify({ provider: "p", model: "m" });
     const result = agents.runAgent("planner", "run-1", "dry-run", null, deps);
     expect(result.status).toBe("done");
     expect(stepPersistence.writeStepResult).toHaveBeenCalled();
     expect(stepPersistence.writeDecision).toHaveBeenCalled();
     expect(gatingRuntime.applyOverride).toHaveBeenCalled();
-    const writeCalls = (Legacy.writeJsonFile as any as vi.Mock).mock.calls
-      .map((c) => c[0]);
-    expect(writeCalls.some((p) => normalize(p).endsWith("outputs/planner/result.json"))).toBe(true);
+    expect(result.provider).toBe("p");
+    const writeCalls = (Legacy.writeJsonFile as any as vi.Mock).mock.calls.map((c) => normalize(c[0]));
+    expect(writeCalls.some((p) => p.endsWith("outputs/planner/result.json"))).toBe(true);
   });
 
   it("requests clarification when inputs are missing", () => {
@@ -217,5 +218,53 @@ describe("agents runAgent scenarios", () => {
     expect(writeCall).toBeTruthy();
     const plan = writeCall ? writeCall[1] : null;
     expect(plan?.steps?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("marks human_gate blocked when override missing", () => {
+    const { deps } = makeDeps({
+      "/workspace/runs/run-1/inputs/request.md": "req",
+      "/workspace/runs/run-1/inputs/context.md": "ctx",
+    });
+    const decisionSpy = vi.spyOn(stepPersistence, "writeDecision");
+    const result = agents.runAgent("human_gate" as any, "run-1", "dry-run", null, deps);
+    expect(result.status).toBe("blocked");
+    const decisionPayload = decisionSpy.mock.calls[0][2] ?? decisionSpy.mock.calls[0][1];
+    expect(JSON.stringify(decisionPayload)).toContain("missing inputs");
+  });
+
+  it("routes technical-writer through runner output", () => {
+    const { deps } = makeDeps({
+      "/workspace/runs/run-1/inputs/request.md": "req",
+      "/workspace/runs/run-1/inputs/context.md": "ctx",
+    });
+    const runner = vi.spyOn(Runners, "runTechnicalWriter").mockReturnValue({ status: "done", summary: "ok" } as any);
+    const result = agents.runAgent("technical-writer" as any, "run-1", "live", null, deps);
+    expect(result.status).toBe("done");
+    expect(runner).toHaveBeenCalled();
+  });
+});
+
+describe("buildDecision branches", () => {
+  it.each([
+    { missing: ["a"], gate: { gate_status: "pass", hard_failed_ids: [], soft_failed_ids: [], notes: [] }, strictness: "soft", action: "request_clarification", reason: /missing inputs/ },
+    { missing: [], gate: { gate_status: "hard_fail", hard_failed_ids: ["h1"], soft_failed_ids: [], notes: [] }, strictness: "soft", action: "halt", reason: /hard checks/ },
+    { missing: [], gate: { gate_status: "soft_fail", hard_failed_ids: [], soft_failed_ids: ["s"], notes: [] }, strictness: "hard", action: "require_human", reason: /soft failures/ },
+    { missing: [], gate: { gate_status: "soft_fail", hard_failed_ids: [], soft_failed_ids: ["s"], notes: [] }, strictness: "soft", action: "continue", reason: /soft failures tolerated/ },
+  ])("buildDecision path %#", ({ missing, gate, strictness, action, reason }) => {
+    const promptSpy = vi.spyOn(Legacy, "writeFileAtomic").mockImplementation(() => {});
+    const decision = agents.buildDecision({
+      runId: "run-1",
+      stepId: "step-1",
+      finishedAt: new Date("2020-01-01T00:00:00Z"),
+      strictness: strictness as any,
+      gateOutcome: gate as any,
+      missingInputs: missing,
+    });
+    expect(decision.decision.action).toBe(action);
+    expect(decision.decision.reason).toMatch(reason);
+    if (action === "require_human" || action === "request_clarification") {
+      expect(promptSpy).toHaveBeenCalled();
+    }
+    promptSpy.mockRestore();
   });
 });
