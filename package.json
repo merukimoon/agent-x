@@ -21,6 +21,8 @@
     "test:integration": "pnpm exec vitest run --config vitest.integration.config.js",
     "test:mcp-protections": "pnpm exec vitest run --config vitest.mcp-protections.config.js",
     "test:mcp-stress": "pnpm exec vitest run --config vitest.mcp-stress.config.js",
+    "test:stress": "pnpm exec vitest run --dir tests/stress",
+    "coverage": "pnpm run test:unit:coverage",
     "test:mcp": "pnpm exec vitest run --config vitest.unit.config.js packages/mcp/src/__tests__/unit",
     "test:cli": "pnpm exec vitest run --config vitest.unit.config.js packages/cli/src/__tests__/unit",
     "test:core": "pnpm exec vitest run --config vitest.unit.config.js packages/core/src/__tests__/unit",

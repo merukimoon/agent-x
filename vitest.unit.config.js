@@ -4,7 +4,10 @@ export default defineConfig({
   test: {
     environment: 'node',
     // Run ONLY unit tests
-    include: ['packages/**/src/__tests__/unit/**/*.unit.test.{js,ts,tsx}'],
+    include: [
+      'packages/**/src/__tests__/unit/**/*.unit.test.{js,ts,tsx}',
+      'tests/unit/**/*.unit.test.{js,ts,tsx}'
+    ],
     exclude: ['**/node_modules/**', '**/dist/**', '**/build/**'],
 
     coverage: {
