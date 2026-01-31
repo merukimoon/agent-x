@@ -63,6 +63,31 @@ describe("status render helpers", () => {
     expect(rendered).not.toContain("Errors:");
     expect(rendered).not.toContain("Blocked step");
   });
+
+  it("renders blocked without required inputs or paths", () => {
+    const view: NormalizedStatus = {
+      run_id: "run-345",
+      overall: "in_progress",
+      artifacts_valid: true,
+      errors: [],
+      steps: [
+        { step_index: 0, step_id: "s0", agent_name: "a", status: "blocked", decision_action: "require_human", model: "m", duration_ms: 1 },
+      ],
+      current_state: {
+        is_blocked: true,
+        blocked_reason: null,
+        blocked_step_id: "s0",
+        next_action: "approve_or_override",
+        required_inputs: [],
+        paths: [],
+      },
+    } as any;
+    const rendered = renderStatusView(view, "LOCKED");
+    expect(rendered).toContain("LOCKED");
+    expect(rendered).toContain("Blocked step: s0");
+    expect(rendered).not.toContain("Required inputs:");
+    expect(rendered).not.toContain("Relevant files:");
+  });
 });
 
 describe("status_view helpers", () => {
